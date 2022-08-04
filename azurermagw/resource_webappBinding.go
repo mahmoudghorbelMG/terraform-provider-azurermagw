@@ -188,6 +188,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 			"Backend Address pool Name doesn't exist in the app gateway. ###  Definitely, it was removed manually ###",
 		)
 		return*/
+		//backend_state =
 	}
 	
 	// Generate resource state struct
@@ -274,28 +275,41 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		return
 	}
 
+	var backend_state Backend_address_pool	
 	// in the Read method, the number of fqdns and Ip in a Backendpool should be calculated from the json object and not the plan or state,
 	// because the purpose of the read is to see if there is a difference between the real element and the satate stored localy.
-	index := getBackendAddressPoolElementKey(gw, state.Backend_address_pool.Name.Value)
-	backend_json2 := gw.Properties.BackendAddressPools[index]
-	nb_BackendAddresses := len(backend_json2.Properties.BackendAddresses)
-	fmt.Println("tttupdatettt  nb_BackendAddresses = ", nb_BackendAddresses)
-	fmt.Println("oooupdateooo  the length of state.Backend_address_pool.Fqdns  = ", len(state.Backend_address_pool.Fqdns))
-	fmt.Println("oooupdateooo  the length of state.Backend_address_pool.Ip_addresses  = ", len(state.Backend_address_pool.Ip_addresses))
-	nb_Fqdns := 0
-	for i := 0; i < nb_BackendAddresses; i++ {
-		if (backend_json2.Properties.BackendAddresses[i].Fqdn != "") && (&backend_json2.Properties.BackendAddresses[i].Fqdn != nil) {
-			nb_Fqdns++
-		} else {
-			fmt.Println("+++update+++   backend_json.Properties.BackendAddresses[i].Fqdn = ''  ou nil:")
+	if checkBackendAddressPoolElement(gw, state.Backend_address_pool.Name.Value) {
+		index := getBackendAddressPoolElementKey(gw, state.Backend_address_pool.Name.Value)
+		backend_json2 := gw.Properties.BackendAddressPools[index]
+		nb_BackendAddresses := len(backend_json2.Properties.BackendAddresses)
+		fmt.Println("tttupdatettt  nb_BackendAddresses = ", nb_BackendAddresses)
+		fmt.Println("oooupdateooo  the length of state.Backend_address_pool.Fqdns  = ", len(state.Backend_address_pool.Fqdns))
+		fmt.Println("oooupdateooo  the length of state.Backend_address_pool.Ip_addresses  = ", len(state.Backend_address_pool.Ip_addresses))
+		nb_Fqdns := 0
+		for i := 0; i < nb_BackendAddresses; i++ {
+			if (backend_json2.Properties.BackendAddresses[i].Fqdn != "") && (&backend_json2.Properties.BackendAddresses[i].Fqdn != nil) {
+				nb_Fqdns++
+			} else {
+				fmt.Println("+++update+++   backend_json.Properties.BackendAddresses[i].Fqdn = ''  ou nil:")
+			}
 		}
+		fmt.Println("tttupdatettt  nb_fqdns = ", nb_Fqdns)
+		nb_IpAddress := nb_BackendAddresses - nb_Fqdns
+
+		//generate BackendState
+		backend_state = generateBackendAddressPoolState(gw_response, state.Backend_address_pool.Name.Value,nb_Fqdns,nb_IpAddress)
+	}else{
+		// Error  - the non existance of backend_plan address pool name should stop execution
+		resp.Diagnostics.AddWarning("###Unable to read Backend Address pool: ", state.Backend_address_pool.Name.Value+
+		"\n Backend Address pool Name doesn't exist in the app gateway. ###  Definitely, it was removed manually ###")
+		/*
+		resp.Diagnostics.AddError(
+			"Unable to read Backend Address pool",
+			"Backend Address pool Name doesn't exist in the app gateway. ###  Definitely, it was removed manually ###",
+		)
+		return*/
+		//backend_state =
 	}
-	fmt.Println("tttupdatettt  nb_fqdns = ", nb_Fqdns)
-	nb_IpAddress := nb_BackendAddresses - nb_Fqdns
-
-	//generate BackendState
-	backend_state := generateBackendAddressPoolState(gw_response, state.Backend_address_pool.Name.Value,nb_Fqdns,nb_IpAddress)
-
 	// Generate resource state struct
 	var result = WebappBinding{
 		Name:                 state.Name,
