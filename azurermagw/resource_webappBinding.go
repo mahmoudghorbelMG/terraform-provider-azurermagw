@@ -1,4 +1,4 @@
-package azurerm_agw
+package azurermagw
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -74,7 +75,6 @@ func (r resourceWebappBindingType) NewResource(_ context.Context, p tfsdk.Provid
 	}, nil
 }
 
-
 // Create a new resource
 func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
 	if !r.p.configured {
@@ -99,11 +99,11 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 
 	//Check if the agw already contains an element that has the same name
-	checkElementName(gw,plan,resp)
-	
+	checkElementName(gw, plan, resp)
+
 	//create and map the new Backend pool element (backend_json) object from the plan (backend_plan)
-	createBackendAddressPool(&gw,plan.Backend_address_pool)
-		
+	createBackendAddressPool(&gw, plan.Backend_address_pool)
+
 	gw_response, responseData, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 	//if there is an error, responseData contains the error message in jason, else, gw_response is a correct gw Object
 	rs := string(responseData)
@@ -111,13 +111,13 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	//verify if the backend address pool is added to the gateway, otherwise exit error
-	checkCreatedBackendAddressPool(gw_response,plan.Backend_address_pool,resp,code,ress_error)
-	
+	checkCreatedBackendAddressPool(gw_response, plan.Backend_address_pool, resp, code, ress_error)
+
 	//generate BackendState
-	backend_state:= generateBackendAddressPoolState(gw_response,plan.Backend_address_pool)
-	
+	backend_state := generateBackendAddressPoolState(gw_response, plan.Backend_address_pool)
+
 	// Generate resource state struct
 	var result = WebappBinding{
 		Name:                 plan.Name,
@@ -132,7 +132,6 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		return
 	}
 }
-
 
 // Read resource information
 func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
@@ -151,7 +150,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	resourceGroupName := state.Agw_rg.Value
 	applicationGatewayName := state.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
-	
+
 	//test if the backend address pool doen't exist in the gateway, then it is an error
 	if !checkBackendAddressPoolElement(gw, state.Backend_address_pool.Name.Value) {
 		// Error  - the non existance of backend_plan address pool name must stop execution
@@ -164,7 +163,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 
 	//backend_state2 :=generateBackendAddressPoolState(gw, state.Backend_address_pool)
 	// Get the current backend address pool from the API
-	index:=getBackendAddressPoolElementKey(gw, state.Backend_address_pool.Name.Value)
+	index := getBackendAddressPoolElementKey(gw, state.Backend_address_pool.Name.Value)
 	backend_json := gw.Properties.BackendAddressPools[index]
 
 	// Map response body to resource schema attribute
@@ -176,44 +175,43 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	}
 
 	length_BackendAddresses := len(backend_json.Properties.BackendAddresses)
-	fmt.Println("tttttttttttttttttt  length_BackendAddresses = ",length_BackendAddresses)
-	fmt.Println("oooooooooooooooo  the length of state.Backend_address_pool.Fqdns  = ",len(state.Backend_address_pool.Fqdns))
-	fmt.Println("oooooooooooooooo  the length of state.Backend_address_pool.Ip_addresses  = ",len(state.Backend_address_pool.Ip_addresses))
-	length_Fqdns :=0	
+	fmt.Println("tttttttttttttttttt  length_BackendAddresses = ", length_BackendAddresses)
+	fmt.Println("oooooooooooooooo  the length of state.Backend_address_pool.Fqdns  = ", len(state.Backend_address_pool.Fqdns))
+	fmt.Println("oooooooooooooooo  the length of state.Backend_address_pool.Ip_addresses  = ", len(state.Backend_address_pool.Ip_addresses))
+	length_Fqdns := 0
 	for i := 0; i < length_BackendAddresses; i++ {
-		if (backend_json.Properties.BackendAddresses[i].Fqdn != "")&&(&backend_json.Properties.BackendAddresses[i].Fqdn != nil) {			
-			length_Fqdns++ 
-		}else{
+		if (backend_json.Properties.BackendAddresses[i].Fqdn != "") && (&backend_json.Properties.BackendAddresses[i].Fqdn != nil) {
+			length_Fqdns++
+		} else {
 			fmt.Println("+++++++++++++++++   backend_json.Properties.BackendAddresses[i].Fqdn = ''  ou nil:")
 		}
 	}
-	fmt.Println("tttttttttttttttttt  length_fqdns = ",length_Fqdns)
+	fmt.Println("tttttttttttttttttt  length_fqdns = ", length_Fqdns)
 	length_Ip := length_BackendAddresses - length_Fqdns
 
 	if length_Fqdns != 0 {
 		backend_state.Fqdns = make([]types.String, length_Fqdns)
-	}else{
+	} else {
 		backend_state.Fqdns = nil
 	}
-	
+
 	if length_Ip != 0 {
 		backend_state.Ip_addresses = make([]types.String, length_Ip)
-	}else{
+	} else {
 		backend_state.Ip_addresses = nil
 	}
-	
 
 	for j := 0; j < length_Fqdns; j++ {
-        backend_state.Fqdns[j]= types.String{Value: backend_json.Properties.BackendAddresses[j].Fqdn}
-    }
+		backend_state.Fqdns[j] = types.String{Value: backend_json.Properties.BackendAddresses[j].Fqdn}
+	}
 	for j := 0; j < length_Ip; j++ {
-        backend_state.Ip_addresses[j] = types.String{Value: backend_json.Properties.BackendAddresses[j+length_Fqdns].IPAddress}
-    }
-/*
-	backend_state.Fqdns = make([]types.String, 1)
-	backend_state.Ip_addresses = make([]types.String, 1)
-	backend_state.Fqdns[0] = types.String{Value: backend_json.Properties.BackendAddresses[0].Fqdn}
-	backend_state.Ip_addresses[0] = types.String{Value: backend_json.Properties.BackendAddresses[1].IPAddress}*/
+		backend_state.Ip_addresses[j] = types.String{Value: backend_json.Properties.BackendAddresses[j+length_Fqdns].IPAddress}
+	}
+	/*
+		backend_state.Fqdns = make([]types.String, 1)
+		backend_state.Ip_addresses = make([]types.String, 1)
+		backend_state.Fqdns[0] = types.String{Value: backend_json.Properties.BackendAddresses[0].Fqdn}
+		backend_state.Ip_addresses[0] = types.String{Value: backend_json.Properties.BackendAddresses[1].IPAddress}*/
 
 	// Generate resource state struct
 	var result = WebappBinding{
@@ -231,7 +229,6 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	}
 
 }
-
 
 // Update resource
 func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
@@ -286,30 +283,29 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		Type: "Microsoft.Network/applicationGateways/backendAddressPools",
 	}
 
-	length := len(backend_plan.Fqdns)+len(backend_plan.Ip_addresses)
+	length := len(backend_plan.Fqdns) + len(backend_plan.Ip_addresses)
 	if length != 0 {
 		backend_json.Properties.BackendAddresses = make([]struct {
 			Fqdn      string "json:\"fqdn,omitempty\""
 			IPAddress string "json:\"ipAddress,omitempty\""
 		}, length)
-	}else{
+	} else {
 		backend_json.Properties.BackendAddresses = nil
 	}
-	
 
 	for i := 0; i < len(backend_plan.Fqdns); i++ {
-        backend_json.Properties.BackendAddresses[i].Fqdn = backend_plan.Fqdns[i].Value
-    }
+		backend_json.Properties.BackendAddresses[i].Fqdn = backend_plan.Fqdns[i].Value
+	}
 	for i := 0; i < len(backend_plan.Ip_addresses); i++ {
-        backend_json.Properties.BackendAddresses[i+len(backend_plan.Fqdns)].IPAddress = backend_plan.Ip_addresses[i].Value
-    }
-/*
-	backend_json.Properties.BackendAddresses = make([]struct {
-		Fqdn      string "json:\"fqdn,omitempty\""
-		IPAddress string "json:\"ipAddress,omitempty\""
-	}, 2)
-	backend_json.Properties.BackendAddresses[0].Fqdn = backend_plan.Fqdns[0].Value
-	backend_json.Properties.BackendAddresses[1].IPAddress = backend_plan.Ip_addresses[0].Value*/
+		backend_json.Properties.BackendAddresses[i+len(backend_plan.Fqdns)].IPAddress = backend_plan.Ip_addresses[i].Value
+	}
+	/*
+		backend_json.Properties.BackendAddresses = make([]struct {
+			Fqdn      string "json:\"fqdn,omitempty\""
+			IPAddress string "json:\"ipAddress,omitempty\""
+		}, 2)
+		backend_json.Properties.BackendAddresses[0].Fqdn = backend_plan.Fqdns[0].Value
+		backend_json.Properties.BackendAddresses[1].IPAddress = backend_plan.Ip_addresses[0].Value*/
 
 	//remove the old backend from the gateway
 	removeBackendAddressPoolElement(&gw, backend_json.Name)
@@ -348,34 +344,33 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	}
 
 	length_Backends := len(backend_json2.Properties.BackendAddresses)
-	length_Fqdns :=0	
+	length_Fqdns := 0
 	for i := 0; i < length_Backends; i++ {
 		if !(backend_json2.Properties.BackendAddresses[i].Fqdn == "") {
-			length_Fqdns++ 
+			length_Fqdns++
 		}
 	}
 	length_Ip := length_Backends - length_Fqdns
 
 	if length_Fqdns != 0 {
 		backend_state.Fqdns = make([]types.String, length_Fqdns)
-	}else{
+	} else {
 		backend_state.Fqdns = nil
 	}
 
 	if length_Ip != 0 {
 		backend_state.Ip_addresses = make([]types.String, length_Ip)
-	}else{
+	} else {
 		backend_state.Ip_addresses = nil
 	}
-	
+
 	for j := 0; j < length_Fqdns; j++ {
-        backend_state.Fqdns[j]= types.String{Value: backend_json2.Properties.BackendAddresses[j].Fqdn}
-    }
+		backend_state.Fqdns[j] = types.String{Value: backend_json2.Properties.BackendAddresses[j].Fqdn}
+	}
 	for j := 0; j < length_Ip; j++ {
-        backend_state.Ip_addresses[j] = types.String{Value: backend_json2.Properties.BackendAddresses[j+length_Fqdns].IPAddress}
-    }
-	
-	
+		backend_state.Ip_addresses[j] = types.String{Value: backend_json2.Properties.BackendAddresses[j+length_Fqdns].IPAddress}
+	}
+
 	// Generate resource state struct
 	var result = WebappBinding{
 		Name:                 state.Name,
@@ -390,7 +385,6 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		return
 	}
 }
-
 
 // Delete resource
 func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
@@ -446,13 +440,11 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	resp.State.RemoveResource(ctx)
 }
 
-
 // Import resource
 func (r resourceWebappBinding) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	// Save the import identifier in the id attribute
 	//tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("id"), req, resp)
 }
-
 
 //Client operations
 func getGW(subscriptionId string, resourceGroupName string, applicationGatewayName string, token string) ApplicationGateway {
@@ -517,12 +509,12 @@ func updateGW(subscriptionId string, resourceGroupName string, applicationGatewa
 	}
 	return agw, responseData, code
 }
-func checkElementName(gw ApplicationGateway, plan WebappBinding,resp *tfsdk.CreateResourceResponse){
+func checkElementName(gw ApplicationGateway, plan WebappBinding, resp *tfsdk.CreateResourceResponse) {
 	//This function allows to check if an element name in the required new configuration (plan WebappBinding) already exist in the gw.
 	//if so, the provider has to stop executing and issue an exit error
 
 	//Create new var for all configurations
-	backend_plan := plan.Backend_address_pool	
+	backend_plan := plan.Backend_address_pool
 
 	if checkBackendAddressPoolElement(gw, backend_plan.Name.Value) {
 		// Error  - existing backend_plan address pool name must stop execution
@@ -550,27 +542,27 @@ func createBackendAddressPool(gw *ApplicationGateway, backend_plan Backend_addre
 		}{},
 		Type: "Microsoft.Network/applicationGateways/backendAddressPools",
 	}
-	length := len(backend_plan.Fqdns)+len(backend_plan.Ip_addresses)
-	
+	length := len(backend_plan.Fqdns) + len(backend_plan.Ip_addresses)
+
 	//If there is no fqdn nor IPaddress for the backend pool, initialize the BackendAddresses to nil to avoid a terraform provider error when making the state
 	if length == 0 {
 		backend_json.Properties.BackendAddresses = nil
-	}else{
+	} else {
 		backend_json.Properties.BackendAddresses = make([]struct {
 			Fqdn      string "json:\"fqdn,omitempty\""
 			IPAddress string "json:\"ipAddress,omitempty\""
-		}, length)	
-	}	
+		}, length)
+	}
 	for i := 0; i < len(backend_plan.Fqdns); i++ {
-        backend_json.Properties.BackendAddresses[i].Fqdn = backend_plan.Fqdns[i].Value
-    }
+		backend_json.Properties.BackendAddresses[i].Fqdn = backend_plan.Fqdns[i].Value
+	}
 	for i := 0; i < len(backend_plan.Ip_addresses); i++ {
-        backend_json.Properties.BackendAddresses[i+len(backend_plan.Fqdns)].IPAddress = backend_plan.Ip_addresses[i].Value
-    }	
+		backend_json.Properties.BackendAddresses[i+len(backend_plan.Fqdns)].IPAddress = backend_plan.Ip_addresses[i].Value
+	}
 	// add the backend to the agw and update the agw
 	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backend_json)
 }
-func checkCreatedBackendAddressPool(gw_response ApplicationGateway, backend_plan Backend_address_pool,resp *tfsdk.CreateResourceResponse, code int, ress_error string) {
+func checkCreatedBackendAddressPool(gw_response ApplicationGateway, backend_plan Backend_address_pool, resp *tfsdk.CreateResourceResponse, code int, ress_error string) {
 	if !checkBackendAddressPoolElement(gw_response, backend_plan.Name.Value) {
 		// Error  - backend address pool wasn't added to the app gateway
 		resp.Diagnostics.AddError(
@@ -582,7 +574,7 @@ func checkCreatedBackendAddressPool(gw_response ApplicationGateway, backend_plan
 }
 func generateBackendAddressPoolState(gw ApplicationGateway, backend_plan Backend_address_pool) Backend_address_pool {
 	index := getBackendAddressPoolElementKey(gw, backend_plan.Name.Value)
-	backend_json:=gw.Properties.BackendAddressPools[index]
+	backend_json := gw.Properties.BackendAddressPools[index]
 	// log the added backend address pool
 	//tflog.Trace(ctx, "created BackendAddressPool", "BackendAddressPool ID", backend_json.ID)
 
@@ -594,26 +586,26 @@ func generateBackendAddressPoolState(gw ApplicationGateway, backend_plan Backend
 		Ip_addresses: []types.String{},
 	}
 	fmt.Println("------------------ The number len(backend_plan.Fqdns) is:", len(backend_plan.Fqdns))
-	
+
 	if len(backend_plan.Fqdns) != 0 {
 		backend_state.Fqdns = make([]types.String, len(backend_plan.Fqdns))
-	}else{
+	} else {
 		backend_state.Fqdns = nil
 	}
 	fmt.Println("------------------ The number len(backend_plan.Ip_addresses) is:", len(backend_plan.Ip_addresses))
-	
+
 	if len(backend_plan.Ip_addresses) != 0 {
 		backend_state.Ip_addresses = make([]types.String, len(backend_plan.Ip_addresses))
-	}else{
+	} else {
 		backend_state.Ip_addresses = nil
 	}
 
 	for j := 0; j < len(backend_plan.Fqdns); j++ {
-        backend_state.Fqdns[j]= types.String{Value: backend_json.Properties.BackendAddresses[j].Fqdn}
-    }
+		backend_state.Fqdns[j] = types.String{Value: backend_json.Properties.BackendAddresses[j].Fqdn}
+	}
 	for j := 0; j < len(backend_plan.Ip_addresses); j++ {
 		backend_state.Ip_addresses[j] = types.String{Value: backend_json.Properties.BackendAddresses[j+len(backend_plan.Fqdns)].IPAddress}
-    }
+	}
 
 	return backend_state
 }
@@ -674,11 +666,11 @@ func PrettyString(str string) (string, error) {
 	}
 	return prettyJSON.String(), nil
 }
-func printToFile(str string, fileName string){
+func printToFile(str string, fileName string) {
 	file, err := os.Create(fileName)
-    if err != nil {
-        log.Fatal(err)
-    }
-    mw := io.MultiWriter(os.Stdout, file)
-    fmt.Fprintln(mw, str)
+	if err != nil {
+		log.Fatal(err)
+	}
+	mw := io.MultiWriter(os.Stdout, file)
+	fmt.Fprintln(mw, str)
 }

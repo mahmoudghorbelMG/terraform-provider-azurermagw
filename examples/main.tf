@@ -1,7 +1,7 @@
 terraform {
   required_providers {
-    hashicups = {
-      source  = "citeo.com/edu/azurerm_agw"
+    azurermagw = {
+      source  = "citeo.com/edu/azurermagw"
     }
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -9,7 +9,7 @@ terraform {
     }
   }
 }
-provider "hashicups" {
+provider "azurermagw" {
 }
 provider "azurerm" {
   features {}
@@ -19,7 +19,7 @@ data "azurerm_application_gateway" "appgw"{
   resource_group_name = "shared-app-gateway"
 } 
  
-resource "azurerm_agw_webappBinding" "citeo-binding" {
+resource "azurermagw_webappBinding" "citeo-binding" {
   name = "mahmoud-backendAddressPool-resource-name"
   agw_name              = data.azurerm_application_gateway.appgw.name
   agw_rg                = data.azurerm_application_gateway.appgw.resource_group_name
@@ -30,7 +30,7 @@ resource "azurerm_agw_webappBinding" "citeo-binding" {
   }
 }
 /*
-resource "azurerm_agw_webappBinding" "citeo-binding4" {
+resource "azurermagw_webappBinding" "citeo-binding4" {
   name = "mahmoud-backendAddressPool-resource-name4"
   agw_name              = data.azurerm_application_gateway.appgw.name
   agw_rg                = data.azurerm_application_gateway.appgw.resource_group_name
@@ -40,7 +40,7 @@ resource "azurerm_agw_webappBinding" "citeo-binding4" {
     ip_addresses=["100.0.0.100"]
   }
 }
-resource "azurerm_agw_webappBinding" "citeo-binding3" {
+resource "azurermagw_webappBinding" "citeo-binding3" {
   name = "mahmoud-backendAddressPool-resource-name3"
   agw_name              = data.azurerm_application_gateway.appgw.name
   agw_rg                = data.azurerm_application_gateway.appgw.resource_group_name
@@ -50,7 +50,7 @@ resource "azurerm_agw_webappBinding" "citeo-binding3" {
     ip_addresses=["100.0.0.100"]
   }
 }
-resource "azurerm_agw_webappBinding" "citeo-binding2" {
+resource "azurermagw_webappBinding" "citeo-binding2" {
   name = "mahmoud-backendAddressPool-resource-name2"
   agw_name              = data.azurerm_application_gateway.appgw.name
   agw_rg                = data.azurerm_application_gateway.appgw.resource_group_name
@@ -60,7 +60,7 @@ resource "azurerm_agw_webappBinding" "citeo-binding2" {
     ip_addresses=["100.0.0.100"]
   }
 }
-resource "azurerm_agw_webappBinding" "citeo-binding1" {
+resource "azurermagw_webappBinding" "citeo-binding1" {
   name = "mahmoud-backendAddressPool-resource-name1"
   agw_name              = data.azurerm_application_gateway.appgw.name
   agw_rg                = data.azurerm_application_gateway.appgw.resource_group_name
@@ -73,6 +73,6 @@ resource "azurerm_agw_webappBinding" "citeo-binding1" {
 }*/
 /*
 output "citeo-binding_out" {
-  value = azurerm_agw_webappBinding.citeo-binding
+  value = azurermagw_webappBinding.citeo-binding
 }
 */

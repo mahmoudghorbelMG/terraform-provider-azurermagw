@@ -1,4 +1,4 @@
-package azurerm_agw
+package azurermagw
 
 type Token struct {
 	// defining struct variables
@@ -25,7 +25,7 @@ type BackendAddressPool struct {
 		} `json:"requestRoutingRules,omitempty"`
 	} `json:"properties"`
 	Type string `json:"type,omitempty"`
-} 
+}
 
 type ApplicationGateway struct {
 	Name     string `json:"name"`
@@ -36,7 +36,7 @@ type ApplicationGateway struct {
 	Tags     struct {
 	} `json:"tags"`
 	Identity *struct { //Identity `json:"identity,omitempty"`
-		Type                   string `json:"type,omitempty"`
+		Type                   string      `json:"type,omitempty"`
 		UserAssignedIdentities interface{} `json:"userAssignedIdentities,omitempty"`
 	} `json:"identity"`
 	Properties struct {
@@ -51,7 +51,7 @@ type ApplicationGateway struct {
 			MaxCapacity int `json:"maxCapacity"`
 			MinCapacity int `json:"minCapacity"`
 		} `json:"autoscaleConfiguration"`
-		BackendAddressPools []BackendAddressPool `json:"backendAddressPools,omitempty"`/*[]struct {
+		BackendAddressPools []BackendAddressPool `json:"backendAddressPools,omitempty"` /*[]struct {
 			Name       string `json:"name"`
 			ID         string `json:"id,omitempty"`
 			Etag       string `json:"etag,omitempty"`
@@ -72,12 +72,12 @@ type ApplicationGateway struct {
 			ID         string `json:"id"`
 			Etag       string `json:"etag"`
 			Properties struct {
-				ProvisioningState              string     `json:"provisioningState"`
-				Port                           int        `json:"port"`
-				Protocol                       string     `json:"protocol"`
-				CookieBasedAffinity            string     `json:"cookieBasedAffinity"`
-				PickHostNameFromBackendAddress bool       `json:"pickHostNameFromBackendAddress"`
-				AffinityCookieName             string     `json:"affinityCookieName"`
+				ProvisioningState              string      `json:"provisioningState"`
+				Port                           int         `json:"port"`
+				Protocol                       string      `json:"protocol"`
+				CookieBasedAffinity            string      `json:"cookieBasedAffinity"`
+				PickHostNameFromBackendAddress bool        `json:"pickHostNameFromBackendAddress"`
+				AffinityCookieName             string      `json:"affinityCookieName"`
 				AuthenticationCertificates     *[]struct { ////ajouté
 					ID string `json:"id"`
 				} `json:"authenticationCertificates"`

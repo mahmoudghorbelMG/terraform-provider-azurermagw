@@ -1,8 +1,9 @@
 package main
 
 import (
-	"context"
+	"azurerm_agw/azurermagw"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,8 +12,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"azurerm_agw/azurerm_agw"
 	"strings"
+
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 )
 
@@ -22,8 +23,8 @@ func main() {
 	/*for i := 0; i < 3; i++ {
 		fmt.Print("##################################")
 	}*/
-	tfsdk.Serve(context.Background(), azurerm_agw.New, tfsdk.ServeOpts{
-		Name: "azurerm_agw",
+	tfsdk.Serve(context.Background(), azurermagw.New, tfsdk.ServeOpts{
+		Name: "azurermagw",
 	})
 /*
 	AZURE_TENANT_ID:="*******************************"
@@ -34,7 +35,7 @@ func main() {
 	resourceGroupName:= "shared-app-gateway"
 	applicationGatewayName := "default-app-gateway-mahmoud"
 	token := getToken(AZURE_CLIENT_ID,AZURE_CLIENT_SECRET,AZURE_TENANT_ID)
-	var gw azurerm_agw.ApplicationGateway
+	var gw azurermagw.ApplicationGateway
 	gw = getGW(AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName,token.Access_token)
 	fmt.Print("##################################",
 				"\nGateway Name =",gw.Name,				
@@ -46,7 +47,7 @@ func main() {
 
 	
 	// create a new backendAddressPool 
-	mahmoud := azurerm_agw.BackendAddressPools{
+	mahmoud := azurermagw.BackendAddressPools{
 		Name: "mahmoud-backendAddressPool-name",
 		//ID:   "qlsdjflqsdjfqsd",
 		//Etag: "Etag-string",
@@ -80,7 +81,7 @@ func main() {
 	updateGW(AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName,gw,token.Access_token)
 */
 }
-func removeBackendAddressPoolElement(gw *azurerm_agw.ApplicationGateway,backendAddressPoolName string ){
+func removeBackendAddressPoolElement(gw *azurermagw.ApplicationGateway,backendAddressPoolName string ){
 	removed := false
 	for i := len(gw.Properties.BackendAddressPools) - 1; i >= 0; i-- { 
 		if gw.Properties.BackendAddressPools[i].Name == backendAddressPoolName { 
@@ -91,7 +92,7 @@ func removeBackendAddressPoolElement(gw *azurerm_agw.ApplicationGateway,backendA
 	fmt.Println("#############################removed =",removed)
 }
 
-func updateGW(subscriptionId string,resourceGroupName string,applicationGatewayName string,gw azurerm_agw.ApplicationGateway, token string){
+func updateGW(subscriptionId string,resourceGroupName string,applicationGatewayName string,gw azurermagw.ApplicationGateway, token string){
 	requestURI := "https://management.azure.com/subscriptions/"+subscriptionId+"/resourceGroups/"+ 
 	resourceGroupName+"/providers/Microsoft.Network/applicationGateways/"+applicationGatewayName+"?api-version=2021-08-01"
 	payloadBytes, err := json.Marshal(gw)
@@ -151,10 +152,10 @@ func monMain(){
 	//applicationGatewayName := "dev-app-gateway"
 	//token := getToken()
 	//fmt.Printf("###################################\n%s\n",token.Access_token)
-	var gw azurerm_agw.ApplicationGateway
+	var gw azurermagw.ApplicationGateway
 	gw = getGW(AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName,token.Access_token)
 	
-	var ide azurerm_agw.Identity
+	var ide azurermagw.Identity
 	ide = gw.Identity
 	//printToFile(gw,"agw.txt")
 	fmt.Printf("\nGateway Identity = %+v",ide)//.UserAssignedIdentities,
@@ -165,7 +166,7 @@ func monMain(){
 				"\nGateway Name =",gw.Properties.BackendHTTPSettingsCollection[0].Name,
 				"\nGateway Name =",gw.Properties.BackendAddressPools[2].Name,"\n")
 }*/
-func printGWtoFile(gw azurerm_agw.ApplicationGateway, fileName string){
+func printGWtoFile(gw azurermagw.ApplicationGateway, fileName string){
 	payloadBytes, err := json.Marshal(gw)
 	if err != nil {
 		// handle err
@@ -189,7 +190,7 @@ func printToFile(str string, fileName string){
     mw := io.MultiWriter(os.Stdout, file)
     fmt.Fprintln(mw, str)
 }
-func getGW(subscriptionId string,resourceGroupName string,applicationGatewayName string, token string)(azurerm_agw.ApplicationGateway){
+func getGW(subscriptionId string,resourceGroupName string,applicationGatewayName string, token string)(azurermagw.ApplicationGateway){
 	requestURI := "https://management.azure.com/subscriptions/"+subscriptionId+"/resourceGroups/"+ 
 	resourceGroupName+"/providers/Microsoft.Network/applicationGateways/"+applicationGatewayName+"?api-version=2021-08-01"
 	req, err := http.NewRequest("GET", requestURI, nil)
@@ -209,7 +210,7 @@ func getGW(subscriptionId string,resourceGroupName string,applicationGatewayName
     if err != nil {
         log.Fatal(err)
     }
-	var agw azurerm_agw.ApplicationGateway
+	var agw azurermagw.ApplicationGateway
 	err = json.Unmarshal(responseData, &agw)
   
     if err != nil {  
@@ -225,7 +226,7 @@ func PrettyString(str string) (string, error) {
     }
     return prettyJSON.String(), nil
 }
-func getToken(client_id string,client_secret string,tenant_id string)(azurerm_agw.Token){
+func getToken(client_id string,client_secret string,tenant_id string)(azurermagw.Token){
 	params := url.Values{}
 	params.Add("grant_type", `client_credentials`)
 	params.Add("client_id", client_id)
@@ -258,7 +259,7 @@ func getToken(client_id string,client_secret string,tenant_id string)(azurerm_ag
     }
     fmt.Println(res)*/
 
-	var token azurerm_agw.Token
+	var token azurermagw.Token
 	err = json.Unmarshal(responseData, &token)
   
     if err != nil {  

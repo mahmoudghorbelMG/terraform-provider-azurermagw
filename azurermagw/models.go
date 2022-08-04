@@ -1,4 +1,4 @@
-package azurerm_agw
+package azurermagw
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -18,9 +18,9 @@ type OrderItem struct {
 }
 
 // Coffee -
-// This Coffee struct is for Order.Items[].Coffee which does not have an 
+// This Coffee struct is for Order.Items[].Coffee which does not have an
 // ingredients field in the schema defined by plugin framework. Since the
-// resource schema must match the struct exactly (extra field will return an 
+// resource schema must match the struct exactly (extra field will return an
 // error). This struct has Ingredients commented out.
 type Coffee struct {
 	ID          int          `tfsdk:"id"`
@@ -40,25 +40,26 @@ type Ingredient struct {
 	Unit     string `tfsdk:"unit"`
 }
 
-// 
+//
 // Coffee Data Source specific structs
-// 
+//
 
 // CoffeeIngredients
 type CoffeeIngredients struct {
-	ID          int `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	Teaser      types.String `tfsdk:"teaser"`
-	Description types.String `tfsdk:"description"`
-	Price       types.Number `tfsdk:"price"`
-	Image       types.String `tfsdk:"image"`
+	ID          int            `tfsdk:"id"`
+	Name        types.String   `tfsdk:"name"`
+	Teaser      types.String   `tfsdk:"teaser"`
+	Description types.String   `tfsdk:"description"`
+	Price       types.Number   `tfsdk:"price"`
+	Image       types.String   `tfsdk:"image"`
 	Ingredient  []IngredientID `tfsdk:"ingredients"`
 }
 
 // Ingredient -
 type IngredientID struct {
-	ID       int    `tfsdk:"id"`
+	ID int `tfsdk:"id"`
 }
+
 // WebappBinding -
 type WebappBinding struct {
 	Name                 types.String         `tfsdk:"name"`
@@ -69,7 +70,7 @@ type WebappBinding struct {
 }
 type Backend_address_pool struct {
 	Name         types.String   `tfsdk:"name"`
-	Id 			 types.String	`tfsdk:"id"`
+	Id           types.String   `tfsdk:"id"`
 	Fqdns        []types.String `tfsdk:"fqdns"`
 	Ip_addresses []types.String `tfsdk:"ip_addresses"`
 } /*
