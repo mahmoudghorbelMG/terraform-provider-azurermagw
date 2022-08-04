@@ -99,7 +99,14 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 
 	//Check if the agw already contains an element that has the same name
-	checkElementName(gw, plan, &resp)
+	exist_element, exist := checkElementName(gw, plan)
+	if exist {
+		resp.Diagnostics.AddError(
+			"Unable to create binding. At least, : "+ exist_element,
+			"Already exists in the app gateway",
+		)
+		return
+	}
 
 	//create and map the new Backend pool element (backend_json) object from the plan (backend_plan)
 	backend_json := createBackendAddressPool(plan.Backend_address_pool)
@@ -448,22 +455,19 @@ func updateGW(subscriptionId string, resourceGroupName string, applicationGatewa
 	}
 	return agw, responseData, code
 }
-func checkElementName(gw ApplicationGateway, plan WebappBinding, resp **tfsdk.CreateResourceResponse) {
+func checkElementName(gw ApplicationGateway, plan WebappBinding) (string,bool){
 	//This function allows to check if an element name in the required new configuration (plan WebappBinding) already exist in the gw.
 	//if so, the provider has to stop executing and issue an exit error
-
+	exist := false
 	//Create new var for all configurations
 	backend_plan := plan.Backend_address_pool
 	fmt.Println("OOOOOOOO  looking for =", backend_plan.Name.Value)
 	if checkBackendAddressPoolElement(gw, backend_plan.Name.Value) {
 		fmt.Println("OOOOOOOO  entering the if =", backend_plan.Name.Value)
-		// Error  - existing backend_plan address pool name must stop execution
-		resp.Diagnostics.AddError(
-			"Unable to create Backend Address pool",
-			"Backend Address pool Name already exists in the app gateway",
-		)
-		return
+		exist = true
+		// Error  - existing backend_plan address pool name must stop execution 
 	}
+	return backend_plan.Name.Value,exist
 }
 
 //Backend pool operations
