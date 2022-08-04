@@ -552,11 +552,13 @@ func generateBackendAddressPoolState(gw ApplicationGateway, Backend_address_pool
 func checkBackendAddressPoolElement(gw ApplicationGateway, backendAddressPoolName string) bool {
 	exist := false
 	for i := len(gw.Properties.BackendAddressPools) - 1; i >= 0; i-- {
+		fmt.Println("wwwwwwwwww  =", gw.Properties.BackendAddressPools[i].Name)
 		if gw.Properties.BackendAddressPools[i].Name == backendAddressPoolName {
 			//gw.Properties.BackendAddressPools =append(gw.Properties.BackendAddressPools[:i], gw.Properties.BackendAddressPools[i+1:]...)
 			exist = true
 		}
 	}
+	fmt.Println("ww         Exist =",exist)
 	return exist
 }
 func removeBackendAddressPoolElement(gw *ApplicationGateway, backendAddressPoolName string) {
