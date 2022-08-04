@@ -1,7 +1,7 @@
 package main
 
 import (
-	"azurerm_agw/azurermagw"
+	"terraform-plugin-azurermagw/azurermagw"
 	"bytes"
 	"context"
 	"encoding/json"

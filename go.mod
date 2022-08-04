@@ -1,4 +1,4 @@
-module azurerm_agw
+module terraform-plugin-azurermagw
 
 go 1.16
 
