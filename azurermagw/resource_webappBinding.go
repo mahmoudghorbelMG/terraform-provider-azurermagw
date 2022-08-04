@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
+	//"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 type resourceWebappBindingType struct{}
@@ -102,7 +102,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	checkElementName(gw, plan, resp)
 
 	//create and map the new Backend pool element (backend_json) object from the plan (backend_plan)
-	createBackendAddressPool(&gw, plan.Backend_address_pool)
+	backend_json := createBackendAddressPool(plan.Backend_address_pool)
+	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backend_json)
 
 	gw_response, responseData, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 	//if there is an error, responseData contains the error message in jason, else, gw_response is a correct gw Object
@@ -118,7 +119,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	//generate BackendState.
 	nb_Fqdns 		:= len(plan.Backend_address_pool.Fqdns)
 	nb_IpAddress	:= len(plan.Backend_address_pool.Ip_addresses)
-	backend_state := generateBackendAddressPoolState(gw_response, plan.Backend_address_pool,nb_Fqdns,nb_IpAddress)
+	backend_state := generateBackendAddressPoolState(gw_response, plan.Backend_address_pool.Name.Value,nb_Fqdns,nb_IpAddress)
 
 	// Generate resource state struct
 	var result = WebappBinding{
@@ -176,15 +177,15 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		nb_IpAddress := nb_BackendAddresses - nb_Fqdns
 
 		//generate BackendState
-		backend_state = generateBackendAddressPoolState(gw, state.Backend_address_pool,nb_Fqdns,nb_IpAddress)
+		backend_state = generateBackendAddressPoolState(gw, state.Backend_address_pool.Name.Value,nb_Fqdns,nb_IpAddress)
 	}else{
 		// Error  - the non existance of backend_plan address pool name must stop execution
-		resp.Diagnostics.AddWarning("###Unable to read Backend Address pool: ", state.Backend_address_pool.Name.Value+"\nBackend Address pool Name doesn't exist in the app gateway. ### Certainly, it was removed manually ###")
-		
+		resp.Diagnostics.AddWarning("###Unable to read Backend Address pool: ", state.Backend_address_pool.Name.Value+
+		"\n Backend Address pool Name doesn't exist in the app gateway. ###  Definitely, it was removed manually ###")
 		/*
 		resp.Diagnostics.AddError(
 			"Unable to read Backend Address pool",
-			"Backend Address pool Name doesn't exist in the app gateway. ### Certainly, it was removed manually ###",
+			"Backend Address pool Name doesn't exist in the app gateway. ###  Definitely, it was removed manually ###",
 		)
 		return*/
 	}
@@ -233,58 +234,25 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//Verify if the agw already contains the wanted element
 	var backend_plan Backend_address_pool
 	backend_plan = plan.Backend_address_pool
-	//resp.Diagnostics.AddWarning("################ Backend Address Pool Name: ", backend_plan.Name.Value)
-	if !checkBackendAddressPoolElement(gw, backend_plan.Name.Value) {
+
+	//create and map the new Backend pool element (backend_json) object from the plan (backend_plan)
+	backend_json := createBackendAddressPool(backend_plan)
+
+	
+	if checkBackendAddressPoolElement(gw, backend_plan.Name.Value) {
+		//remove the old backend from the gateway
+		removeBackendAddressPoolElement(&gw, backend_json.Name)	
+	}else{
+		resp.Diagnostics.AddWarning("###Unable to update the Backend Address pool: ", backend_plan.Name.Value+
+		"Backend Address pool Name dosen't exist in the app gateway")
+		fmt.Println("||||||||||||||| before, it exit here")
 		// Error  - existing backend_plan address pool name must stop execution
-		resp.Diagnostics.AddError(
+		/*resp.Diagnostics.AddError(
 			"Unable to update the Backend Address pool",
 			"Backend Address pool Name dosen't exist in the app gateway",
 		)
-		return
-	}
-
-	//create and map the new backend_json object from the backend_plan
-	backend_json := BackendAddressPool{
-		Name: backend_plan.Name.Value,
-		Properties: struct {
-			ProvisioningState string "json:\"provisioningState,omitempty\""
-			BackendAddresses  []struct {
-				Fqdn      string "json:\"fqdn,omitempty\""
-				IPAddress string "json:\"ipAddress,omitempty\""
-			} "json:\"backendAddresses\""
-			RequestRoutingRules []struct {
-				ID string "json:\"id,omitempty\""
-			} "json:\"requestRoutingRules,omitempty\""
-		}{},
-		Type: "Microsoft.Network/applicationGateways/backendAddressPools",
-	}
-
-	length := len(backend_plan.Fqdns) + len(backend_plan.Ip_addresses)
-	if length != 0 {
-		backend_json.Properties.BackendAddresses = make([]struct {
-			Fqdn      string "json:\"fqdn,omitempty\""
-			IPAddress string "json:\"ipAddress,omitempty\""
-		}, length)
-	} else {
-		backend_json.Properties.BackendAddresses = nil
-	}
-
-	for i := 0; i < len(backend_plan.Fqdns); i++ {
-		backend_json.Properties.BackendAddresses[i].Fqdn = backend_plan.Fqdns[i].Value
-	}
-	for i := 0; i < len(backend_plan.Ip_addresses); i++ {
-		backend_json.Properties.BackendAddresses[i+len(backend_plan.Fqdns)].IPAddress = backend_plan.Ip_addresses[i].Value
-	}
-	/*
-		backend_json.Properties.BackendAddresses = make([]struct {
-			Fqdn      string "json:\"fqdn,omitempty\""
-			IPAddress string "json:\"ipAddress,omitempty\""
-		}, 2)
-		backend_json.Properties.BackendAddresses[0].Fqdn = backend_plan.Fqdns[0].Value
-		backend_json.Properties.BackendAddresses[1].IPAddress = backend_plan.Ip_addresses[0].Value*/
-
-	//remove the old backend from the gateway
-	removeBackendAddressPoolElement(&gw, backend_json.Name)
+		return*/
+	}	
 	//add the new one
 	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backend_json)
 	//and update the gateway
@@ -306,46 +274,27 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		return
 	}
 
-	// log the added backend address pool
-	index := getBackendAddressPoolElementKey(gw_response, backend_json.Name)
-	backend_json2 := gw_response.Properties.BackendAddressPools[index]
-	tflog.Trace(ctx, "Updated BackendAddressPool", "BackendAddressPool ID", backend_json2.ID)
-
-	// Map response body to resource schema attribute
-	backend_state := Backend_address_pool{
-		Name:         types.String{Value: backend_json2.Name},
-		Id:           types.String{Value: backend_json2.ID},
-		Fqdns:        []types.String{},
-		Ip_addresses: []types.String{},
-	}
-
+	// in the Read method, the number of fqdns and Ip in a Backendpool should be calculated from the json object and not the plan or state,
+	// because the purpose of the read is to see if there is a difference between the real element and the satate stored localy.
+	index := getBackendAddressPoolElementKey(gw, state.Backend_address_pool.Name.Value)
+	backend_json2 := gw.Properties.BackendAddressPools[index]
 	nb_BackendAddresses := len(backend_json2.Properties.BackendAddresses)
+	fmt.Println("tttupdatettt  nb_BackendAddresses = ", nb_BackendAddresses)
+	fmt.Println("oooupdateooo  the length of state.Backend_address_pool.Fqdns  = ", len(state.Backend_address_pool.Fqdns))
+	fmt.Println("oooupdateooo  the length of state.Backend_address_pool.Ip_addresses  = ", len(state.Backend_address_pool.Ip_addresses))
 	nb_Fqdns := 0
 	for i := 0; i < nb_BackendAddresses; i++ {
-		if !(backend_json2.Properties.BackendAddresses[i].Fqdn == "") {
+		if (backend_json2.Properties.BackendAddresses[i].Fqdn != "") && (&backend_json2.Properties.BackendAddresses[i].Fqdn != nil) {
 			nb_Fqdns++
+		} else {
+			fmt.Println("+++update+++   backend_json.Properties.BackendAddresses[i].Fqdn = ''  ou nil:")
 		}
 	}
+	fmt.Println("tttupdatettt  nb_fqdns = ", nb_Fqdns)
 	nb_IpAddress := nb_BackendAddresses - nb_Fqdns
 
-	if nb_Fqdns != 0 {
-		backend_state.Fqdns = make([]types.String, nb_Fqdns)
-	} else {
-		backend_state.Fqdns = nil
-	}
-
-	if nb_IpAddress != 0 {
-		backend_state.Ip_addresses = make([]types.String, nb_IpAddress)
-	} else {
-		backend_state.Ip_addresses = nil
-	}
-
-	for j := 0; j < nb_Fqdns; j++ {
-		backend_state.Fqdns[j] = types.String{Value: backend_json2.Properties.BackendAddresses[j].Fqdn}
-	}
-	for j := 0; j < nb_IpAddress; j++ {
-		backend_state.Ip_addresses[j] = types.String{Value: backend_json2.Properties.BackendAddresses[j+nb_Fqdns].IPAddress}
-	}
+	//generate BackendState
+	backend_state := generateBackendAddressPoolState(gw_response, state.Backend_address_pool.Name.Value,nb_Fqdns,nb_IpAddress)
 
 	// Generate resource state struct
 	var result = WebappBinding{
@@ -384,7 +333,7 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 		// Error  - the non existance of backend_plan address pool name must stop execution
 		resp.Diagnostics.AddError(
 			"Unable to delete Backend Address pool",
-			"Backend Address pool Name doesn't exist in the app gateway. ###Certainly, it was removed manually###",
+			"Backend Address pool Name doesn't exist in the app gateway. ### Definitely, it was removed manually###",
 		)
 		return
 	}
@@ -503,7 +452,7 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding, resp *tfsdk.Cre
 }
 
 //Backend pool operations
-func createBackendAddressPool(gw *ApplicationGateway, backend_plan Backend_address_pool) {
+func createBackendAddressPool(backend_plan Backend_address_pool) BackendAddressPool{
 	backend_json := BackendAddressPool{
 		Name: backend_plan.Name.Value,
 		Properties: struct {
@@ -536,7 +485,7 @@ func createBackendAddressPool(gw *ApplicationGateway, backend_plan Backend_addre
 		backend_json.Properties.BackendAddresses[i+len(backend_plan.Fqdns)].IPAddress = backend_plan.Ip_addresses[i].Value
 	}
 	// add the backend to the agw and update the agw
-	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backend_json)
+	return backend_json
 }
 func checkCreatedBackendAddressPool(gw_response ApplicationGateway, backend_plan Backend_address_pool, resp *tfsdk.CreateResourceResponse, code int, ress_error string) {
 	if !checkBackendAddressPoolElement(gw_response, backend_plan.Name.Value) {
@@ -548,9 +497,9 @@ func checkCreatedBackendAddressPool(gw_response ApplicationGateway, backend_plan
 		return
 	}
 }
-func generateBackendAddressPoolState(gw ApplicationGateway, backend_plan Backend_address_pool,nb_Fqdns int,nb_IpAddress int) Backend_address_pool {
+func generateBackendAddressPoolState(gw ApplicationGateway, Backend_address_pool_name string,nb_Fqdns int,nb_IpAddress int) Backend_address_pool {
 	// we have to give the nb_Fqdns and nb_IpAddress in order to make this function reusable in create, read and update method
-	index := getBackendAddressPoolElementKey(gw, backend_plan.Name.Value)
+	index := getBackendAddressPoolElementKey(gw, Backend_address_pool_name)
 	backend_json := gw.Properties.BackendAddressPools[index]
 	// log the added backend address pool
 	//tflog.Trace(ctx, "created BackendAddressPool", "BackendAddressPool ID", backend_json.ID)
