@@ -156,11 +156,14 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	//test if the backend address pool doen't exist in the gateway, then it is an error
 	if !checkBackendAddressPoolElement(gw, state.Backend_address_pool.Name.Value) {
 		// Error  - the non existance of backend_plan address pool name must stop execution
+		resp.Diagnostics.AddWarning("###Unable to read Backend Address pool: ", state.Backend_address_pool.Name.Value+"\nBackend Address pool Name doesn't exist in the app gateway. ### Certainly, it was removed manually ###")
+	
+		/*
 		resp.Diagnostics.AddError(
 			"Unable to read Backend Address pool",
 			"Backend Address pool Name doesn't exist in the app gateway. ### Certainly, it was removed manually ###",
 		)
-		return
+		return*/
 	}
 
 
