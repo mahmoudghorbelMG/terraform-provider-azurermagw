@@ -99,7 +99,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 
 	//Check if the agw already contains an element that has the same name
-	checkElementName(gw, plan, resp)
+	checkElementName(gw, plan, &resp)
 
 	//create and map the new Backend pool element (backend_json) object from the plan (backend_plan)
 	backend_json := createBackendAddressPool(plan.Backend_address_pool)
@@ -448,7 +448,7 @@ func updateGW(subscriptionId string, resourceGroupName string, applicationGatewa
 	}
 	return agw, responseData, code
 }
-func checkElementName(gw ApplicationGateway, plan WebappBinding, resp *tfsdk.CreateResourceResponse) {
+func checkElementName(gw ApplicationGateway, plan WebappBinding, resp **tfsdk.CreateResourceResponse) {
 	//This function allows to check if an element name in the required new configuration (plan WebappBinding) already exist in the gw.
 	//if so, the provider has to stop executing and issue an exit error
 
