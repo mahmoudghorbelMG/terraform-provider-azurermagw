@@ -1,8 +1,8 @@
 TEST?=$$(go list ./... | grep -v 'vendor')
 HOSTNAME=citeo.com
 NAMESPACE=edu
-NAME=azurermagw
-BINARY=terraform-provider-${NAME}
+NAME=azurerm_agw
+BINARY=${NAME}
 VERSION=0.3.3
 OS_ARCH=darwin_amd64
 
