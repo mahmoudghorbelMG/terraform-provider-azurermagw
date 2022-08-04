@@ -551,6 +551,7 @@ func generateBackendAddressPoolState(gw ApplicationGateway, Backend_address_pool
 }
 func checkBackendAddressPoolElement(gw ApplicationGateway, backendAddressPoolName string) bool {
 	exist := false
+	fmt.Println("OOOOOOOO  looking for =", backendAddressPoolName)
 	for i := len(gw.Properties.BackendAddressPools) - 1; i >= 0; i-- {
 		fmt.Println("wwwwwwwwww  =", gw.Properties.BackendAddressPools[i].Name)
 		if gw.Properties.BackendAddressPools[i].Name == backendAddressPoolName {
