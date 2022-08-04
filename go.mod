@@ -1,4 +1,4 @@
-module terraform-plugin-azurermagw
+module terraform-provider-azurermagw
 
 go 1.16
 
