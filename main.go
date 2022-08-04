@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 )
 
