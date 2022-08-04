@@ -454,8 +454,9 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding, resp *tfsdk.Cre
 
 	//Create new var for all configurations
 	backend_plan := plan.Backend_address_pool
-
+	fmt.Println("OOOOOOOO  looking for =", backend_plan.Name.Value)
 	if checkBackendAddressPoolElement(gw, backend_plan.Name.Value) {
+		fmt.Println("OOOOOOOO  entering the if =", backend_plan.Name.Value)
 		// Error  - existing backend_plan address pool name must stop execution
 		resp.Diagnostics.AddError(
 			"Unable to create Backend Address pool",
@@ -551,15 +552,15 @@ func generateBackendAddressPoolState(gw ApplicationGateway, Backend_address_pool
 }
 func checkBackendAddressPoolElement(gw ApplicationGateway, backendAddressPoolName string) bool {
 	exist := false
-	fmt.Println("OOOOOOOO  looking for =", backendAddressPoolName)
+	//fmt.Println("OOOOOOOO  looking for =", backendAddressPoolName)
 	for i := len(gw.Properties.BackendAddressPools) - 1; i >= 0; i-- {
-		fmt.Println("wwwwwwwwww  =", gw.Properties.BackendAddressPools[i].Name)
+		//fmt.Println("wwwwwwwwww  =", gw.Properties.BackendAddressPools[i].Name)
 		if gw.Properties.BackendAddressPools[i].Name == backendAddressPoolName {
 			//gw.Properties.BackendAddressPools =append(gw.Properties.BackendAddressPools[:i], gw.Properties.BackendAddressPools[i+1:]...)
 			exist = true
 		}
 	}
-	fmt.Println("ww         Exist =",exist)
+	//fmt.Println("ww         Exist =",exist)
 	return exist
 }
 func removeBackendAddressPoolElement(gw *ApplicationGateway, backendAddressPoolName string) {
