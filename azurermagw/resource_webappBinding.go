@@ -40,7 +40,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 				Required: true,
 			},
 			"backend_address_pool": {
-				Required: true,
+				Optional: true,
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
@@ -102,8 +102,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	exist_element, exist := checkElementName(gw, plan)
 	if exist {
 		resp.Diagnostics.AddError(
-			"Unable to create binding. At least, : "+ exist_element,
-			"Already exists in the app gateway",
+			"Unable to create binding. At least, those elements : "+ exist_element,
+			"Already exists in the app gateway. Please, modify the element name.",
 		)
 		return
 	}
@@ -195,7 +195,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 			"Backend Address pool Name doesn't exist in the app gateway. ###  Definitely, it was removed manually ###",
 		)
 		return*/
-		//backend_state =
+		backend_state = Backend_address_pool{}
 	}
 	
 	// Generate resource state struct
@@ -251,7 +251,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		//remove the old backend from the gateway
 		removeBackendAddressPoolElement(&gw, backend_json.Name)	
 	}else{
-		resp.Diagnostics.AddWarning("###Unable to update the Backend Address pool: ", backend_plan.Name.Value+
+		resp.Diagnostics.AddWarning("### Unable to update the Backend Address pool: ", backend_plan.Name.Value+
 		"Backend Address pool Name dosen't exist in the app gateway")
 		fmt.Println("||||||||||||||| before, it exit here")
 		// Error  - existing backend_plan address pool name must stop execution
