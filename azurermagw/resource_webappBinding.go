@@ -433,20 +433,32 @@ func generateBackendAddressPoolState(gw ApplicationGateway, backendAddressPoolNa
 	} else {
 		backend_state.Fqdns = nil
 	}
-	//fmt.Println("------------------ The number nb_IpAddress is:", nb_IpAddress)
-
+	
 	if nb_IpAddress != 0 {
 		backend_state.Ip_addresses = make([]types.String, nb_IpAddress)
 	} else {
 		backend_state.Ip_addresses = nil
 	}
-
+	
+	index_nb_Fqdns		:=0
+	index_nb_IpAddress 	:= 0
+	for i := 0; i < nb_Fqdns + nb_IpAddress; i++ {
+		if backend_json.Properties.BackendAddresses[i].Fqdn != "" {
+			backend_state.Fqdns[index_nb_Fqdns] = types.String{Value: backend_json.Properties.BackendAddresses[i].Fqdn}
+			index_nb_Fqdns++
+		}
+		if backend_json.Properties.BackendAddresses[i].IPAddress != "" {
+			backend_state.Ip_addresses[index_nb_IpAddress] = types.String{Value: backend_json.Properties.BackendAddresses[i].IPAddress}
+			index_nb_IpAddress++
+		}
+	}
+/*
 	for j := 0; j < nb_Fqdns; j++ {
 		backend_state.Fqdns[j] = types.String{Value: backend_json.Properties.BackendAddresses[j].Fqdn}
 	}
 	for j := 0; j < nb_IpAddress; j++ {
 		backend_state.Ip_addresses[j] = types.String{Value: backend_json.Properties.BackendAddresses[j+nb_Fqdns].IPAddress}
-	}
+	}*/
 
 	return backend_state
 }
