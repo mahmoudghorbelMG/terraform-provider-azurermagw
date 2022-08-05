@@ -227,6 +227,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	applicationGatewayName := plan.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 
+
 	//Verify if the agw already contains the wanted element
 	backend_plan := plan.Backend_address_pool
 
@@ -236,6 +237,12 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	if checkBackendAddressPoolElement(gw, backend_plan.Name.Value) {
 		//remove the old backend from the gateway
 		removeBackendAddressPoolElement(&gw, backend_json.Name)	
+	}
+	//if the backend name in the plan is different to the state, that means its name is modified
+	//so we have to remove the old backend (referenced in the state)
+	if checkBackendAddressPoolElement(gw, state.Backend_address_pool.Name.Value) {
+		//remove the old backend from the gateway
+		removeBackendAddressPoolElement(&gw, state.Backend_address_pool.Name.Value)	
 	}
 
 	//add the new one
