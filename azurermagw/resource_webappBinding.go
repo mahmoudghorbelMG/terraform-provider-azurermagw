@@ -77,6 +77,7 @@ func (r resourceWebappBindingType) NewResource(_ context.Context, p tfsdk.Provid
 
 // Create a new resource
 func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	fmt.Println("\n######################## Create Method ########################")
 	if !r.p.configured {
 		resp.Diagnostics.AddError(
 			"Provider not configured",
@@ -146,6 +147,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 
 // Read resource information
 func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+	fmt.Println("\n######################## Read Method ########################")
+	
 	// Get current state
 	var state WebappBinding
 	diags := req.State.Get(ctx, &state)
@@ -164,7 +167,8 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 
 	var backend_state Backend_address_pool
 	backendAddressPoolName := state.Backend_address_pool.Name.Value
-	//check if the backend address pool exist in the gateway, then it is an error
+	fmt.Printf("\n--------------------- state.Backend_address_pool Content before Read :\n %+v ",state.Backend_address_pool)
+	//check if the backend address pool exist in the gateway, otherwise, it was removed manually
 	if checkBackendAddressPoolElement(gw, backendAddressPoolName) {
 		// in the Read method, the number of fqdns and Ip in a Backendpool should be calculated from the json object and not the plan or state,
 		// because the purpose of the read is to see if there is a difference between the real element and the satate stored localy.
@@ -182,9 +186,10 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		//generate BackendState
 		backend_state = generateBackendAddressPoolState(gw, backendAddressPoolName,nb_Fqdns,nb_IpAddress)
 	}else{
-		//generate an empty Backend_State
+		//generate an empty Backend_State because it was removed manually
 		backend_state = Backend_address_pool{}
 	}
+	fmt.Printf("\n+++++++++++++++++++++ state.Backend_address_pool Content after Read :\n %+v ",backend_state)
 	
 	// Generate resource state struct
 	var result = WebappBinding{
@@ -205,7 +210,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 
 // Update resource
 func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
-
+	fmt.Println("\n######################## Update Method ########################")
 	// Get plan values
 	var plan WebappBinding
 	diags := req.Plan.Get(ctx, &plan)
@@ -253,17 +258,6 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		//remove the old backend (old name) from the gateway
 		removeBackendAddressPoolElement(&gw, state.Backend_address_pool.Name.Value)
 	}
-/*
-	if checkBackendAddressPoolElement(gw, backend_plan.Name.Value) {
-		//remove the old backend from the gateway
-		removeBackendAddressPoolElement(&gw, backend_json.Name)	
-	}
-	//if the backend name in the plan is different to the state, that means its name is modified
-	//so we have to remove the old backend (referenced in the state)
-	if checkBackendAddressPoolElement(gw, state.Backend_address_pool.Name.Value) {
-		//remove the old backend from the gateway
-		removeBackendAddressPoolElement(&gw, state.Backend_address_pool.Name.Value)	
-	}*/
 
 	//add the new one
 	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backend_json)
@@ -315,6 +309,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 
 // Delete resource
 func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+	fmt.Println("\n######################## Delete Method ########################")
 	// Get current state
 	var state WebappBinding
 	diags := req.State.Get(ctx, &state)
@@ -430,13 +425,13 @@ func generateBackendAddressPoolState(gw ApplicationGateway, backendAddressPoolNa
 		Ip_addresses: []types.String{},
 	}
 	
-	fmt.Println("------------------ The number nb_Fqdns is:", nb_Fqdns)
+	//fmt.Println("------------------ The number nb_Fqdns is:", nb_Fqdns)
 	if nb_Fqdns != 0 {
 		backend_state.Fqdns = make([]types.String, nb_Fqdns)
 	} else {
 		backend_state.Fqdns = nil
 	}
-	fmt.Println("------------------ The number nb_IpAddress is:", nb_IpAddress)
+	//fmt.Println("------------------ The number nb_IpAddress is:", nb_IpAddress)
 
 	if nb_IpAddress != 0 {
 		backend_state.Ip_addresses = make([]types.String, nb_IpAddress)
@@ -467,14 +462,14 @@ func checkBackendAddressPoolElement(gw ApplicationGateway, backendAddressPoolNam
 	return exist
 }
 func removeBackendAddressPoolElement(gw *ApplicationGateway, backendAddressPoolName string) {
-	removed := false
+	//removed := false
 	for i := len(gw.Properties.BackendAddressPools) - 1; i >= 0; i-- {
 		if gw.Properties.BackendAddressPools[i].Name == backendAddressPoolName {
 			gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools[:i], gw.Properties.BackendAddressPools[i+1:]...)
-			removed = true
+			//removed = true
 		}
 	}
-	fmt.Println("#############################removed =", removed)
+	//fmt.Println("#############################removed =", removed)
 }
 func getBackendAddressPoolElementKey(gw ApplicationGateway, backendAddressPoolName string) int {
 	key := -1
