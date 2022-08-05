@@ -167,6 +167,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 
 	var backend_state Backend_address_pool
 	backendAddressPoolName := state.Backend_address_pool.Name.Value
+
 	fmt.Printf("\n--------------------- state.Backend_address_pool Content before Read :\n %+v ",state.Backend_address_pool)
 	//check if the backend address pool exist in the gateway, otherwise, it was removed manually
 	if checkBackendAddressPoolElement(gw, backendAddressPoolName) {
@@ -174,6 +175,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		// because the purpose of the read is to see if there is a difference between the real element and the satate stored localy.
 		index := getBackendAddressPoolElementKey(gw, backendAddressPoolName)
 		backend_json := gw.Properties.BackendAddressPools[index]
+		fmt.Printf("\n******************** backend_json Content from gw :\n %+v ",backend_json)
 		nb_BackendAddresses := len(backend_json.Properties.BackendAddresses)
 		nb_Fqdns := 0
 		for i := 0; i < nb_BackendAddresses; i++ {
