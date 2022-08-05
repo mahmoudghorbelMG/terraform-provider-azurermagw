@@ -234,6 +234,26 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//create and map the new Backend pool element (backend_json) object from the plan (backend_plan)
 	backend_json := createBackendAddressPool(backend_plan)
 
+	//check if the backend name in the plan and state are different
+	if backend_plan.Name.Value == state.Backend_address_pool.Name.Value {
+		//it is about backend update with the same name
+		//so we remove the old one 
+		removeBackendAddressPoolElement(&gw, backend_json.Name)
+	}else{
+		// it's about backend update with a new name
+		// we have to check if the new backend name is already used
+		if checkBackendAddressPoolElement(gw, backend_json.Name) {
+			//this is an error. issue an exit error.
+			resp.Diagnostics.AddError(
+				"Unable to update the app gateway. The Backend Adresse pool name : "+ backend_json.Name+" already exists.",
+				" Please, modify the name.",
+			)
+			return
+		}
+		//remove the old backend (old name) from the gateway
+		removeBackendAddressPoolElement(&gw, state.Backend_address_pool.Name.Value)
+	}
+/*
 	if checkBackendAddressPoolElement(gw, backend_plan.Name.Value) {
 		//remove the old backend from the gateway
 		removeBackendAddressPoolElement(&gw, backend_json.Name)	
@@ -243,7 +263,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	if checkBackendAddressPoolElement(gw, state.Backend_address_pool.Name.Value) {
 		//remove the old backend from the gateway
 		removeBackendAddressPoolElement(&gw, state.Backend_address_pool.Name.Value)	
-	}
+	}*/
 
 	//add the new one
 	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backend_json)
