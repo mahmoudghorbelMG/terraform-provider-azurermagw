@@ -10,7 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-
+	
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -112,16 +112,17 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	backend_json := createBackendAddressPool(plan.Backend_address_pool)
 	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backend_json)
 
-	gw_response, responseData, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
-	//if there is an error, responseData contains the error message in jason, else, gw_response is a correct gw Object
-	rs := string(responseData)
-	ress_error, err := PrettyString(rs)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
+	
 	//verify if the backend address pool is added to the gateway, otherwise exit error
-	checkCreatedBackendAddressPool(gw_response, plan.Backend_address_pool, resp, code, ress_error)
+	if code != 200 {
+		// Error  - backend address pool wasn't added to the app gateway
+		resp.Diagnostics.AddError(
+			"Unable to add Backend Address pool ######## API response = "+fmt.Sprint(code)+"\n"+error_json,
+			"Backend Address pool Name doesn't exist in the response of the app gateway",
+		)
+		return
+	}
 	
 	//generate BackendState.
 	nb_Fqdns 		:= len(plan.Backend_address_pool.Fqdns)
@@ -162,12 +163,12 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 
 	var backend_state Backend_address_pool
-	Backend_address_pool_name := state.Backend_address_pool.Name.Value
+	backendAddressPoolName := state.Backend_address_pool.Name.Value
 	//check if the backend address pool exist in the gateway, then it is an error
-	if checkBackendAddressPoolElement(gw, Backend_address_pool_name) {
+	if checkBackendAddressPoolElement(gw, backendAddressPoolName) {
 		// in the Read method, the number of fqdns and Ip in a Backendpool should be calculated from the json object and not the plan or state,
 		// because the purpose of the read is to see if there is a difference between the real element and the satate stored localy.
-		index := getBackendAddressPoolElementKey(gw, Backend_address_pool_name)
+		index := getBackendAddressPoolElementKey(gw, backendAddressPoolName)
 		backend_json := gw.Properties.BackendAddressPools[index]
 		nb_BackendAddresses := len(backend_json.Properties.BackendAddresses)
 		nb_Fqdns := 0
@@ -179,7 +180,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		nb_IpAddress := nb_BackendAddresses - nb_Fqdns
 
 		//generate BackendState
-		backend_state = generateBackendAddressPoolState(gw, Backend_address_pool_name,nb_Fqdns,nb_IpAddress)
+		backend_state = generateBackendAddressPoolState(gw, backendAddressPoolName,nb_Fqdns,nb_IpAddress)
 	}else{
 		//generate an empty Backend_State
 		backend_state = Backend_address_pool{}
@@ -227,8 +228,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 
 	//Verify if the agw already contains the wanted element
-	var backend_plan Backend_address_pool
-	backend_plan = plan.Backend_address_pool
+	backend_plan := plan.Backend_address_pool
 
 	//create and map the new Backend pool element (backend_json) object from the plan (backend_plan)
 	backend_json := createBackendAddressPool(backend_plan)
@@ -241,20 +241,14 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//add the new one
 	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backend_json)
 	//and update the gateway
-	gw_response, responseData, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
+	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 
-	//if there is an error, responseData contains the error message in jason, else, gw_response is a correct gw Object
-	rs := string(responseData)
-	ress_error, err := PrettyString(rs)
-	if err != nil {
-		log.Fatal(err)
-	}
-	//verify if the new backend address pool is added to the gateway
-	if !checkBackendAddressPoolElement(gw_response, backend_json.Name) {
+	//verify if the backend address pool is added to the gateway, otherwise exit error
+	if code != 200 {
 		// Error  - backend address pool wasn't added to the app gateway
 		resp.Diagnostics.AddError(
-			"Unable to create Backend Address pool ######## API response code="+fmt.Sprint(code)+"\n"+ress_error, //+args+ress_gw+"\n"
-			"Backend Address pool Name doesn't exist in the response app gateway",
+			"Unable to update Backend Address pool ######## API response = "+fmt.Sprint(code)+"\n"+error_json,
+			"Backend Address pool Name doesn't exist in the response of the app gateway",
 		)
 		return
 	}
@@ -323,21 +317,13 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	removeBackendAddressPoolElement(&gw, backend_name)
 
 	//and update the gateway
-	_, responseData, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
-	//if there is an error, responseData contains the error message in jason, else, gw_response is a correct gw Object
-	rs := string(responseData)
-	ress_error, err := PrettyString(rs)
-	if err != nil {
-		log.Fatal(err)
-	}
-	resp.Diagnostics.AddWarning("----------------- API code: "+fmt.Sprint(code)+"\n", "ress_error")
-	//exit :=checkBackendAddressPoolElement(gw_response, backend_name)
-	//verify if the backend address pool is added to the gateway
-	if code != 200 { //checkBackendAddressPoolElement(gw_response, backend_name) {
+	_, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
+	//verify if the backend address pool is added to the gateway, otherwise exit error
+	if code != 200 {
 		// Error  - backend address pool wasn't added to the app gateway
 		resp.Diagnostics.AddError(
-			"Unable to delete Backend Address pool ######## API response code="+fmt.Sprint(code)+"\n"+ress_error, //+args+ress_gw+"\n"
-			"Backend Address pool Name still exist in the response app gateway",
+			"Unable to delete Backend Address pool ######## API response = "+fmt.Sprint(code)+"\n"+error_json,
+			"Backend Address pool Name doesn't exist in the response of the app gateway",
 		)
 		return
 	}
@@ -352,80 +338,16 @@ func (r resourceWebappBinding) ImportState(ctx context.Context, req tfsdk.Import
 	//tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("id"), req, resp)
 }
 
-//Client operations
-func getGW(subscriptionId string, resourceGroupName string, applicationGatewayName string, token string) ApplicationGateway {
-	requestURI := "https://management.azure.com/subscriptions/" + subscriptionId + "/resourceGroups/" +
-		resourceGroupName + "/providers/Microsoft.Network/applicationGateways/" + applicationGatewayName + "?api-version=2021-08-01"
-	req, err := http.NewRequest("GET", requestURI, nil)
-	if err != nil {
-		// handle err
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatalf("Call failure: %+v", err)
-	}
-	defer resp.Body.Close()
-	responseData, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var agw ApplicationGateway
-	err = json.Unmarshal(responseData, &agw)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-	return agw
-}
-func updateGW(subscriptionId string, resourceGroupName string, applicationGatewayName string, gw ApplicationGateway, token string) (ApplicationGateway, []byte, int) {
-	requestURI := "https://management.azure.com/subscriptions/" + subscriptionId + "/resourceGroups/" +
-		resourceGroupName + "/providers/Microsoft.Network/applicationGateways/" + applicationGatewayName + "?api-version=2021-08-01"
-	payloadBytes, err := json.Marshal(gw)
-	if err != nil {
-		log.Fatal(err)
-	}
-	body := bytes.NewReader(payloadBytes)
-
-	req, err := http.NewRequest("PUT", requestURI, body)
-	if err != nil {
-		// handle err
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatalf("Call failure: %+v", err)
-	}
-	defer resp.Body.Close()
-	code := resp.StatusCode
-
-	responseData, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	var agw ApplicationGateway
-	err = json.Unmarshal(responseData, &agw)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-	return agw, responseData, code
-}
 func checkElementName(gw ApplicationGateway, plan WebappBinding) (string,bool){
 	//This function allows to check if an element name in the required new configuration (plan WebappBinding) already exist in the gw.
 	//if so, the provider has to stop executing and issue an exit error
 	exist := false
+
 	//Create new var for all configurations
 	backend_plan := plan.Backend_address_pool
-	fmt.Println("OOOOOOOO  looking for =", backend_plan.Name.Value)
 	if checkBackendAddressPoolElement(gw, backend_plan.Name.Value) {
-		fmt.Println("OOOOOOOO  entering the if =", backend_plan.Name.Value)
-		exist = true
-		// Error  - existing backend_plan address pool name must stop execution 
+		exist = true 
 	}
 	return backend_plan.Name.Value,exist
 }
@@ -466,19 +388,9 @@ func createBackendAddressPool(backend_plan Backend_address_pool) BackendAddressP
 	// add the backend to the agw and update the agw
 	return backend_json
 }
-func checkCreatedBackendAddressPool(gw_response ApplicationGateway, backend_plan Backend_address_pool, resp *tfsdk.CreateResourceResponse, code int, ress_error string) {
-	if !checkBackendAddressPoolElement(gw_response, backend_plan.Name.Value) {
-		// Error  - backend address pool wasn't added to the app gateway
-		resp.Diagnostics.AddError(
-			"Unable to create Backend Address pool ######## API response = "+fmt.Sprint(code)+"\n"+ress_error, //+args+ress_gw+"\n"
-			"Backend Address pool Name doesn't exist in the response of the app gateway",
-		)
-		return
-	}
-}
-func generateBackendAddressPoolState(gw ApplicationGateway, Backend_address_pool_name string,nb_Fqdns int,nb_IpAddress int) Backend_address_pool {
+func generateBackendAddressPoolState(gw ApplicationGateway, backendAddressPoolName string,nb_Fqdns int,nb_IpAddress int) Backend_address_pool {
 	// we have to give the nb_Fqdns and nb_IpAddress in order to make this function reusable in create, read and update method
-	index := getBackendAddressPoolElementKey(gw, Backend_address_pool_name)
+	index := getBackendAddressPoolElementKey(gw, backendAddressPoolName)
 	backend_json := gw.Properties.BackendAddressPools[index]
 	// log the added backend address pool
 	//tflog.Trace(ctx, "created BackendAddressPool", "BackendAddressPool ID", backend_json.ID)
@@ -545,6 +457,75 @@ func getBackendAddressPoolElementKey(gw ApplicationGateway, backendAddressPoolNa
 		}
 	}
 	return key
+}
+
+//Client operations
+func getGW(subscriptionId string, resourceGroupName string, applicationGatewayName string, token string) ApplicationGateway {
+	requestURI := "https://management.azure.com/subscriptions/" + subscriptionId + "/resourceGroups/" +
+		resourceGroupName + "/providers/Microsoft.Network/applicationGateways/" + applicationGatewayName + "?api-version=2021-08-01"
+	req, err := http.NewRequest("GET", requestURI, nil)
+	if err != nil {
+		// handle err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatalf("Call failure: %+v", err)
+	}
+	defer resp.Body.Close()
+	responseData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var agw ApplicationGateway
+	err = json.Unmarshal(responseData, &agw)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	return agw
+}
+func updateGW(subscriptionId string, resourceGroupName string, applicationGatewayName string, gw ApplicationGateway, token string) (ApplicationGateway, string, int) {
+	requestURI := "https://management.azure.com/subscriptions/" + subscriptionId + "/resourceGroups/" +
+		resourceGroupName + "/providers/Microsoft.Network/applicationGateways/" + applicationGatewayName + "?api-version=2021-08-01"
+	payloadBytes, err := json.Marshal(gw)
+	if err != nil {
+		log.Fatal(err)
+	}
+	body := bytes.NewReader(payloadBytes)
+
+	req, err := http.NewRequest("PUT", requestURI, body)
+	if err != nil {
+		// handle err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatalf("Call failure: %+v", err)
+	}
+	defer resp.Body.Close()
+	code := resp.StatusCode
+
+	responseData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//if code != 200, the responseData contain a json that describe the error
+	rs := string(responseData)
+	error_json, err := PrettyString(rs)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var agw ApplicationGateway
+	err = json.Unmarshal(responseData, &agw)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return agw, error_json, code
 }
 
 //some debugging tools
