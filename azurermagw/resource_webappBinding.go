@@ -297,12 +297,12 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	}
 	// Get backend address pool name from state
 	backend_name := state.Backend_address_pool.Name.Value
-	resp.Diagnostics.AddWarning("################ Delete Backend Address Pool Name: ", backend_name)
-
+	
 	//Get the agw
 	resourceGroupName := state.Agw_rg.Value
 	applicationGatewayName := state.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
+	/*
 	//test if the backend address pool doen't exist in the gateway, then it is an error
 	if !checkBackendAddressPoolElement(gw, backend_name) {
 		// Error  - the non existance of backend_plan address pool name must stop execution
@@ -311,7 +311,7 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 			"Backend Address pool Name doesn't exist in the app gateway. ### Definitely, it was removed manually###",
 		)
 		return
-	}
+	}*/
 
 	//remove the backend from the gw
 	removeBackendAddressPoolElement(&gw, backend_name)

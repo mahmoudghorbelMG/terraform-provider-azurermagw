@@ -10,23 +10,6 @@ type Token struct {
 	Resource       string `json:"resource"`
 	Access_token   string `json:"access_token"`
 }
-type BackendAddressPool struct {
-	Name       string `json:"name,omitempty"`
-	ID         string `json:"id,omitempty"`
-	Etag       string `json:"etag,omitempty"`
-	Properties struct {
-		ProvisioningState string `json:"provisioningState,omitempty"`
-		BackendAddresses  []struct {
-			Fqdn      string `json:"fqdn,omitempty"`
-			IPAddress string `json:"ipAddress,omitempty"`
-		} `json:"backendAddresses"`
-		RequestRoutingRules []struct {
-			ID string `json:"id,omitempty"`
-		} `json:"requestRoutingRules,omitempty"`
-	} `json:"properties"`
-	Type string `json:"type,omitempty"`
-}
-
 type ApplicationGateway struct {
 	Name     string `json:"name"`
 	ID       string `json:"id"`
@@ -51,22 +34,7 @@ type ApplicationGateway struct {
 			MaxCapacity int `json:"maxCapacity"`
 			MinCapacity int `json:"minCapacity"`
 		} `json:"autoscaleConfiguration"`
-		BackendAddressPools []BackendAddressPool `json:"backendAddressPools,omitempty"` /*[]struct {
-			Name       string `json:"name"`
-			ID         string `json:"id,omitempty"`
-			Etag       string `json:"etag,omitempty"`
-			Properties struct {
-				ProvisioningState string `json:"provisioningState"`
-				BackendAddresses  []struct {
-					Fqdn      string `json:"fqdn,omitempty"`
-					IPAddress string `json:"ipAddress,omitempty"`
-				} `json:"backendAddresses"`
-				RequestRoutingRules []struct {
-					ID string `json:"id"`
-				} `json:"requestRoutingRules"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"backendAddressPools"`	*/
+		BackendAddressPools []BackendAddressPool `json:"backendAddressPools,omitempty"` 
 		BackendHTTPSettingsCollection []struct {
 			Name       string `json:"name"`
 			ID         string `json:"id"`
