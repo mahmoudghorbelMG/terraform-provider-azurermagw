@@ -28,6 +28,16 @@ resource "azurermagw_webappBinding" "citeo-binding" {
     fqdns = ["fqdn.mahmoud"]
     ip_addresses=["10.2.3.3"]
   }
+  backend_http_settings = {
+    name                                = "mahmoud-backendHttpSettings-3"
+    affinity_cookie_name                = "ApplicationGatewayAffinity"
+    cookie_based_affinity               = "Disabled"
+    pick_host_name_from_backend_address = true
+    port                                = 443
+    probe_name                          = "mahmoud-probe-3"
+    protocol                            = "Https"
+    request_timeout                     = 667
+  }
 }
 /*
 resource "azurermagw_webappBinding" "citeo-binding4" {

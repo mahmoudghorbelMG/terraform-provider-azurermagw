@@ -259,6 +259,8 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		//generate an empty backendHTTPSettings_state because it was removed manually
 		backendHTTPSettings_state = Backend_http_settings{}
 	}
+	fmt.Printf("\nHHHHHHHHHHHHHHHHH backendHTTPSettings_state =\n %+v ",backendHTTPSettings_state)
+	
 
 	// Generate resource state struct
 	var result = WebappBinding{
@@ -432,7 +434,7 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	//remove the backend from the gw
 	removeBackendAddressPoolElement(&gw, backendAddressPool_name)
 	removeBackendHTTPSettingsElement(&gw,backendHTTPSettings_name)
-	
+
 	//and update the gateway
 	_, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 	//verify if the API response is 200 (that means, normaly, elements were deleted to the gateway), otherwise exit error
