@@ -18,12 +18,12 @@ import (
 
 
 func main() {
-	probe_string := "/subscriptions/__AZURE_SUBSCRIPTION_ID__/resourceGroups/__rg_name__/providers/Microsoft.Network/applicationGateways/__agw_name__/probes/"
+	/*probe_string := "/subscriptions/__AZURE_SUBSCRIPTION_ID__/resourceGroups/__rg_name__/providers/Microsoft.Network/applicationGateways/__agw_name__/probes/"
 	str := probe_string + "mahmoud-probe"
 	fmt.Println("\n-- probe_string: ",str)
 	splitted_list := strings.Split(str,"/")
 	probe_string1 := splitted_list[len(splitted_list)-1]
-	fmt.Println("\n-- probe_string1: ",probe_string1)
+	fmt.Println("\n-- probe_string1: ",probe_string1)*/
 	
 
 	/*for i := 0; i < 3; i++ {
