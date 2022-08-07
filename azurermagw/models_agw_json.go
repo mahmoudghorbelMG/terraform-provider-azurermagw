@@ -35,42 +35,9 @@ type ApplicationGateway struct {
 			MaxCapacity int `json:"maxCapacity"`
 			MinCapacity int `json:"minCapacity"`
 		} `json:"autoscaleConfiguration"`
-		BackendAddressPools []BackendAddressPool `json:"backendAddressPools,omitempty"` 
-		BackendHTTPSettingsCollection []struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
-			Properties struct {
-				ProvisioningState              string      `json:"provisioningState"`
-				Port                           int         `json:"port"`
-				Protocol                       string      `json:"protocol"`
-				CookieBasedAffinity            string      `json:"cookieBasedAffinity"`
-				PickHostNameFromBackendAddress bool        `json:"pickHostNameFromBackendAddress"`
-				AffinityCookieName             string      `json:"affinityCookieName"`
-				AuthenticationCertificates     *[]struct { ////ajouté
-					ID string `json:"id"`
-				} `json:"authenticationCertificates"`
-				ConnectionDraining *struct { ////ajouté
-					DrainTimeoutInSec int  `json:"drainTimeoutInSec"`
-					Enabled           bool `json:"enabled"`
-				} `json:"connectionDraining"`
-				HostName       string `json:"hostName,omitempty"` ////ajouté
-				Path           string `json:"path"`
-				RequestTimeout int    `json:"requestTimeout"`
-				Probe          *struct {
-					ID string `json:"id"`
-				} `json:"probe"`
-				ProbeEnabled        bool `json:"probeEnabled,omitempty"` ////ajouté
-				RequestRoutingRules *[]struct {
-					ID string `json:"id"`
-				} `json:"requestRoutingRules"`
-				TrustedRootCertificates *[]struct { ////ajouté
-					ID string `json:"id"`
-				} `json:"trustedRootCertificates"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"backendHttpSettingsCollection"`
-		BackendSettingsCollection []struct {
+		BackendAddressPools 			[]BackendAddressPool `json:"backendAddressPools,omitempty"` 
+		BackendHTTPSettingsCollection 	[]BackendHTTPSettings `json:"backendHttpSettingsCollection,omitempty"`
+		BackendSettingsCollection 		[]struct {
 			ID         string `json:"id"`
 			Name       string `json:"name"`
 			Properties struct {

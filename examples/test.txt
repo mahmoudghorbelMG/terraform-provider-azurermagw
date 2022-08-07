@@ -1,0 +1,19 @@
+List of the minimum tests that should be applied when developping new app gateway element:
+
+- new resource creation
+    * normal
+    * with existing name
+- resource deletion
+- parameters modification
+    * addition of some new ones
+    * deletion
+    * delete all
+    * addition from zero conf
+- name modification
+    * normal (non existing new name)
+    * existing name
+- manual parameters modification
+    * addition
+    * deletion
+    * modification of existing one
+- manual resource deletion

@@ -10,7 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -64,6 +64,47 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 					},
 				}),
 			},
+			"backend_http_settings": {
+				Required: true,
+				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+					"name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"id": {
+						Type:     types.StringType,
+						Computed: true,
+					},
+					"affinity_cookie_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"cookie_based_affinity": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"pick_host_name_from_backend_address": {
+						Type:     types.BoolType,
+						Optional: true,
+					},
+					"port": {
+						Type:     types.Int64Type,
+						Required: true,
+					},
+					"protocol": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"request_timeout": {
+						Type:     types.Int64Type,
+						Required: true,
+					},
+					"probe_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+				}),
+			},
 		},
 	}, nil
 }
@@ -81,7 +122,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	if !r.p.configured {
 		resp.Diagnostics.AddError(
 			"Provider not configured",
-			"The provider hasn't been configured before apply, likely because it depends on an unknown value from another resource. This leads to weird stuff happening, so we'd prefer if you didn't do that. Thanks!",
+			"The provider hasn't been configured before apply, likely because it depends on an unknown value from another resource."+
+			"This leads to weird stuff happening, so we'd prefer if you didn't do that. Thanks!",
 		)
 		return
 	}
@@ -99,43 +141,58 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	applicationGatewayName := plan.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 
-	//Check if the agw already contains an element that has the same name
+	//Check if the agw already contains an existing element that has the same name of a new element to add
 	exist_element, exist := checkElementName(gw, plan)
 	if exist {
 		resp.Diagnostics.AddError(
-			"Unable to create binding. At least, those elements : "+ exist_element,
-			"Already exists in the app gateway. Please, modify the element name.",
+			"Unable to create binding. At least, those elements : "+ fmt.Sprint(exist_element),
+			"Already exists in the app gateway. Please, modify their names.",
 		)
 		return
 	}
 
-	//create and map the new Backend pool element (backend_json) object from the plan (backend_plan)
-	backend_json := createBackendAddressPool(plan.Backend_address_pool)
-	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backend_json)
+	//create, map and add the new elements (json) object from the plan (plan) to the agw object
+	gw.Properties.BackendAddressPools = append(
+		gw.Properties.BackendAddressPools, createBackendAddressPool(
+			plan.Backend_address_pool))
+	gw.Properties.BackendHTTPSettingsCollection = append(
+		gw.Properties.BackendHTTPSettingsCollection, createBackendHTTPSettings(
+			plan.Backend_http_settings,
+			r.p.AZURE_SUBSCRIPTION_ID,
+			resourceGroupName,
+			applicationGatewayName))
 
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 	
-	//verify if the backend address pool is added to the gateway, otherwise exit error
+	//verify if the API response is 200 (that means, normaly, elements were added to the gateway), otherwise exit error
 	if code != 200 {
 		// Error  - backend address pool wasn't added to the app gateway
 		resp.Diagnostics.AddError(
-			"Unable to add Backend Address pool ######## API response = "+fmt.Sprint(code)+"\n"+error_json,
-			"Backend Address pool Name doesn't exist in the response of the app gateway",
+			"Unable to create the resource. ######## API response = "+fmt.Sprint(code)+"\n"+error_json,
+			"Check the API response",
 		)
 		return
 	}
 	
-	//generate BackendState.
+	//generate the States.
 	nb_Fqdns 		:= len(plan.Backend_address_pool.Fqdns)
 	nb_IpAddress	:= len(plan.Backend_address_pool.Ip_addresses)
-	backend_state := generateBackendAddressPoolState(gw_response, plan.Backend_address_pool.Name.Value,nb_Fqdns,nb_IpAddress)
+	backendAddressPool_state 	:= generateBackendAddressPoolState(
+		gw_response, 
+		plan.Backend_address_pool.Name.Value,
+		nb_Fqdns,
+		nb_IpAddress)
+	backendHTTPSettings_state 	:= generateBackendHTTPSettingsState(
+		gw_response,
+		plan.Backend_http_settings.Name.Value)
 
 	// Generate resource state struct
 	var result = WebappBinding{
-		Name:                 plan.Name,
-		Agw_name:             types.String{Value: gw_response.Name},
-		Agw_rg:               plan.Agw_rg,
-		Backend_address_pool: backend_state,
+		Name					: plan.Name,
+		Agw_name				: types.String{Value: gw_response.Name},
+		Agw_rg					: plan.Agw_rg,
+		Backend_address_pool	: backendAddressPool_state,
+		Backend_http_settings	: backendHTTPSettings_state,
 	}
 	//store to the created objecy to the terraform state
 	diags = resp.State.Set(ctx, result)
@@ -165,40 +222,51 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	applicationGatewayName := state.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 
-	var backend_state Backend_address_pool
+	// *********** Processing backend address pool *********** //
+	var backendAddressPool_state Backend_address_pool
 	backendAddressPoolName := state.Backend_address_pool.Name.Value
-
-	fmt.Printf("\n--------------------- state.Backend_address_pool Content before Read :\n %+v ",state.Backend_address_pool)
 	//check if the backend address pool exist in the gateway, otherwise, it was removed manually
 	if checkBackendAddressPoolElement(gw, backendAddressPoolName) {
 		// in the Read method, the number of fqdns and Ip in a Backendpool should be calculated from the json object and not the plan or state,
 		// because the purpose of the read is to see if there is a difference between the real element and the satate stored localy.
 		index := getBackendAddressPoolElementKey(gw, backendAddressPoolName)
-		backend_json := gw.Properties.BackendAddressPools[index]
-		fmt.Printf("\n******************** backend_json Content from gw :\n %+v ",backend_json)
-		nb_BackendAddresses := len(backend_json.Properties.BackendAddresses)
+		backendAddressPool_json := gw.Properties.BackendAddressPools[index]
+		nb_BackendAddresses := len(backendAddressPool_json.Properties.BackendAddresses)
 		nb_Fqdns := 0
 		for i := 0; i < nb_BackendAddresses; i++ {
-			if (backend_json.Properties.BackendAddresses[i].Fqdn != "") && (&backend_json.Properties.BackendAddresses[i].Fqdn != nil) {
+			if 	(backendAddressPool_json.Properties.BackendAddresses[i].Fqdn != "") && 
+				(&backendAddressPool_json.Properties.BackendAddresses[i].Fqdn != nil) {
 				nb_Fqdns++
 			}
 		}
 		nb_IpAddress := nb_BackendAddresses - nb_Fqdns
 
 		//generate BackendState
-		backend_state = generateBackendAddressPoolState(gw, backendAddressPoolName,nb_Fqdns,nb_IpAddress)
+		backendAddressPool_state = generateBackendAddressPoolState(gw, backendAddressPoolName,nb_Fqdns,nb_IpAddress)
 	}else{
-		//generate an empty Backend_State because it was removed manually
-		backend_state = Backend_address_pool{}
+		//generate an empty backendAddressPool_state because it was removed manually
+		backendAddressPool_state = Backend_address_pool{}
 	}
-	fmt.Printf("\n+++++++++++++++++++++ state.Backend_address_pool Content after Read :\n %+v ",backend_state)
 	
+	// *********** Processing backend http settings *********** //
+	var backendHTTPSettings_state Backend_http_settings
+	backendHTTPSettingsName := state.Backend_http_settings.Name.Value
+	//check if the backend http settings exists in the gateway, otherwise, it was removed manually
+	if checkBackendHTTPSettingsElement(gw, backendHTTPSettingsName) {
+		//generate BackendState
+		backendHTTPSettings_state = generateBackendHTTPSettingsState(gw, backendHTTPSettingsName)
+	}else{
+		//generate an empty backendHTTPSettings_state because it was removed manually
+		backendHTTPSettings_state = Backend_http_settings{}
+	}
+
 	// Generate resource state struct
 	var result = WebappBinding{
-		Name:                 types.String{Value: webappBindingName},
-		Agw_name:             state.Agw_name,
-		Agw_rg:               state.Agw_rg,
-		Backend_address_pool: backend_state,
+		Name					: types.String{Value: webappBindingName},
+		Agw_name				: state.Agw_name,
+		Agw_rg					: state.Agw_rg,
+		Backend_address_pool	: backendAddressPool_state,
+		Backend_http_settings	: backendHTTPSettings_state,
 	}
 
 	state = result
@@ -234,25 +302,32 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	applicationGatewayName := plan.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 
+	//preparing the new elements (json) from the plan
+	//create and map the new Backend pool element (backendAddressPool_json) object from the plan (backendAddressPool_plan)
+	backendAddressPool_plan := plan.Backend_address_pool
+	backendAddressPool_json := createBackendAddressPool(backendAddressPool_plan)
+	backendHTTPSettings_plan := plan.Backend_http_settings
+	backendHTTPSettings_json := createBackendHTTPSettings(
+		backendHTTPSettings_plan,r.p.AZURE_SUBSCRIPTION_ID,
+		resourceGroupName,applicationGatewayName)
 
-	//Verify if the agw already contains the wanted element
-	backend_plan := plan.Backend_address_pool
-
-	//create and map the new Backend pool element (backend_json) object from the plan (backend_plan)
-	backend_json := createBackendAddressPool(backend_plan)
-
-	//check if the backend name in the plan and state are different
-	if backend_plan.Name.Value == state.Backend_address_pool.Name.Value {
-		//it is about backend update with the same name
-		//so we remove the old one 
-		removeBackendAddressPoolElement(&gw, backend_json.Name)
+	//Verify if the agw already contains the elements to be updated.
+	//the older ones should be removed before updating. 
+	//we have also to prevent element name updating and manual deletion
+	
+	// *********** Processing backend address pool *********** //	
+	//check if the backend name in the plan and state are different, that means that the
+	if backendAddressPool_plan.Name.Value == state.Backend_address_pool.Name.Value {
+		//it is about backend AddressPool update  with the same name
+		//so we remove the old one before adding the new one.
+		removeBackendAddressPoolElement(&gw, backendAddressPool_json.Name)
 	}else{
 		// it's about backend update with a new name
 		// we have to check if the new backend name is already used
-		if checkBackendAddressPoolElement(gw, backend_json.Name) {
+		if checkBackendAddressPoolElement(gw, backendAddressPool_json.Name) {
 			//this is an error. issue an exit error.
 			resp.Diagnostics.AddError(
-				"Unable to update the app gateway. The Backend Adresse pool name : "+ backend_json.Name+" already exists.",
+				"Unable to update the app gateway. The Backend Adresse pool name : "+ backendAddressPool_json.Name+" already exists.",
 				" Please, modify the name.",
 			)
 			return
@@ -261,45 +336,71 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		removeBackendAddressPoolElement(&gw, state.Backend_address_pool.Name.Value)
 	}
 
-	//add the new one
-	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backend_json)
+	// *********** Processing backend http settings *********** //	
+	//check if the backend name in the plan and state are different, that means that the
+	if backendHTTPSettings_plan.Name.Value == state.Backend_http_settings.Name.Value {
+		//it is about backend http settings update  with the same name
+		//so we remove the old one before adding the new one.
+		removeBackendHTTPSettingsElement(&gw, backendHTTPSettings_json.Name)
+	}else{
+		// it's about backend http settings update with a new name
+		// we have to check if the new backend http settings name is already used
+		if checkBackendHTTPSettingsElement(gw, backendHTTPSettings_json.Name) {
+			//this is an error. issue an exit error.
+			resp.Diagnostics.AddError(
+				"Unable to update the app gateway. The Backend Adresse pool name : "+ backendHTTPSettings_json.Name+" already exists.",
+				" Please, modify the name.",
+			)
+			return
+		}
+		//remove the old backend http settings (old name) from the gateway
+		removeBackendHTTPSettingsElement(&gw, state.Backend_http_settings.Name.Value)
+	}
+
+	//add the new elements
+	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backendAddressPool_json)
+	gw.Properties.BackendHTTPSettingsCollection = append(gw.Properties.BackendHTTPSettingsCollection, backendHTTPSettings_json)
+	
 	//and update the gateway
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 
-	//verify if the backend address pool is added to the gateway, otherwise exit error
+	//verify if the API response is 200 (that means, normaly, elements were added to the gateway), otherwise exit error
 	if code != 200 {
-		// Error  - backend address pool wasn't added to the app gateway
+		// Error  - when adding new elements to the app gateway
 		resp.Diagnostics.AddError(
-			"Unable to update Backend Address pool ######## API response = "+fmt.Sprint(code)+"\n"+error_json,
-			"Backend Address pool Name doesn't exist in the response of the app gateway",
+			"Unable to update the resource. ######## API response = "+fmt.Sprint(code)+"\n"+error_json,
+			"Check the API response",
 		)
 		return
 	}
 
-	var backend_state Backend_address_pool	
+	// Generate new states 
+	
 	// in the Read method, the number of fqdns and Ip in a Backendpool should be calculated from the json object and not the plan or state,
 	// because the purpose of the read is to see if there is a difference between the real element and the satate stored localy.
-		
-	index := getBackendAddressPoolElementKey(gw, backend_json.Name)
-	backend_json2 := gw.Properties.BackendAddressPools[index]
-	nb_BackendAddresses := len(backend_json2.Properties.BackendAddresses)
+	/*********** Special for Backend Address Pool ********************/
+	index := getBackendAddressPoolElementKey(gw, backendAddressPool_json.Name)
+	backendAddressPool_json2 := gw.Properties.BackendAddressPools[index]
+	nb_BackendAddresses := len(backendAddressPool_json2.Properties.BackendAddresses)
 	nb_Fqdns := 0
 	for i := 0; i < nb_BackendAddresses; i++ {
-		if (backend_json2.Properties.BackendAddresses[i].Fqdn != "") && (&backend_json2.Properties.BackendAddresses[i].Fqdn != nil) {
+		if (backendAddressPool_json2.Properties.BackendAddresses[i].Fqdn != "") && (&backendAddressPool_json2.Properties.BackendAddresses[i].Fqdn != nil) {
 			nb_Fqdns++
 		} 
 	}
 	nb_IpAddress := nb_BackendAddresses - nb_Fqdns
-
-	//generate BackendState
-	backend_state = generateBackendAddressPoolState(gw_response, backend_json.Name,nb_Fqdns,nb_IpAddress)
+	/*****************************************************************/
 	
+	backendAddressPool_state	:= generateBackendAddressPoolState(gw_response, backendAddressPool_json.Name,nb_Fqdns,nb_IpAddress)
+	backendHTTPSettings_state	:= generateBackendHTTPSettingsState(gw_response,backendHTTPSettings_json.Name)
+
 	// Generate resource state struct
 	var result = WebappBinding{
-		Name:                 state.Name,
-		Agw_name:             types.String{Value: gw_response.Name},
-		Agw_rg:               state.Agw_rg,
-		Backend_address_pool: backend_state,
+		Name					: state.Name,
+		Agw_name				: types.String{Value: gw_response.Name},
+		Agw_rg					: state.Agw_rg,
+		Backend_address_pool	: backendAddressPool_state,
+		Backend_http_settings	: backendHTTPSettings_state,
 	}
 	//store to the created objecy to the terraform state
 	diags = resp.State.Set(ctx, result)
@@ -319,35 +420,27 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	// Get backend address pool name from state
-	backend_name := state.Backend_address_pool.Name.Value
+	// Get elements names from state
+	backendAddressPool_name := state.Backend_address_pool.Name.Value
+	backendHTTPSettings_name := state.Backend_http_settings.Name.Value
 	
 	//Get the agw
 	resourceGroupName := state.Agw_rg.Value
 	applicationGatewayName := state.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
-	/*
-	//test if the backend address pool doen't exist in the gateway, then it is an error
-	if !checkBackendAddressPoolElement(gw, backend_name) {
-		// Error  - the non existance of backend_plan address pool name must stop execution
-		resp.Diagnostics.AddError(
-			"Unable to delete Backend Address pool",
-			"Backend Address pool Name doesn't exist in the app gateway. ### Definitely, it was removed manually###",
-		)
-		return
-	}*/
-
+	
 	//remove the backend from the gw
-	removeBackendAddressPoolElement(&gw, backend_name)
-
+	removeBackendAddressPoolElement(&gw, backendAddressPool_name)
+	removeBackendHTTPSettingsElement(&gw,backendHTTPSettings_name)
+	
 	//and update the gateway
 	_, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
-	//verify if the backend address pool is added to the gateway, otherwise exit error
+	//verify if the API response is 200 (that means, normaly, elements were deleted to the gateway), otherwise exit error
 	if code != 200 {
-		// Error  - backend address pool wasn't added to the app gateway
+		// Error  - when deleting new elements to the app gateway
 		resp.Diagnostics.AddError(
-			"Unable to delete Backend Address pool ######## API response = "+fmt.Sprint(code)+"\n"+error_json,
-			"Backend Address pool Name doesn't exist in the response of the app gateway",
+			"Unable to delete the resource. ######## API response = "+fmt.Sprint(code)+"\n"+error_json,
+			"Check the API response",
 		)
 		return
 	}
@@ -363,17 +456,18 @@ func (r resourceWebappBinding) ImportState(ctx context.Context, req tfsdk.Import
 }
 
 
-func checkElementName(gw ApplicationGateway, plan WebappBinding) (string,bool){
+func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool){
 	//This function allows to check if an element name in the required new configuration (plan WebappBinding) already exist in the gw.
 	//if so, the provider has to stop executing and issue an exit error
 	exist := false
-
+	var existing_element_list [] string
 	//Create new var for all configurations
-	backend_plan := plan.Backend_address_pool
+	backend_plan := plan.Backend_address_pool 
 	if checkBackendAddressPoolElement(gw, backend_plan.Name.Value) {
 		exist = true 
+		existing_element_list = append(existing_element_list,"\n	- "+backend_plan.Name.Value)
 	}
-	return backend_plan.Name.Value,exist
+	return existing_element_list,exist
 }
 
 //Client operations
