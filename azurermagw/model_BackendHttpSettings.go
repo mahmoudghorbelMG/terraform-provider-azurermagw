@@ -105,11 +105,18 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,AZURE_SUBSCRIP
 	//the probe name should trated specifically to construct the ID
 	probe_string := "/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+"/providers/Microsoft.Network/applicationGateways/"+agw_name+"/probes/"
 	//backend_json.Properties.Probe.ID = probe_string + backend_plan.Probe_name.Value
-	backend_json.Properties.Probe = &struct{
-		ID string "json:\"id,omitempty\""
-	}{
-		ID: probe_string + backend_plan.Probe_name.Value,
-	}	
+	
+	// if there is à probe, then copy it, else, nil
+	if backend_plan.Probe_name.Value != "" {
+		backend_json.Properties.Probe = &struct{
+			ID string "json:\"id,omitempty\""
+		}{
+			ID: probe_string + backend_plan.Probe_name.Value,
+		}
+	}else{
+		//backend_json.Properties.Probe = 
+	}
+		
 	fmt.Printf("\nHHHHHHHHHHHHHH  backend_json.Properties.Probe =\n %+v ",backend_json.Properties.Probe)
 	
 	// add the backend to the agw and update the agw
