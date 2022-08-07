@@ -158,7 +158,7 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 	if (&backend_json.Properties.PickHostNameFromBackendAddress != nil){
 		backend_state.Pick_host_name_from_backend_address = types.Bool {Value: bool(backend_json.Properties.PickHostNameFromBackendAddress)}
 	}else{
-		backend_state.Pick_host_name_from_backend_address = types.Bool {Value: false}
+		//backend_state.Pick_host_name_from_backend_address = types.Bool {Value: false}
 	}
 
 	fmt.Printf("\n--------------------- BackendHTTPSettings state createBackendHTTPSettings() =\n %+v ",backend_state)
