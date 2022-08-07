@@ -134,22 +134,33 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 	backend_state = Backend_http_settings{
 		Name:                                types.String	{Value: backend_json.Name},
 		Id:                                  types.String	{Value: backend_json.ID},
-		Affinity_cookie_name:                types.String	{Value: backend_json.Properties.AffinityCookieName},
+		Affinity_cookie_name:                types.String	{},
 		Cookie_based_affinity:               types.String	{Value: backend_json.Properties.CookieBasedAffinity},
-		Pick_host_name_from_backend_address: types.Bool		{Value: bool(backend_json.Properties.PickHostNameFromBackendAddress)},
+		Pick_host_name_from_backend_address: types.Bool		{},
 		Port:                                types.Int64	{Value: int64(backend_json.Properties.Port)},
 		Protocol:                            types.String	{Value: backend_json.Properties.Protocol},
 		Request_timeout:                     types.Int64	{Value: int64(backend_json.Properties.RequestTimeout)},
 		Probe_name:                          types.String	{},
 	}
-
+	//verify if optional parameters are provided, otherwise, they have to set to null
 	if backend_json.Properties.Probe != nil {
 		splitted_list := strings.Split(backend_json.Properties.Probe.ID,"/")
 		backend_state.Probe_name = types.String{Value: splitted_list[len(splitted_list)-1]}
 	}else{
 		backend_state.Probe_name = types.String{Null: true}
+	}	
+	if (backend_json.Properties.AffinityCookieName != "")&&
+		(&backend_json.Properties.AffinityCookieName != nil) {
+		backend_state.Affinity_cookie_name = types.String {Value: backend_json.Properties.AffinityCookieName}
+	}else{
+		backend_state.Affinity_cookie_name = types.String{Null: true}
 	}
-	
+	if (&backend_json.Properties.PickHostNameFromBackendAddress != nil){
+		backend_state.Pick_host_name_from_backend_address = types.Bool {Value: bool(backend_json.Properties.PickHostNameFromBackendAddress)}
+	}else{
+		backend_state.Pick_host_name_from_backend_address = types.Bool {Null: true}
+	}
+
 	fmt.Printf("\n--------------------- BackendHTTPSettings state createBackendHTTPSettings() =\n %+v ",backend_state)
 	
 	return backend_state
