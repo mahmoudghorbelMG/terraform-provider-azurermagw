@@ -464,10 +464,16 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool)
 	exist := false
 	var existing_element_list [] string
 	//Create new var for all configurations
-	backend_plan := plan.Backend_address_pool 
-	if checkBackendAddressPoolElement(gw, backend_plan.Name.Value) {
+	backendAddressPool_plan := plan.Backend_address_pool 
+	backendHTTPSettings_plan := plan.Backend_http_settings
+	
+	if checkBackendAddressPoolElement(gw, backendAddressPool_plan.Name.Value) {
 		exist = true 
-		existing_element_list = append(existing_element_list,"\n	- "+backend_plan.Name.Value)
+		existing_element_list = append(existing_element_list,"\n	- "+backendAddressPool_plan.Name.Value)
+	}
+	if checkBackendHTTPSettingsElement(gw, backendHTTPSettings_plan.Name.Value) {
+		exist = true 
+		existing_element_list = append(existing_element_list,"\n	- "+backendHTTPSettings_plan.Name.Value)
 	}
 	return existing_element_list,exist
 }
