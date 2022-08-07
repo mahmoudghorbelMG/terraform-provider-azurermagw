@@ -129,8 +129,12 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 	
 	// Map response body to resource schema attribute
 	//split the probe ID using the separator "/". the probe name is the last one
-	splitted_list := strings.Split(backend_json.Properties.Probe.ID,"/")
-	probe_string := splitted_list[len(splitted_list)-1]
+	var probe_string string
+	if backend_json.Properties.Probe != nil {
+		splitted_list := strings.Split(backend_json.Properties.Probe.ID,"/")
+		probe_string = splitted_list[len(splitted_list)-1]
+	
+	}
 	backend_state := Backend_http_settings{
 		Name:                                types.String	{Value: backend_json.Name},
 		Id:                                  types.String	{Value: backend_json.ID},
