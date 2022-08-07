@@ -147,7 +147,7 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 		splitted_list := strings.Split(backend_json.Properties.Probe.ID,"/")
 		backend_state.Probe_name = types.String{Value: splitted_list[len(splitted_list)-1]}
 	}else{
-		
+		backend_state.Probe_name = types.String{Null: true}
 	}
 	
 	fmt.Printf("\n--------------------- BackendHTTPSettings state createBackendHTTPSettings() =\n %+v ",backend_state)
