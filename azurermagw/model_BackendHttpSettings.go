@@ -94,14 +94,21 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,AZURE_SUBSCRIP
 			}{	//initialisation of the Properties Struct
 				AffinityCookieName: 			backend_plan.Affinity_cookie_name.Value,
 				CookieBasedAffinity:			backend_plan.Cookie_based_affinity.Value,
-				PickHostNameFromBackendAddress: bool(backend_plan.Pick_host_name_from_backend_address.Value),
+				//PickHostNameFromBackendAddress: bool(backend_plan.Pick_host_name_from_backend_address.Value),
 				Port: 							int(backend_plan.Port.Value),
 				Protocol: 						backend_plan.Protocol.Value,
 				RequestTimeout: 				int(backend_plan.Request_timeout.Value),
 			},
 		Type: "Microsoft.Network/applicationGateways/backendHttpSettingsCollection",
 	}
-	//only the probe construct remains
+
+	//Two params remain: the probe_name and Pick_host_name_from_backend_address. they require a specific processing
+	//if Pick_host_name_from_backend_address doesn't exist in the plan, then its default value is "false"
+	if backend_plan.Pick_host_name_from_backend_address.Null == true {
+		backend_json.Properties.PickHostNameFromBackendAddress = false
+	}else{
+		backend_json.Properties.PickHostNameFromBackendAddress = bool(backend_plan.Pick_host_name_from_backend_address.Value)
+	}
 	//the probe name should trated specifically to construct the ID
 	probe_string := "/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+"/providers/Microsoft.Network/applicationGateways/"+agw_name+"/probes/"
 	//backend_json.Properties.Probe.ID = probe_string + backend_plan.Probe_name.Value
@@ -135,7 +142,7 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 		Id:                                  types.String	{Value: backend_json.ID},
 		Affinity_cookie_name:                types.String	{},
 		Cookie_based_affinity:               types.String	{Value: backend_json.Properties.CookieBasedAffinity},
-		Pick_host_name_from_backend_address: types.Bool		{},
+		Pick_host_name_from_backend_address: types.Bool		{Value: backend_json.Properties.PickHostNameFromBackendAddress},
 		Port:                                types.Int64	{Value: int64(backend_json.Properties.Port)},
 		Protocol:                            types.String	{Value: backend_json.Properties.Protocol},
 		Request_timeout:                     types.Int64	{Value: int64(backend_json.Properties.RequestTimeout)},
@@ -154,11 +161,12 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 	}else{
 		backend_state.Affinity_cookie_name = types.String{Null: true}
 	}
+	/*
 	if backend_json.Properties.PickHostNameFromBackendAddress {
 		backend_state.Pick_host_name_from_backend_address = types.Bool {Value: true}
 	}else{
 		backend_state.Pick_host_name_from_backend_address = types.Bool {Value: false}
-	}
+	}*/
 
 	fmt.Printf("\n--------------------- BackendHTTPSettings state createBackendHTTPSettings() =\n %+v ",backend_state)
 	
