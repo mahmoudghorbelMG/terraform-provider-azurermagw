@@ -120,7 +120,7 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,AZURE_SUBSCRIP
 	if !backend_plan.Affinity_cookie_name.Null {
 		backend_json.Properties.AffinityCookieName = backend_plan.Affinity_cookie_name.Value
 	}else{
-		//backend_json.Properties.AffinityCookieName = ""
+		backend_json.Properties.AffinityCookieName = ""
 	}		
 	fmt.Printf("\nHHHHHHHHHHHHHH  backend_json.Properties.Probe =\n %+v ",backend_json.Properties.Probe)
 	
@@ -158,7 +158,7 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 		(&backend_json.Properties.AffinityCookieName != nil) {
 		backend_state.Affinity_cookie_name = types.String {Value: backend_json.Properties.AffinityCookieName}
 	}else{
-		//backend_state.Affinity_cookie_name = types.String{Unknown: true}
+		backend_state.Affinity_cookie_name = types.String{Value: ""}
 	}
 
 	fmt.Printf("\n--------------------- BackendHTTPSettings state createBackendHTTPSettings() =\n %+v ",backend_state)
