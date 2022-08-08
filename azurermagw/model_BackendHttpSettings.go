@@ -94,6 +94,7 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,AZURE_SUBSCRIP
 			} "json:\"trustedRootCertificates\""
 			}{	//initialisation of the Properties Struct
 				CookieBasedAffinity:			backend_plan.Cookie_based_affinity.Value,
+				AffinityCookieName:				backend_plan.Affinity_cookie_name.Value,
 				//if PickHostNameFromBackendAddress attribute become optional with false default value, this line should be replaced
 				PickHostNameFromBackendAddress: bool(backend_plan.Pick_host_name_from_backend_address.Value),
 				Port: 							int(backend_plan.Port.Value),
@@ -117,12 +118,12 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,AZURE_SUBSCRIP
 		//backend_json.Properties.Probe = 
 	}
 
-	//AffinityCookieName: 			backend_plan.Affinity_cookie_name.Value,
+	/*
 	if !backend_plan.Affinity_cookie_name.Null {
 		backend_json.Properties.AffinityCookieName = backend_plan.Affinity_cookie_name.Value
 	}else{
 		backend_json.Properties.AffinityCookieName = ""
-	}		
+	}	*/	
 	fmt.Printf("\nHHHHHHHHHHHHHH  backend_json =\n %+v ",backend_json)
 	
 	// add the backend to the agw and update the agw
