@@ -59,6 +59,7 @@ type Backend_http_settings struct {
 }
 
 func createBackendHTTPSettings(backend_plan Backend_http_settings,AZURE_SUBSCRIPTION_ID string, rg_name string, agw_name string) BackendHTTPSettings{
+	fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  backend_plan =\n %+v ",backend_plan)
 	backend_json := BackendHTTPSettings{
 		Name:       backend_plan.Name.Value,
 		//ID:         "",
@@ -122,7 +123,7 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,AZURE_SUBSCRIP
 	}else{
 		backend_json.Properties.AffinityCookieName = ""
 	}		
-	fmt.Printf("\nHHHHHHHHHHHHHH  backend_json.Properties.Probe =\n %+v ",backend_json.Properties.Probe)
+	fmt.Printf("\nHHHHHHHHHHHHHH  backend_json =\n %+v ",backend_json)
 	
 	// add the backend to the agw and update the agw
 	return backend_json
