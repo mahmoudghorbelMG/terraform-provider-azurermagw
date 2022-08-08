@@ -75,6 +75,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 						Type:     types.StringType,
 						Computed: true,
 					},
+					//the affinity has a default value if it's not provided: "ApplicationGatewayAffinity"
 					"affinity_cookie_name": {
 						Type:     types.StringType,
 						Optional: true,
@@ -90,8 +91,9 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 						//this params should be optional but whith default value (false)
 						//to implment this, it requires additional effort. Actually, it is easier for me
 						//to make it Required :)
-						Required: true,
-						//Default: false,
+						Optional: true,
+						Computed: true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{boolDefault(false)},
 					},
 					"port": {
 						Type:     types.Int64Type,
@@ -115,8 +117,12 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 	}, nil
 }
 func stringDefault(defaultValue string) stringDefaultModifier {
-	//fmt.Printf("\nXXXXXXXXXXXXXXXXXXXXXXXX  entering (function stringDefault) default value of affinity_cookie_name =\n %+v ",defaultValue)	
-    return stringDefaultModifier{
+	return stringDefaultModifier{
+        Default: defaultValue,
+    }
+}
+func boolDefault(defaultValue bool) boolDefaultModifier {
+	return boolDefaultModifier{
         Default: defaultValue,
     }
 }
