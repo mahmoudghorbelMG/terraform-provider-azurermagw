@@ -158,7 +158,7 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 		(&backend_json.Properties.AffinityCookieName != nil) {
 		backend_state.Affinity_cookie_name = types.String {Value: backend_json.Properties.AffinityCookieName}
 	}else{
-		//backend_state.Affinity_cookie_name = types.String{Value: ""}
+		backend_state.Affinity_cookie_name = types.String{Unknown: true}
 	}
 
 	fmt.Printf("\n--------------------- BackendHTTPSettings state createBackendHTTPSettings() =\n %+v ",backend_state)
