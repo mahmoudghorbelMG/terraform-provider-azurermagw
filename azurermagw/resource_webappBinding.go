@@ -78,6 +78,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 					"affinity_cookie_name": {
 						Type:     types.StringType,
 						Optional: true,
+						Computed: true,
 					},
 					"cookie_based_affinity": {
 						Type:     types.StringType,
