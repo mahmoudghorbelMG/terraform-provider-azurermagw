@@ -140,7 +140,7 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 	backend_state = Backend_http_settings{
 		Name:                                types.String	{Value: backend_json.Name},
 		Id:                                  types.String	{Value: backend_json.ID},
-		Affinity_cookie_name:                types.String	{},
+		Affinity_cookie_name:                types.String	{Value: backend_json.Properties.AffinityCookieName},
 		Cookie_based_affinity:               types.String	{Value: backend_json.Properties.CookieBasedAffinity},
 		Pick_host_name_from_backend_address: types.Bool		{Value: backend_json.Properties.PickHostNameFromBackendAddress},
 		Port:                                types.Int64	{Value: int64(backend_json.Properties.Port)},
@@ -154,13 +154,13 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 		backend_state.Probe_name = types.String{Value: splitted_list[len(splitted_list)-1]}
 	}else{
 		backend_state.Probe_name = types.String{Null: true}
-	}	
+	}	/*
 	if (backend_json.Properties.AffinityCookieName != "")&&
 		(&backend_json.Properties.AffinityCookieName != nil) {
 		backend_state.Affinity_cookie_name = types.String {Value: backend_json.Properties.AffinityCookieName}
 	}else{
 		backend_state.Affinity_cookie_name = types.String{Value: ""}
-	}
+	}*/
 
 	fmt.Printf("\nqqqqqqqqqqqqqqqqq BackendHTTPSettings state createBackendHTTPSettings() =\n %+v ",backend_state)
 	

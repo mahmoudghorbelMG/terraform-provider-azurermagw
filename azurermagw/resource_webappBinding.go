@@ -79,7 +79,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 						Type:     types.StringType,
 						Optional: true,
 						Computed: true,
-						PlanModifiers: tfsdk.AttributePlanModifiers{stringDefault("")},
+						PlanModifiers: tfsdk.AttributePlanModifiers{stringDefault("ApplicationGatewayAffinity")},
 					},
 					"cookie_based_affinity": {
 						Type:     types.StringType,
