@@ -115,7 +115,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 	}, nil
 }
 func stringDefault(defaultValue string) stringDefaultModifier {
-	fmt.Printf("\nXXXXXXXXXXXXXXXXXXXXXXXX  entering default value of affinity_cookie_name =\n %+v ",defaultValue)	
+	fmt.Printf("\nXXXXXXXXXXXXXXXXXXXXXXXX  entering (function stringDefault) default value of affinity_cookie_name =\n %+v ",defaultValue)	
     return stringDefaultModifier{
         Default: defaultValue,
     }
