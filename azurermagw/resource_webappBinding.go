@@ -270,7 +270,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		//generate an empty backendHTTPSettings_state because it was removed manually
 		backendHTTPSettings_state = Backend_http_settings{}
 	}
-	fmt.Printf("\nHHHHHHHHHHHHHHHHH backendHTTPSettings_state =\n %+v ",backendHTTPSettings_state)
+	//fmt.Printf("\nHHHHHHHHHHHHHHHHH backendHTTPSettings_state =\n %+v ",backendHTTPSettings_state)
 	
 
 	// Generate resource state struct

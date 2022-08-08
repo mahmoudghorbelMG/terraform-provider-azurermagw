@@ -132,7 +132,7 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 	// we have to give the nb_Fqdns and nb_IpAddress in order to make this function reusable in create, read and update method
 	index := getBackendHTTPSettingsElementKey(gw, BackendHTTPSettingsName)
 	backend_json := gw.Properties.BackendHTTPSettingsCollection[index]
-	
+	fmt.Printf("\nqqqqqqqqqqqqqqq backend_json (fromgw_response) =\n %+v ",backend_json)
 	// Map response body to resource schema attribute
 	//split the probe ID using the separator "/". the probe name is the last one
 	
@@ -162,7 +162,7 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 		backend_state.Affinity_cookie_name = types.String{Value: ""}
 	}
 
-	fmt.Printf("\n--------------------- BackendHTTPSettings state createBackendHTTPSettings() =\n %+v ",backend_state)
+	fmt.Printf("\nqqqqqqqqqqqqqqqqq BackendHTTPSettings state createBackendHTTPSettings() =\n %+v ",backend_state)
 	
 	return backend_state
 }
