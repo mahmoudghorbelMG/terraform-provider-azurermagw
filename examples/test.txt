@@ -3,6 +3,9 @@ List of the minimum tests that should be applied when developping new app gatewa
 - new resource creation
     * normal
     * with existing name
+    * with/without required parameters
+    * with/without optional parameters
+    * with/without existing/incorrect referenced params (like probe name)
 - resource deletion
 - parameters modification
     * addition of some new ones
