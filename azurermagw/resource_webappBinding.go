@@ -79,6 +79,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 						Type:     types.StringType,
 						Optional: true,
 						Computed: true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{stringDefault("")},
 					},
 					"cookie_based_affinity": {
 						Type:     types.StringType,
@@ -112,6 +113,11 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 			},
 		},
 	}, nil
+}
+func stringDefault(defaultValue string) stringDefaultModifier {
+    return stringDefaultModifier{
+        Default: defaultValue,
+    }
 }
 
 // New resource instance
