@@ -85,7 +85,11 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 					},
 					"pick_host_name_from_backend_address": {
 						Type:     types.BoolType,
-						Optional: true,
+						//this params should be optional but whith default value (false)
+						//to implment this, it requires additional effort. Actually, it is easier for me
+						//to make it Required :)
+						Required: true,
+						//Default: false,
 					},
 					"port": {
 						Type:     types.Int64Type,
