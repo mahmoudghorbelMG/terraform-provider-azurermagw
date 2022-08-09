@@ -20,3 +20,8 @@ List of the minimum tests that should be applied when developping new app gatewa
     * deletion
     * modification of existing one
 - manual resource deletion
+
+Problems:
+- param AffinityCookieName in Backend_http_settings: When set to null initially, azure API don't enable changing it. 
+    The solution <as to put a default value (ApplicationGatewayAffinity) as described in the Azure app gateway spec.
+- the probe should be created

@@ -102,13 +102,6 @@ func generateBackendAddressPoolState(gw ApplicationGateway, backendAddressPoolNa
 			index_nb_IpAddress++
 		}
 	}
-/*
-	for j := 0; j < nb_Fqdns; j++ {
-		backend_state.Fqdns[j] = types.String{Value: backend_json.Properties.BackendAddresses[j].Fqdn}
-	}
-	for j := 0; j < nb_IpAddress; j++ {
-		backend_state.Ip_addresses[j] = types.String{Value: backend_json.Properties.BackendAddresses[j+nb_Fqdns].IPAddress}
-	}*/
 
 	return backend_state
 }

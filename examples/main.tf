@@ -24,20 +24,34 @@ resource "azurermagw_webappBinding" "citeo-binding" {
   agw_name              = data.azurerm_application_gateway.appgw.name
   agw_rg                = data.azurerm_application_gateway.appgw.resource_group_name
   backend_address_pool = {
-    name = "mahmoud-backendAddressPool-name"
+    name = "mahmoud-backendAddressPool-1"
     fqdns = ["fqdn.mahmoud"]
     ip_addresses=["10.2.3.3"]
   }
   backend_http_settings = {
-    name                                = "mahmoud-backendHttpSettings-3"
+    name                                = "mahmoud-backendHttpSettings-1"
     affinity_cookie_name                = "ApplicationGatewayAffinity"
     cookie_based_affinity               = "Disabled"
     pick_host_name_from_backend_address = true
     port                                = 443
-    probe_name                          = "mahmoud-probe-3"
+//    probe_name                          = "mahmoud-probe-1"
     protocol                            = "Https"
     request_timeout                     = 667
   }
+  probe {
+    name                                      = "mahmoud-probe-1"
+  	interval                                  = 30
+	  protocol                                  = "Https"
+    path                                      = "/"
+    timeout                                   = 30
+    unhealthy_threshold                       = 3
+    pick_host_name_from_backend_http_settings = true  
+    minimum_servers				  = int  
+    match {
+      body        = ""
+      status_code = ["200-399"]
+    }
+}
 }
 /*
 resource "azurermagw_webappBinding" "citeo-binding4" {

@@ -202,30 +202,7 @@ type ApplicationGateway struct {
 				} `json:"ipConfigurations"`
 			} `json:"properties"`
 		} `json:"privateLinkConfigurations"`
-		Probes []struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
-			Properties struct {
-				ProvisioningState                   string `json:"provisioningState"`
-				Protocol                            string `json:"protocol"`
-				Host                                string `json:"host"`
-				Path                                string `json:"path"`
-				Interval                            int    `json:"interval"`
-				Timeout                             int    `json:"timeout"`
-				UnhealthyThreshold                  int    `json:"unhealthyThreshold"`
-				PickHostNameFromBackendHTTPSettings bool   `json:"pickHostNameFromBackendHttpSettings"`
-				MinServers                          int    `json:"minServers"`
-				Match                               struct {
-					Body        string   `json:"body"`
-					StatusCodes []string `json:"statusCodes"`
-				} `json:"match"`
-				BackendHTTPSettings []struct {
-					ID string `json:"id"`
-				} `json:"backendHttpSettings"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"probes"`
+		Probes []Probe_json `json:"probes"`
 		RedirectConfigurations []struct {
 			Name       string `json:"name"`
 			ID         string `json:"id"`

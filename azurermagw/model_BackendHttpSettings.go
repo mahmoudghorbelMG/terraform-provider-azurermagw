@@ -1,7 +1,7 @@
 package azurermagw
 
 import (
-	"fmt"
+	//"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -59,7 +59,7 @@ type Backend_http_settings struct {
 }
 
 func createBackendHTTPSettings(backend_plan Backend_http_settings,AZURE_SUBSCRIPTION_ID string, rg_name string, agw_name string) BackendHTTPSettings{
-	fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  backend_plan =\n %+v ",backend_plan)
+	//fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  backend_plan =\n %+v ",backend_plan)
 	backend_json := BackendHTTPSettings{
 		Name:       backend_plan.Name.Value,
 		//ID:         "",
@@ -95,7 +95,6 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,AZURE_SUBSCRIP
 			}{	//initialisation of the Properties Struct
 				CookieBasedAffinity:			backend_plan.Cookie_based_affinity.Value,
 				AffinityCookieName:				backend_plan.Affinity_cookie_name.Value,
-				//if PickHostNameFromBackendAddress attribute become optional with false default value, this line should be replaced
 				PickHostNameFromBackendAddress: bool(backend_plan.Pick_host_name_from_backend_address.Value),
 				Port: 							int(backend_plan.Port.Value),
 				Protocol: 						backend_plan.Protocol.Value,
@@ -116,15 +115,8 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,AZURE_SUBSCRIP
 		}
 	}else{
 		//backend_json.Properties.Probe = 
-	}
-
-	/*
-	if !backend_plan.Affinity_cookie_name.Null {
-		backend_json.Properties.AffinityCookieName = backend_plan.Affinity_cookie_name.Value
-	}else{
-		backend_json.Properties.AffinityCookieName = ""
-	}	*/	
-	fmt.Printf("\nHHHHHHHHHHHHHH  backend_json =\n %+v ",backend_json)
+	}	
+	//fmt.Printf("\nHHHHHHHHHHHHHH  backend_json =\n %+v ",backend_json)
 	
 	// add the backend to the agw and update the agw
 	return backend_json
@@ -133,7 +125,7 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 	// we have to give the nb_Fqdns and nb_IpAddress in order to make this function reusable in create, read and update method
 	index := getBackendHTTPSettingsElementKey(gw, BackendHTTPSettingsName)
 	backend_json := gw.Properties.BackendHTTPSettingsCollection[index]
-	fmt.Printf("\nqqqqqqqqqqqqqqq backend_json (fromgw_response) =\n %+v ",backend_json)
+	//fmt.Printf("\nqqqqqqqqqqqqqqq backend_json (fromgw_response) =\n %+v ",backend_json)
 	// Map response body to resource schema attribute
 	//split the probe ID using the separator "/". the probe name is the last one
 	
@@ -155,16 +147,7 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 		backend_state.Probe_name = types.String{Value: splitted_list[len(splitted_list)-1]}
 	}else{
 		backend_state.Probe_name = types.String{Null: true}
-	}	/*
-	if (backend_json.Properties.AffinityCookieName != "")&&
-		(&backend_json.Properties.AffinityCookieName != nil) {
-		backend_state.Affinity_cookie_name = types.String {Value: backend_json.Properties.AffinityCookieName}
-	}else{
-		backend_state.Affinity_cookie_name = types.String{Value: ""}
-	}*/
-
-	fmt.Printf("\nqqqqqqqqqqqqqqqqq BackendHTTPSettings state createBackendHTTPSettings() =\n %+v ",backend_state)
-	
+	}	
 	return backend_state
 }
 func getBackendHTTPSettingsElementKey(gw ApplicationGateway, BackendHTTPSettingsName string) int {

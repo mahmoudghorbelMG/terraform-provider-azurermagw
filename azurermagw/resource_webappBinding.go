@@ -113,8 +113,84 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 					},
 				}),
 			},
+			"probe": {
+				Required: true,
+				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+					"name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"id": {
+						Type:     types.StringType,
+						Computed: true,
+					},
+					"interval": {
+						Type:     types.Int64Type,
+						Required: true,
+					},
+					"protocol": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"path": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"pick_host_name_from_backend_http_settings": {
+						Type:     types.BoolType,
+						Optional: true,
+						Computed: true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{boolDefault(false)},
+					},
+					"timeout": {
+						Type:     types.Int64Type,
+						Required: true,
+					},
+					"unhealthy_threshold": {
+						Type:     types.Int64Type,
+						Required: true,
+					},	
+					"minimum_servers": {
+						Type:     types.Int64Type,
+						Optional: true,
+						Computed: true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{intDefault(0)},
+					},
+					"match": {
+						Optional: true,
+						Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+							"body": {
+								Type:     types.StringType,
+								Required: true,
+							},
+							"status_code": {
+								Type: types.ListType{
+									ElemType: types.StringType,
+								},
+								Required: true,
+								/*
+								Optional: true,
+								Computed: true,
+								PlanModifiers: tfsdk.AttributePlanModifiers{stringArrayDefault("200-399")},*/
+							},
+						}),
+					},
+				}),
+			},
 		},
 	}, nil
+}
+/*
+func stringArrayDefault(defaultValue []string) {
+	return stringArrayDefaultModifier{
+        Default: defaultValue,
+    }
+}*/
+
+func intDefault(defaultValue int64) intDefaultModifier{
+	return intDefaultModifier{
+        Default: defaultValue,
+    }
 }
 func stringDefault(defaultValue string) stringDefaultModifier {
 	return stringDefaultModifier{
@@ -163,8 +239,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	exist_element, exist := checkElementName(gw, plan)
 	if exist {
 		resp.Diagnostics.AddError(
-			"Unable to create binding. At least, those elements : "+ fmt.Sprint(exist_element),
-			"Already exists in the app gateway. Please, modify their names.",
+			"Unable to create binding. At least, these elements already exists in the app gateway: "+ fmt.Sprint(exist_element),
+			"Please, change their names.",
 		)
 		return
 	}
@@ -179,7 +255,14 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			r.p.AZURE_SUBSCRIPTION_ID,
 			resourceGroupName,
 			applicationGatewayName))
+	gw.Properties.Probes = append(
+		gw.Properties.Probes,createProbe(
+			plan.Probe,
+			r.p.AZURE_SUBSCRIPTION_ID,
+			resourceGroupName,
+			applicationGatewayName))
 
+	//call the API to update the gw
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 	
 	//verify if the API response is 200 (that means, normaly, elements were added to the gateway), otherwise exit error
@@ -192,7 +275,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		return
 	}
 	
-	//generate the States.
+	//generate the States based on gw_response from API.
 	nb_Fqdns 		:= len(plan.Backend_address_pool.Fqdns)
 	nb_IpAddress	:= len(plan.Backend_address_pool.Ip_addresses)
 	backendAddressPool_state 	:= generateBackendAddressPoolState(
@@ -203,6 +286,10 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	backendHTTPSettings_state 	:= generateBackendHTTPSettingsState(
 		gw_response,
 		plan.Backend_http_settings.Name.Value)
+	probe_state := generateProbeState(
+		gw_response,
+		plan.Probe.Name.Value)
+
 
 	// Generate resource state struct
 	var result = WebappBinding{
@@ -211,6 +298,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		Agw_rg					: plan.Agw_rg,
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
+		Probe					: probe_state,
 	}
 	//store to the created objecy to the terraform state
 	diags = resp.State.Set(ctx, result)
@@ -240,7 +328,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	applicationGatewayName := state.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 
-	// *********** Processing backend address pool *********** //
+	// *********** Processing the backend address pool *********** //
 	var backendAddressPool_state Backend_address_pool
 	backendAddressPoolName := state.Backend_address_pool.Name.Value
 	//check if the backend address pool exist in the gateway, otherwise, it was removed manually
@@ -258,7 +346,6 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 			}
 		}
 		nb_IpAddress := nb_BackendAddresses - nb_Fqdns
-
 		//generate BackendState
 		backendAddressPool_state = generateBackendAddressPoolState(gw, backendAddressPoolName,nb_Fqdns,nb_IpAddress)
 	}else{
@@ -266,7 +353,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		backendAddressPool_state = Backend_address_pool{}
 	}
 	
-	// *********** Processing backend http settings *********** //
+	// *********** Processing the backend http settings *********** //
 	var backendHTTPSettings_state Backend_http_settings
 	backendHTTPSettingsName := state.Backend_http_settings.Name.Value
 	//check if the backend http settings exists in the gateway, otherwise, it was removed manually
@@ -277,9 +364,20 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		//generate an empty backendHTTPSettings_state because it was removed manually
 		backendHTTPSettings_state = Backend_http_settings{}
 	}
-	//fmt.Printf("\nHHHHHHHHHHHHHHHHH backendHTTPSettings_state =\n %+v ",backendHTTPSettings_state)
 	
-
+	// *********** Processing the probe *********** //
+	var probe_state Probe_tf
+	probeName := state.Probe.Name.Value
+	//check if the probe exists in the gateway, otherwise, it was removed manually
+	if checkProbeElement(gw, probeName) {
+		//generate probe state
+		probe_state = generateProbeState(gw, probeName)
+	}else{
+		//generate an empty probe_state because it was removed manually
+		probe_state = Probe_tf{}
+	}
+	//fmt.Printf("\nHHHHHHHHHHHHHHHHH probe_state =\n %+v ",probe_state)
+	
 	// Generate resource state struct
 	var result = WebappBinding{
 		Name					: types.String{Value: webappBindingName},
@@ -287,6 +385,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		Agw_rg					: state.Agw_rg,
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
+		Probe					: probe_state,
 	}
 
 	state = result
@@ -295,7 +394,6 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 }
 
 // Update resource
@@ -327,9 +425,9 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	backendAddressPool_plan := plan.Backend_address_pool
 	backendAddressPool_json := createBackendAddressPool(backendAddressPool_plan)
 	backendHTTPSettings_plan := plan.Backend_http_settings
-	backendHTTPSettings_json := createBackendHTTPSettings(
-		backendHTTPSettings_plan,r.p.AZURE_SUBSCRIPTION_ID,
-		resourceGroupName,applicationGatewayName)
+	backendHTTPSettings_json := createBackendHTTPSettings(backendHTTPSettings_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	probe_plan := plan.Probe
+	probe_json := createProbe(probe_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 
 	//Verify if the agw already contains the elements to be updated.
 	//the older ones should be removed before updating. 
@@ -348,7 +446,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			//this is an error. issue an exit error.
 			resp.Diagnostics.AddError(
 				"Unable to update the app gateway. The Backend Adresse pool name : "+ backendAddressPool_json.Name+" already exists.",
-				" Please, modify the name.",
+				" Please, change the name.",
 			)
 			return
 		}
@@ -368,8 +466,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		if checkBackendHTTPSettingsElement(gw, backendHTTPSettings_json.Name) {
 			//this is an error. issue an exit error.
 			resp.Diagnostics.AddError(
-				"Unable to update the app gateway. The Backend Adresse pool name : "+ backendHTTPSettings_json.Name+" already exists.",
-				" Please, modify the name.",
+				"Unable to update the app gateway. The Backend HTTP settings name : "+ backendHTTPSettings_json.Name+" already exists.",
+				" Please, change the name.",
 			)
 			return
 		}
@@ -377,9 +475,31 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		removeBackendHTTPSettingsElement(&gw, state.Backend_http_settings.Name.Value)
 	}
 
+	// *********** Processing the probe *********** //	
+	//check if the probe name in the plan and state are different,
+	if probe_plan.Name.Value == state.Probe.Name.Value {
+		//it is about probe update  with the same name
+		//so we remove the old one before adding the new one.
+		removeProbeElement(&gw, probe_json.Name)
+	}else{
+		// it's about probe update with a new name
+		// we have to check if the new probe name is already used
+		if checkProbeElement(gw, probe_json.Name) {
+			//this is an error. issue an exit error.
+			resp.Diagnostics.AddError(
+				"Unable to update the app gateway. The probe name : "+ probe_json.Name+" already exists.",
+				" Please, change the name.",
+			)
+			return
+		}
+		//remove the old backend http settings (old name) from the gateway
+		removeProbeElement(&gw, state.Probe.Name.Value)
+	}
+
 	//add the new elements
 	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backendAddressPool_json)
 	gw.Properties.BackendHTTPSettingsCollection = append(gw.Properties.BackendHTTPSettingsCollection, backendHTTPSettings_json)
+	gw.Properties.Probes = append(gw.Properties.Probes, probe_json)
 	
 	//and update the gateway
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
@@ -396,9 +516,9 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 
 	// Generate new states 
 	
+	/*********** Special for Backend Address Pool ********************/
 	// in the Read method, the number of fqdns and Ip in a Backendpool should be calculated from the json object and not the plan or state,
 	// because the purpose of the read is to see if there is a difference between the real element and the satate stored localy.
-	/*********** Special for Backend Address Pool ********************/
 	index := getBackendAddressPoolElementKey(gw, backendAddressPool_json.Name)
 	backendAddressPool_json2 := gw.Properties.BackendAddressPools[index]
 	nb_BackendAddresses := len(backendAddressPool_json2.Properties.BackendAddresses)
@@ -413,6 +533,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	
 	backendAddressPool_state	:= generateBackendAddressPoolState(gw_response, backendAddressPool_json.Name,nb_Fqdns,nb_IpAddress)
 	backendHTTPSettings_state	:= generateBackendHTTPSettingsState(gw_response,backendHTTPSettings_json.Name)
+	probe_state	:= generateProbeState(gw_response,probe_json.Name)
 
 	// Generate resource state struct
 	var result = WebappBinding{
@@ -421,6 +542,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		Agw_rg					: state.Agw_rg,
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
+		Probe					: probe_state,
 	}
 	//store to the created objecy to the terraform state
 	diags = resp.State.Set(ctx, result)
@@ -443,6 +565,7 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	// Get elements names from state
 	backendAddressPool_name := state.Backend_address_pool.Name.Value
 	backendHTTPSettings_name := state.Backend_http_settings.Name.Value
+	probe_name := state.Probe.Name.Value
 	
 	//Get the agw
 	resourceGroupName := state.Agw_rg.Value
@@ -452,6 +575,7 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	//remove the backend from the gw
 	removeBackendAddressPoolElement(&gw, backendAddressPool_name)
 	removeBackendHTTPSettingsElement(&gw,backendHTTPSettings_name)
+	removeProbeElement(&gw,probe_name)
 
 	//and update the gateway
 	_, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
@@ -482,16 +606,20 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool)
 	exist := false
 	var existing_element_list [] string
 	//Create new var for all configurations
-	backendAddressPool_plan := plan.Backend_address_pool 
-	backendHTTPSettings_plan := plan.Backend_http_settings
-	
+	backendAddressPool_plan 	:= plan.Backend_address_pool 
+	backendHTTPSettings_plan 	:= plan.Backend_http_settings
+	probe_plan 					:= plan.Probe
 	if checkBackendAddressPoolElement(gw, backendAddressPool_plan.Name.Value) {
 		exist = true 
-		existing_element_list = append(existing_element_list,"\n	- "+backendAddressPool_plan.Name.Value)
+		existing_element_list = append(existing_element_list,"\n	- BackendAddressPool: "+backendAddressPool_plan.Name.Value)
 	}
 	if checkBackendHTTPSettingsElement(gw, backendHTTPSettings_plan.Name.Value) {
 		exist = true 
-		existing_element_list = append(existing_element_list,"\n	- "+backendHTTPSettings_plan.Name.Value)
+		existing_element_list = append(existing_element_list,"\n	- BackendHTTPSettings: "+backendHTTPSettings_plan.Name.Value)
+	}
+	if checkProbeElement(gw, probe_plan.Name.Value) {
+		exist = true 
+		existing_element_list = append(existing_element_list,"\n	- Probe: "+probe_plan.Name.Value)
 	}
 	return existing_element_list,exist
 }
