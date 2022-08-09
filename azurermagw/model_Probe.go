@@ -86,17 +86,23 @@ func createProbe(probe_plan Probe_tf,AZURE_SUBSCRIPTION_ID string, rg_name strin
 	}
 	//it remains Match struct. we have to check if it is provided or not (actually, i don't have time)
 	//probe_json.Properties.Match.Body = probe_plan.Match.Body.Value
-	probe_json.Properties.Match = &struct{
-		Body string "json:\"body,omitempty\""; 
-		StatusCodes []string "json:\"statusCodes,omitempty\""
-		}{
-			Body: probe_plan.Match.Body.Value,
-			//StatusCodes: ,
+	//mah :=Match{}
+	if &probe_plan.Match != nil {
+		probe_json.Properties.Match = &struct{
+			Body string "json:\"body,omitempty\""; 
+			StatusCodes []string "json:\"statusCodes,omitempty\""
+			}{
+				Body: probe_plan.Match.Body.Value,
+				//StatusCodes: ,
+			}
+		probe_json.Properties.Match.StatusCodes = make([]string, len(probe_plan.Match.Status_code))
+		for i := 0; i < len(probe_plan.Match.Status_code); i++ {
+			probe_json.Properties.Match.StatusCodes[i] = probe_plan.Match.Status_code[i].Value
 		}
-	probe_json.Properties.Match.StatusCodes = make([]string, len(probe_plan.Match.Status_code))
-	for i := 0; i < len(probe_plan.Match.Status_code); i++ {
-		probe_json.Properties.Match.StatusCodes[i] = probe_plan.Match.Status_code[i].Value
+	}else{
+		probe_json.Properties.Match = nil
 	}
+	
 		
 	fmt.Printf("\nHHHHHHHHHHHHHH  probe_json =\n %+v ",probe_json)
 	
