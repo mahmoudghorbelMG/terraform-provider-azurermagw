@@ -50,7 +50,7 @@ type Match	struct{
 	Status_code									[]types.String	`tfsdk:"status_code"`
 }
 
-func createProbe(probe_plan Probe_tf,AZURE_SUBSCRIPTION_ID string, rg_name string, agw_name string) Probe_json{
+func createProbe(probe_plan Probe_tf,AZURE_SUBSCRIPTION_ID string, rg_name string, agw_name string) Probe_json{	
 	fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  probe_plan =\n %+v ",probe_plan)
 	probe_json := Probe_json{
 		Name:       probe_plan.Name.Value,
@@ -85,7 +85,14 @@ func createProbe(probe_plan Probe_tf,AZURE_SUBSCRIPTION_ID string, rg_name strin
 		Type: "Microsoft.Network/applicationGateways/probes",
 	}
 	//it remains Match struct. we have to check if it is provided or not (actually, i don't have time)
-	probe_json.Properties.Match.Body = probe_plan.Match.Body.Value
+	//probe_json.Properties.Match.Body = probe_plan.Match.Body.Value
+	probe_json.Properties.Match = &struct{
+		Body string "json:\"body,omitempty\""; 
+		StatusCodes []string "json:\"statusCodes,omitempty\""
+		}{
+			Body: probe_plan.Match.Body.Value,
+			//StatusCodes: ,
+		}
 	probe_json.Properties.Match.StatusCodes = make([]string, len(probe_plan.Match.Status_code))
 	for i := 0; i < len(probe_plan.Match.Status_code); i++ {
 		probe_json.Properties.Match.StatusCodes[i] = probe_plan.Match.Status_code[i].Value

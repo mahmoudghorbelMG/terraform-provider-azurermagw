@@ -38,7 +38,7 @@ resource "azurermagw_webappBinding" "citeo-binding" {
     protocol                            = "Https"
     request_timeout                     = 667
   }
-  probe {
+  probe = {
     name                                      = "mahmoud-probe-1"
   	interval                                  = 30
 	  protocol                                  = "Https"
@@ -46,12 +46,12 @@ resource "azurermagw_webappBinding" "citeo-binding" {
     timeout                                   = 30
     unhealthy_threshold                       = 3
     pick_host_name_from_backend_http_settings = true  
-    minimum_servers				  = int  
-    match {
+    minimum_servers				  = 0
+    match = {
       body        = ""
       status_code = ["200-399"]
     }
-}
+  }
 }
 /*
 resource "azurermagw_webappBinding" "citeo-binding4" {
