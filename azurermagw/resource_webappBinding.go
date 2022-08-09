@@ -427,6 +427,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	backendHTTPSettings_plan := plan.Backend_http_settings
 	backendHTTPSettings_json := createBackendHTTPSettings(backendHTTPSettings_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 	probe_plan := plan.Probe
+	fmt.Printf("\nUUUUUUUUUUUUUUUUUUUUUU before Update  probe_plan =\n %+v ",probe_plan)
 	probe_json := createProbe(probe_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 
 	//Verify if the agw already contains the elements to be updated.
