@@ -37,10 +37,10 @@ func (m intDefaultModifier) Modify(ctx context.Context, req tfsdk.ModifyAttribut
     if diags.HasError() {
         return
     }
-    if (!str.Null){
-		fmt.Printf("\nQQQQQQQQQQQQQQQQQQQQQQQ  entering if affinity_cookie_name is not nul=\n %+v ",str)	
+    if (str.Value!=0){
+		fmt.Printf("\nQQQQQQQQQQQQQQQQQQQQQQQ  entering if intDefaultModifier is not nul=\n %+v ",str)	
         return
     }
-	fmt.Printf("\nMMMMMMMMMMMMMMMMMMMM  entering if affinity_cookie_name is nul=\n %+v ",types.Int64{Value: m.Default})	
+	fmt.Printf("\nMMMMMMMMMMMMMMMMMMMM  entering if intDefaultModifier is nul=\n %+v ",types.Int64{Value: m.Default})	
     resp.AttributePlan = types.Int64{Value: m.Default}
 }
