@@ -5,7 +5,7 @@ List of the minimum tests that should be applied when developping new app gatewa
     * with existing name
     * with/without required parameters
     * with/without optional parameters
-    * with/without existing/incorrect referenced params (like probe name)
+    * with/without existing/incorrect referenced params (like probe name for backend http settings)
 - resource deletion
 - parameters modification
     * addition of some new ones
@@ -13,15 +13,15 @@ List of the minimum tests that should be applied when developping new app gatewa
     * delete all
     * addition from zero conf
 - name modification
-    * normal (non existing new name)
+    * normal (non existing name)
     * existing name
-- manual parameters modification
+- manual parameters modification (the provider should detect new conf and set initial one)
     * addition
     * deletion
     * modification of existing one
 - manual resource deletion
 
 Problems:
-- param AffinityCookieName in Backend_http_settings: When set to null initially, azure API don't enable changing it. 
-    The solution <as to put a default value (ApplicationGatewayAffinity) as described in the Azure app gateway spec.
-- the probe should be created
+- param AffinityCookieName in Backend_http_settings: When set to null initially, azure API don't allow changing it. 
+    The solution is to put a default value ("ApplicationGatewayAffinity") as described in the Azure app gateway spec.
+- the probe should be created before referencing it in backend http settings.

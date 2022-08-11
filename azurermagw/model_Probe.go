@@ -105,6 +105,7 @@ func createProbe(probe_plan Probe_tf,AZURE_SUBSCRIPTION_ID string, rg_name strin
 	
 		
 	fmt.Printf("\nHHHHHHHHHHHHHH  probe_json =\n %+v ",probe_json)
+	fmt.Printf("\nHHHHHHHHHHHHHH  probe_json.Properties.Match =\n %+v ",probe_json.Properties.Match)
 	
 	// add the backend to the agw and update the agw
 	return probe_json
@@ -114,6 +115,7 @@ func generateProbeState(gw ApplicationGateway, ProbeName string) Probe_tf {
 	index := getProbeElementKey(gw, ProbeName)
 	probe_json := gw.Properties.Probes[index]
 	fmt.Printf("\nDDDDDDDDDDDDDDDDDDD probe_json (from gw_response) =\n %+v ",probe_json)
+	fmt.Printf("\nDDDDDDDDDDDDDDDDDDD probe_json.Properties.Match (from gw_response) =\n %+v ",probe_json.Properties.Match)
 	// Map response body to resource schema attribute
 	var probe_state Probe_tf
 	probe_state = Probe_tf{

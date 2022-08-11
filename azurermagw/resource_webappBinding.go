@@ -255,13 +255,14 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			r.p.AZURE_SUBSCRIPTION_ID,
 			resourceGroupName,
 			applicationGatewayName))
+	fmt.Println("\n######################## Just Before createProbe ########################")
 	gw.Properties.Probes = append(
 		gw.Properties.Probes,createProbe(
 			plan.Probe,
 			r.p.AZURE_SUBSCRIPTION_ID,
 			resourceGroupName,
 			applicationGatewayName))
-
+	fmt.Println("\n######################## Just After createProbe ########################")
 	//call the API to update the gw
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 	
