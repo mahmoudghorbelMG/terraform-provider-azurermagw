@@ -246,6 +246,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	}
 
 	//create, map and add the new elements (json) object from the plan (plan) to the agw object
+	fmt.Println("\n######################## Just Before createBackendAddressPool ########################")
 	gw.Properties.BackendAddressPools = append(
 		gw.Properties.BackendAddressPools, createBackendAddressPool(
 			plan.Backend_address_pool))
@@ -255,7 +256,6 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			r.p.AZURE_SUBSCRIPTION_ID,
 			resourceGroupName,
 			applicationGatewayName))
-	fmt.Println("\n######################## Just Before createProbe ########################")
 	gw.Properties.Probes = append(
 		gw.Properties.Probes,createProbe(
 			plan.Probe,
