@@ -426,31 +426,16 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	applicationGatewayName := plan.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 
-	//preparing the new elements (json) from the plan
-	//create and map the new Backend pool element (backendAddressPool_json) object from the plan (backendAddressPool_plan)
-	backendAddressPool_plan := plan.Backend_address_pool
-
-	backendHTTPSettings_plan := plan.Backend_http_settings
-	
-	probe_plan := plan.Probe
-	
-	backendAddressPool_json := createBackendAddressPool(backendAddressPool_plan)
-	backendHTTPSettings_json, error_probeName := createBackendHTTPSettings(backendHTTPSettings_plan,probe_plan.Name.Value,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-	if error_probeName== "fatal" {
-		resp.Diagnostics.AddError(
-			"Unable to create binding. The probe name ("+plan.Backend_http_settings.Probe_name.Value+") declared in Backend_http_settings: "+ 
-			plan.Backend_http_settings.Name.Value+" doesn't match the probe name conf : "+plan.Probe.Name.Value,
-			"Please, change probe name then retry.",
-		)
-		return
-	}
-	probe_json := createProbe(probe_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-
+	//for all elements (attributes), prepare the new elements (json) from the plan
 	//Verify if the agw already contains the elements to be updated.
 	//the older ones should be removed before updating. 
 	//we have also to prevent element name updating and manual deletion
 	
 	// *********** Processing backend address pool *********** //	
+	//preparing the new elements (json) from the plan
+	backendAddressPool_plan := plan.Backend_address_pool
+	backendAddressPool_json := createBackendAddressPool(backendAddressPool_plan)
+	
 	//check if the backend name in the plan and state are different, that means that the
 	if backendAddressPool_plan.Name.Value == state.Backend_address_pool.Name.Value {
 		//it is about backend AddressPool update  with the same name
@@ -472,7 +457,19 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	}
 
 	// *********** Processing backend http settings *********** //	
+	//preparing the new elements (json) from the plan
+	backendHTTPSettings_plan := plan.Backend_http_settings
+	backendHTTPSettings_json, error_probeName := createBackendHTTPSettings(backendHTTPSettings_plan,plan.Probe.Name.Value,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	
 	//check if the backend name in the plan and state are different, that means that the
+	if error_probeName== "fatal" {
+		resp.Diagnostics.AddError(
+			"Unable to create binding. The probe name ("+plan.Backend_http_settings.Probe_name.Value+") declared in Backend_http_settings: "+ 
+			plan.Backend_http_settings.Name.Value+" doesn't match the probe name conf : "+plan.Probe.Name.Value,
+			"Please, change probe name then retry.",
+		)
+		return
+	}
 	if backendHTTPSettings_plan.Name.Value == state.Backend_http_settings.Name.Value {
 		//it is about backend http settings update  with the same name
 		//so we remove the old one before adding the new one.
@@ -493,6 +490,10 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	}
 
 	// *********** Processing the probe *********** //	
+	//preparing the new elements (json) from the plan
+	probe_plan := plan.Probe	
+	probe_json := createProbe(probe_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+
 	//check if the probe name in the plan and state are different,
 	if probe_plan.Name.Value == state.Probe.Name.Value {
 		//it is about probe update  with the same name

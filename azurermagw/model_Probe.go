@@ -46,6 +46,7 @@ type Probe_tf struct {
 	//i choose to make Match param as required to avoid Value Conversion Error in terraform when 
 	//this param is not provided
 	Match										Match			`tfsdk:"match"`
+	//the BackendHTTPSettings is added automatically when we provide probe name in BackendHTTPSettings params
 }
 type Match	struct{
 	Body          								types.String	`tfsdk:"body"`
@@ -129,10 +130,10 @@ func generateProbeState(gw ApplicationGateway, ProbeName string) Probe_tf {
 		Unhealthy_threshold							: types.Int64	{Value: int64(probe_json.Properties.UnhealthyThreshold)},
 		Pick_host_name_from_backend_http_settings 	: types.Bool {Value: bool(probe_json.Properties.PickHostNameFromBackendHTTPSettings)},
 		Minimum_servers								: types.Int64	{Value: int64(probe_json.Properties.MinServers)},
-		Match										: Match {
-																Body		: types.String{Value: probe_json.Properties.Match.Body},
-																Status_code	: []types.String{},
-															},
+		Match	: Match {
+					Body		: types.String{Value: probe_json.Properties.Match.Body},
+					Status_code	: []types.String{},
+				},
 	}
 
 	if len(probe_json.Properties.Match.StatusCodes) != 0 {
