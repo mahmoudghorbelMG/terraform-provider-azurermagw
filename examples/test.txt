@@ -30,6 +30,6 @@ Problems:
 - can't handle non optional SingleNestedAttributes like probe.match. 
     Solution: i make it required
 - when we make a param as optional(1), computed(2), with default value(3) and put it with the default value(4),
-if there is a change (deletion of this param) in the new conf (plan), it is considered as "Nochanges" evant
+if there is we delete this param in an update conf (plan), it is considered as "Nochanges" event
     Solution: no solution. Just keep it in mind and don't panic.
 

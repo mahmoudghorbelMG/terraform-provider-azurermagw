@@ -32,7 +32,7 @@ func (m intDefaultModifier) Modify(ctx context.Context, req tfsdk.ModifyAttribut
     // https://pkg.go.dev/github.com/hashicorp/terraform-plugin-framework/tfsdk#ConvertValue
     // to convert into a known type.
     var str types.Int64
-    diags := tfsdk.ValueAs(ctx, req.AttributePlan, &str)
+    diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &str)
     resp.Diagnostics.Append(diags...)
     if diags.HasError() {
         return
