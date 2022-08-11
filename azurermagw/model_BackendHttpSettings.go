@@ -3,7 +3,6 @@ package azurermagw
 import (
 	//"fmt"
 	"strings"
-
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -58,7 +57,8 @@ type Backend_http_settings struct {
 	Probe_name							types.String	`tfsdk:"probe_name"`							
 }
 
-func createBackendHTTPSettings(backend_plan Backend_http_settings,AZURE_SUBSCRIPTION_ID string, rg_name string, agw_name string) BackendHTTPSettings{
+func createBackendHTTPSettings(backend_plan Backend_http_settings,probeName string, AZURE_SUBSCRIPTION_ID string, 
+								rg_name string, agw_name string) (BackendHTTPSettings, string){
 	//fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  backend_plan =\n %+v ",backend_plan)
 	backend_json := BackendHTTPSettings{
 		Name:       backend_plan.Name.Value,
@@ -107,19 +107,27 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,AZURE_SUBSCRIP
 	//the probe name should treated specifically to construct the ID
 	probe_string := "/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+"/providers/Microsoft.Network/applicationGateways/"+agw_name+"/probes/"
 	// if there is à probe, then copy it, else, nil
+	var error string
 	if backend_plan.Probe_name.Value != "" {
-		backend_json.Properties.Probe = &struct{
-			ID string "json:\"id,omitempty\""
-		}{
-			ID: probe_string + backend_plan.Probe_name.Value,
+		//we have to check here if the probe name matches probe name in terraform conf in plan.
+		if backend_plan.Probe_name.Value == probeName {
+			backend_json.Properties.Probe = &struct{
+				ID string "json:\"id,omitempty\""
+			}{
+				ID: probe_string + backend_plan.Probe_name.Value,
+			}
+		}else{
+			//Error exit
+			error = "fatal"
 		}
+		
 	}else{
 		//backend_json.Properties.Probe = 
 	}	
 	//fmt.Printf("\nHHHHHHHHHHHHHH  backend_json =\n %+v ",backend_json)
 	
 	// add the backend to the agw and update the agw
-	return backend_json
+	return backend_json,error
 }
 func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettingsName string) Backend_http_settings {
 	// we have to give the nb_Fqdns and nb_IpAddress in order to make this function reusable in create, read and update method

@@ -32,4 +32,7 @@ Problems:
 - when we make a param as optional(1), computed(2), with default value(3) and put it with the default value(4),
 if there is we delete this param in an update conf (plan), it is considered as "Nochanges" event
     Solution: no solution. Just keep it in mind and don't panic.
+- when i use intDefaultModifier for minServers, if i update the conf by deleting it, the last value still exist while showing 
+"no change" event in terraform plan. It should take the default value (0) and not keeping the last one
+    Solution: i change "diags := tfsdk.ValueAs(ctx, req.AttributePlan, &str)" in intDefaultModifier by "diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &str)"
 

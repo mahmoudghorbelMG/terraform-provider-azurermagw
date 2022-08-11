@@ -249,20 +249,26 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	gw.Properties.BackendAddressPools = append(
 		gw.Properties.BackendAddressPools, createBackendAddressPool(
 			plan.Backend_address_pool))
-	gw.Properties.BackendHTTPSettingsCollection = append(
-		gw.Properties.BackendHTTPSettingsCollection, createBackendHTTPSettings(
-			plan.Backend_http_settings,
-			r.p.AZURE_SUBSCRIPTION_ID,
-			resourceGroupName,
-			applicationGatewayName))
+
+	backendHTTPSettings_json, error_probeName := createBackendHTTPSettings(plan.Backend_http_settings,plan.Probe.Name.Value,
+												r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	if error_probeName== "fatal" {
+		resp.Diagnostics.AddError(
+			"Unable to create binding. The probe name ("+plan.Backend_http_settings.Probe_name.Value+") declared in Backend_http_settings: "+ 
+			plan.Backend_http_settings.Name.Value+" doesn't match the probe name conf : "+plan.Probe.Name.Value,
+			"Please, change probe name then retry.",
+		)
+		return
+	}
+	gw.Properties.BackendHTTPSettingsCollection = append(gw.Properties.BackendHTTPSettingsCollection,backendHTTPSettings_json)
 	gw.Properties.Probes = append(
 		gw.Properties.Probes,createProbe(
 			plan.Probe,
 			r.p.AZURE_SUBSCRIPTION_ID,
 			resourceGroupName,
 			applicationGatewayName))
-	fmt.Println("\n######################## Just After createProbe ########################")
-	//call the API to update the gw
+	
+			//call the API to update the gw
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 	
 	//verify if the API response is 200 (that means, normaly, elements were added to the gateway), otherwise exit error
@@ -423,11 +429,21 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//preparing the new elements (json) from the plan
 	//create and map the new Backend pool element (backendAddressPool_json) object from the plan (backendAddressPool_plan)
 	backendAddressPool_plan := plan.Backend_address_pool
-	backendAddressPool_json := createBackendAddressPool(backendAddressPool_plan)
+
 	backendHTTPSettings_plan := plan.Backend_http_settings
-	backendHTTPSettings_json := createBackendHTTPSettings(backendHTTPSettings_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	
 	probe_plan := plan.Probe
-	fmt.Printf("\nUUUUUUUUUUUUUUUUUUUUUU before Update  probe_plan =\n %+v ",probe_plan)
+	
+	backendAddressPool_json := createBackendAddressPool(backendAddressPool_plan)
+	backendHTTPSettings_json, error_probeName := createBackendHTTPSettings(backendHTTPSettings_plan,probe_plan.Name.Value,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	if error_probeName== "fatal" {
+		resp.Diagnostics.AddError(
+			"Unable to create binding. The probe name ("+plan.Backend_http_settings.Probe_name.Value+") declared in Backend_http_settings: "+ 
+			plan.Backend_http_settings.Name.Value+" doesn't match the probe name conf : "+plan.Probe.Name.Value,
+			"Please, change probe name then retry.",
+		)
+		return
+	}
 	probe_json := createProbe(probe_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 
 	//Verify if the agw already contains the elements to be updated.

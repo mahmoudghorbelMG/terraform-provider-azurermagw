@@ -116,8 +116,7 @@ func generateProbeState(gw ApplicationGateway, ProbeName string) Probe_tf {
 	// we have to give the nb_Fqdns and nb_IpAddress in order to make this function reusable in create, read and update method
 	index := getProbeElementKey(gw, ProbeName)
 	probe_json := gw.Properties.Probes[index]
-	fmt.Printf("\nDDDDDDDDDDDDDDDDDDD probe_json (from gw_response) =\n %+v ",probe_json)
-	fmt.Printf("\nDDDDDDDDDDDDDDDDDDD probe_json.Properties.Match (from gw_response) =\n %+v ",probe_json.Properties.Match)
+	
 	// Map response body to resource schema attribute
 	var probe_state Probe_tf
 	probe_state = Probe_tf{
@@ -145,7 +144,6 @@ func generateProbeState(gw ApplicationGateway, ProbeName string) Probe_tf {
 		probe_state.Match.Status_code[i]=types.String{Value: probe_json.Properties.Match.StatusCodes[i]}
 	}
 	//verify if optional parameters are provided, otherwise, they have to set to null
-	fmt.Printf("\nWWWWWWWWWWWWWWWWWW probe_state (from gw_response) =\n %+v ",probe_state)
 		
 	return probe_state
 }
