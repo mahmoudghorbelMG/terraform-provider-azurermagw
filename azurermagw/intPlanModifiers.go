@@ -14,12 +14,12 @@ type intDefaultModifier struct {
 
 // Description returns a plain text description of the validator's behavior, suitable for a practitioner to understand its impact.
 func (m intDefaultModifier) Description(ctx context.Context) string {
-    return fmt.Sprintf("If value is not configured, defaults to %s", m.Default)
+    return fmt.Sprintf("If value is not configured, defaults to %v", m.Default)
 }
 
 // MarkdownDescription returns a markdown formatted description of the validator's behavior, suitable for a practitioner to understand its impact.
 func (m intDefaultModifier) MarkdownDescription(ctx context.Context) string {
-    return fmt.Sprintf("If value is not configured, defaults to `%s`", m.Default)
+    return fmt.Sprintf("If value is not configured, defaults to `%v`", m.Default)
 }
 
 // Modify runs the logic of the plan modifier.
@@ -37,12 +37,10 @@ func (m intDefaultModifier) Modify(ctx context.Context, req tfsdk.ModifyAttribut
     if diags.HasError() {
         return
     }
-
     if (!str.Null){
-		//fmt.Printf("\nQQQQQQQQQQQQQQQQQQQQQQQ  entering if affinity_cookie_name is not nul=\n %+v ",str)	
+		fmt.Printf("\nQQQQQQQQQQQQQQQQQQQQQQQ  entering if affinity_cookie_name is not nul=\n %+v ",str)	
         return
     }
-	//fmt.Printf("\nMMMMMMMMMMMMMMMMMMMM  entering if affinity_cookie_name is nul=\n %+v ",types.int{Value: m.Default})	
-        
+	fmt.Printf("\nMMMMMMMMMMMMMMMMMMMM  entering if affinity_cookie_name is nul=\n %+v ",types.Int64{Value: m.Default})	
     resp.AttributePlan = types.Int64{Value: m.Default}
 }

@@ -23,5 +23,13 @@ List of the minimum tests that should be applied when developping new app gatewa
 
 Problems:
 - param AffinityCookieName in Backend_http_settings: When set to null initially, azure API don't allow changing it. 
-    The solution is to put a default value ("ApplicationGatewayAffinity") as described in the Azure app gateway spec.
+    Solution: put a default value ("ApplicationGatewayAffinity") as described in the Azure app gateway spec.
 - the probe should be created before referencing it in backend http settings.
+- can't make default value of string array (like status_code in probe.match).
+    Solution: i make it required
+- can't handle non optional SingleNestedAttributes like probe.match. 
+    Solution: i make it required
+- when we make a param as optional(1), computed(2), with default value(3) and put it with the default value(4),
+if there is a change (deletion of this param) in the new conf (plan), it is considered as "Nochanges" evant
+    Solution: no solution. Just keep it in mind and don't panic.
+
