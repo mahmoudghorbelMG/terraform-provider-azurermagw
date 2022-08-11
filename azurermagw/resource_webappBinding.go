@@ -221,7 +221,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		)
 		return
 	}
-
+	fmt.Println("\n######################## Just Before req.Plan.Get ########################")
+	
 	// Retrieve values from plan
 	var plan WebappBinding
 	diags := req.Plan.Get(ctx, &plan)
@@ -234,7 +235,6 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	resourceGroupName := plan.Agw_rg.Value
 	applicationGatewayName := plan.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
-	fmt.Println("\n######################## Just Before checkElementName ########################")
 	
 	//Check if the agw already contains an existing element that has the same name of a new element to add
 	exist_element, exist := checkElementName(gw, plan)
