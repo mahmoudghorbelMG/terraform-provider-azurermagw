@@ -157,7 +157,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 						PlanModifiers: tfsdk.AttributePlanModifiers{intDefault(0)},
 					},
 					"match": {
-						Optional: true,
+						Required: true,
 						Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 							"body": {
 								Type:     types.StringType,
@@ -222,8 +222,6 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		return
 	}
 	fmt.Println("\n######################## Just Before req.Plan.Get ########################")
-	/*match := Match{}
-	l.(types.Object).As(ctx, &match, types.ObjectAsOptions{})	*/
 	// Retrieve values from plan
 	var plan WebappBinding
 	diags := req.Plan.Get(ctx, &plan)
