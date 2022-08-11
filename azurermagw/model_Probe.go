@@ -43,7 +43,7 @@ type Probe_tf struct {
 	Unhealthy_threshold							types.Int64		`tfsdk:"unhealthy_threshold"`
 	Pick_host_name_from_backend_http_settings 	types.Bool		`tfsdk:"pick_host_name_from_backend_http_settings"`	
 	Minimum_servers								types.Int64		`tfsdk:"minimum_servers"`
-	Match										Match			`tfsdk:"match"`
+	Match										types.Object	`tfsdk:"match"`
 }
 type Match	struct{
 	Body          								types.String	`tfsdk:"body"`
