@@ -234,7 +234,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	resourceGroupName := plan.Agw_rg.Value
 	applicationGatewayName := plan.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
-
+	fmt.Println("\n######################## Just Before checkElementName ########################")
+	
 	//Check if the agw already contains an existing element that has the same name of a new element to add
 	exist_element, exist := checkElementName(gw, plan)
 	if exist {
@@ -246,7 +247,6 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	}
 
 	//create, map and add the new elements (json) object from the plan (plan) to the agw object
-	fmt.Println("\n######################## Just Before createBackendAddressPool ########################")
 	gw.Properties.BackendAddressPools = append(
 		gw.Properties.BackendAddressPools, createBackendAddressPool(
 			plan.Backend_address_pool))
