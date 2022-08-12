@@ -48,15 +48,15 @@ type Http_listener struct {
 	//required
 	Name         						types.String	`tfsdk:"name"`	
 	Id           						types.String	`tfsdk:"id"`
-	Frontend_ip_configuration_name		types.String	`tfsdk:"frontend_ip_configuration_name "`					
-	Frontend_port_name           		types.String	`tfsdk:"frontend_port_name "`					
+	Frontend_ip_configuration_name		types.String	`tfsdk:"frontend_ip_configuration_name"`					
+	Frontend_port_name           		types.String	`tfsdk:"frontend_port_name"`					
 	Protocol                       		types.String	`tfsdk:"protocol"`								
 	//optional but mutually exclusive
 	Host_name  							types.String	`tfsdk:"host_name"`	
 	Host_names  						[]types.String	`tfsdk:"host_names"`	
 	//optional
 	Require_sni 						types.Bool		`tfsdk:"require_sni "`	//default to false
-	Ssl_certificate_name 				types.String	`tfsdk:"ssl_certificate_name "`							
+	Ssl_certificate_name 				types.String	`tfsdk:"ssl_certificate_name"`							
 	//Ssl_profile_name 
 	//Firewall_policy_id 
 	//Custom_error_configuration 
