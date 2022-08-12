@@ -184,7 +184,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 					ElemType: types.StringType,
 				},*/
 				/*************************/
-				Attributes: tfsdk.SetNestedAttributes(map[string]tfsdk.Attribute{
+				Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
 						Required: true,
@@ -225,7 +225,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 						Type:     types.StringType,
 						Optional: true,
 					},
-				},tfsdk.SetNestedAttributesOptions{}),
+				},tfsdk.ListNestedAttributesOptions{}),
 			},
 		},
 	}, nil
