@@ -179,7 +179,12 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 			},
 			"http_listener": {
 				Required: true,
-				Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
+				/*************************/
+				/*Type: types.ListType{
+					ElemType: types.StringType,
+				},*/
+				/*************************/
+				Attributes: tfsdk.SetNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
 						Required: true,
@@ -188,7 +193,6 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 						Type:     types.StringType,
 						Computed: true,
 					},
-					//the affinity has a default value if it's not provided: "ApplicationGatewayAffinity"
 					"frontend_ip_configuration_name": {
 						Type:     types.StringType,
 						Required: true,
@@ -221,7 +225,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 						Type:     types.StringType,
 						Optional: true,
 					},
-				}, tfsdk.ListNestedAttributesOptions{}),
+				},tfsdk.SetNestedAttributesOptions{}),
 			},
 		},
 	}, nil
