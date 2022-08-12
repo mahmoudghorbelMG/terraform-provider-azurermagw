@@ -87,9 +87,9 @@ func createProbe(probe_plan Probe_tf,AZURE_SUBSCRIPTION_ID string, rg_name strin
 		},
 		Type: "Microsoft.Network/applicationGateways/probes",
 	}
+
 	//it remains Match struct. we have to check if it is provided or not (actually, i don't have time)
-	//probe_json.Properties.Match.Body = probe_plan.Match.Body.Value
-	//mah :=Match{}
+	
 	if &probe_plan.Match != nil {
 		probe_json.Properties.Match = &struct{
 			Body string "json:\"body,omitempty\""; 
@@ -104,17 +104,12 @@ func createProbe(probe_plan Probe_tf,AZURE_SUBSCRIPTION_ID string, rg_name strin
 		}
 	}else{
 		probe_json.Properties.Match = nil
-	}
+	}		
 	
-		
-	fmt.Printf("\nHHHHHHHHHHHHHH  probe_json =\n %+v ",probe_json)
-	fmt.Printf("\nHHHHHHHHHHHHHH  probe_json.Properties.Match =\n %+v ",probe_json.Properties.Match)
-	
-	// add the backend to the agw and update the agw
 	return probe_json
 }
 func generateProbeState(gw ApplicationGateway, ProbeName string) Probe_tf {
-	// we have to give the nb_Fqdns and nb_IpAddress in order to make this function reusable in create, read and update method
+	//retrieve json element from gw
 	index := getProbeElementKey(gw, ProbeName)
 	probe_json := gw.Properties.Probes[index]
 	

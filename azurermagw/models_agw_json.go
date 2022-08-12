@@ -113,41 +113,7 @@ type ApplicationGateway struct {
 			EnableRequestBuffering  bool `json:"enableRequestBuffering"`
 			EnableResponseBuffering bool `json:"enableResponseBuffering"`
 		} `json:"globalConfiguration"`
-		HTTPListeners []struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
-			Properties struct {
-				FirewallPolicy *struct {
-					ID string `json:"id"`
-				} `json:"firewallPolicy"`
-				ProvisioningState       string `json:"provisioningState"`
-				FrontendIPConfiguration struct {
-					ID string `json:"id"`
-				} `json:"frontendIPConfiguration"`
-				FrontendPort struct {
-					ID string `json:"id"`
-				} `json:"frontendPort"`
-				Protocol                    string   `json:"protocol"`
-				HostName                    string   `json:"hostName"`
-				HostNames                   []string `json:"hostNames"`
-				RequireServerNameIndication bool     `json:"requireServerNameIndication"`
-				SslCertificate              *struct {
-					ID string `json:"id"`
-				} `json:"sslCertificate"`
-				SslProfile *struct {
-					ID string `json:"id"`
-				} `json:"sslProfile"`
-				CustomErrorConfigurations []struct {
-					CustomErrorPageURL string `json:"customErrorPageUrl"`
-					StatusCode         string `json:"statusCode"`
-				} `json:"customErrorConfigurations"`
-				RequestRoutingRules *[]struct {
-					ID string `json:"id"`
-				} `json:"requestRoutingRules"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"httpListeners"`
+		HTTPListeners [] HTTPListener `json:"httpListeners,omitempty"`
 		Listeners []struct {
 			ID         string `json:"id"`
 			Name       string `json:"name"`

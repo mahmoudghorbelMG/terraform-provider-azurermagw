@@ -1,0 +1,249 @@
+package azurermagw
+
+import (
+	//"fmt"
+	"fmt"
+	"strings"
+
+	"github.com/hashicorp/terraform-plugin-framework/types"
+)
+
+type HTTPListener struct {
+	Name       string `json:"name,omitempty"`
+	ID         string `json:"id,omitempty"`
+	Etag       string `json:"etag,omitempty"`
+	Properties struct {
+		FirewallPolicy *struct {
+			ID string `json:"id,omitempty"`
+		} `json:"firewallPolicy"`
+		ProvisioningState       string `json:"provisioningState,omitempty"`
+		FrontendIPConfiguration *struct {
+			ID string `json:"id,omitempty"`
+		} `json:"frontendIPConfiguration"`
+		FrontendPort *struct {
+			ID string `json:"id,omitempty"`
+		} `json:"frontendPort,omitempty"`
+		Protocol                    string   `json:"protocol,omitempty"`
+		HostName                    string   `json:"hostName,omitempty"`
+		HostNames                   []string `json:"hostNames,omitempty"`
+		RequireServerNameIndication bool     `json:"requireServerNameIndication,omitempty"`
+		SslCertificate              *struct {
+			ID string `json:"id,omitempty"`
+		} `json:"sslCertificate"`
+		SslProfile *struct {
+			ID string `json:"id,omitempty"`
+		} `json:"sslProfile"`
+		CustomErrorConfigurations *[]struct {
+			CustomErrorPageURL string `json:"customErrorPageUrl,omitempty"`
+			StatusCode         string `json:"statusCode,omitempty"`
+		} `json:"customErrorConfigurations"`
+		RequestRoutingRules *[]struct {
+			ID string `json:"id,omitempty"`
+		} `json:"requestRoutingRules,omitempty"`
+	} `json:"properties"`
+	Type string `json:"type,omitempty"`
+} 
+
+type Http_listener struct {
+	//required
+	Name         						types.String	`tfsdk:"name"`	
+	Id           						types.String	`tfsdk:"id"`
+	Frontend_ip_configuration_name		types.String	`tfsdk:"frontend_ip_configuration_name "`					
+	Frontend_port_name           		types.String	`tfsdk:"frontend_port_name "`					
+	Protocol                       		types.String	`tfsdk:"protocol"`								
+	//optional but mutually exclusive
+	Host_name  							types.String	`tfsdk:"host_name"`	
+	Host_names  						[]types.String	`tfsdk:"host_names"`	
+	//optional
+	Require_sni 						types.Bool		`tfsdk:"require_sni "`	//default to false
+	Ssl_certificate_name 				types.String	`tfsdk:"ssl_certificate_name "`							
+	//Ssl_profile_name 
+	//Firewall_policy_id 
+	//Custom_error_configuration 
+
+}
+
+func createHTTPListener(httpListener_plan Http_listener,SslCertificateName string, AZURE_SUBSCRIPTION_ID string, 
+								rg_name string, agw_name string) (HTTPListener, string, string){
+	//fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  httpListener_plan =\n %+v ",httpListener_plan)
+	httpListener_json := HTTPListener{
+		Name:       httpListener_plan.Name.Value,
+		//ID:         AZURE_SUBSCRIPTION_ID,
+		//Etag:       "",
+		Properties: struct{
+			FirewallPolicy *struct{
+				ID string "json:\"id,omitempty\""
+			} "json:\"firewallPolicy\""; 
+			ProvisioningState string "json:\"provisioningState,omitempty\""; 
+			FrontendIPConfiguration *struct{
+				ID string "json:\"id,omitempty\""
+			} "json:\"frontendIPConfiguration\""; 
+			FrontendPort *struct{
+				ID string "json:\"id,omitempty\""
+			} "json:\"frontendPort,omitempty\""; 
+			Protocol string "json:\"protocol,omitempty\""; 
+			HostName string "json:\"hostName,omitempty\""; 
+			HostNames []string "json:\"hostNames,omitempty\""; 
+			RequireServerNameIndication bool "json:\"requireServerNameIndication,omitempty\""; 
+			SslCertificate *struct{
+				ID string "json:\"id,omitempty\""
+			} "json:\"sslCertificate\""; 
+			SslProfile *struct{ID string "json:\"id,omitempty\""} "json:\"sslProfile\""; 
+			CustomErrorConfigurations *[]struct{
+				CustomErrorPageURL string "json:\"customErrorPageUrl,omitempty\""; 
+				StatusCode string "json:\"statusCode,omitempty\""
+			} "json:\"customErrorConfigurations\""; 
+			RequestRoutingRules *[]struct{
+				ID string "json:\"id,omitempty\""
+			} "json:\"requestRoutingRules,omitempty\""
+		}{
+			Protocol: httpListener_plan.Protocol.Value,			
+			RequireServerNameIndication: bool(httpListener_plan.Require_sni.Value),
+		},
+		Type: "Microsoft.Network/applicationGateways/httpListeners",
+	}
+	
+	//frontendIPConfiguration is required, so no test to do
+	//"id": "/subscriptions/b3ae2f08-8ccb-4640-949e-b4c0d2acfde6/resourceGroups/shared-app-gateway/providers/Microsoft.Network/applicationGateways/app-gateway/frontendIPConfigurations/app-gateway-fe-ip-config"
+    frontendIPConfigurationID :="/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+
+				"/providers/Microsoft.Network/applicationGateways/"+agw_name+"/frontendIPConfigurations/"+
+				httpListener_plan.Frontend_ip_configuration_name.Value
+	httpListener_json.Properties.FrontendIPConfiguration = &struct{ID string "json:\"id,omitempty\""}{ID: frontendIPConfigurationID,}
+
+	//frontendPort is required, so no test to do
+	//"id": "/subscriptions/b3ae2f08-8ccb-4640-949e-b4c0d2acfde6/resourceGroups/shared-app-gateway/providers/Microsoft.Network/applicationGateways/app-gateway/frontendPorts/app-gateway-fe-port-443"
+    frontendPortID :="/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+
+	"/providers/Microsoft.Network/applicationGateways/"+agw_name+"/frontendPorts/"+httpListener_plan.Frontend_port_name.Value
+	httpListener_json.Properties.FrontendPort = &struct{ID string "json:\"id,omitempty\""}{ID: frontendPortID,}
+
+	//ssl certificate id is optional, but when provided, it has to be conform with the certificate name in the binding
+	//"id": "/subscriptions/b3ae2f08-8ccb-4640-949e-b4c0d2acfde6/resourceGroups/shared-app-gateway/providers/Microsoft.Network/applicationGateways/app-gateway/sslCertificates/default-citeo-pat-cert"
+    sslCertificateID := "/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+
+	"/providers/Microsoft.Network/applicationGateways/"+agw_name+"/sslCertificates/"
+	// if there is a Ssl_certificate_name, then put it, else, nil
+	var error_SslCertificateName string
+	if httpListener_plan.Ssl_certificate_name.Value != "" {
+		//we have to check here if the probe name matches probe name in terraform conf in plan.
+		if httpListener_plan.Ssl_certificate_name.Value == SslCertificateName {
+			httpListener_json.Properties.SslCertificate = &struct{
+				ID string "json:\"id,omitempty\""
+			}{
+				ID: sslCertificateID + httpListener_plan.Ssl_certificate_name.Value,
+			}
+		}else{
+			//Error exit
+			error_SslCertificateName = "fatal"
+		}
+	}
+	
+	//verify the mutual exclusivity of the optional attributes hostname and hostnames
+	var error_Hostname string
+	if httpListener_plan.Host_name.Value != "" {
+		if len(httpListener_plan.Host_names)==0 {
+			//hostname is provided but not hostnames
+			httpListener_json.Properties.HostName = httpListener_plan.Host_name.Value
+		}else{
+			//both hostname and hostnames are provided
+			//the hostname is provided but not the hostnames
+			error_Hostname = "fatal"
+		}
+	}else{
+		if len(httpListener_plan.Host_names)==0 {
+			//both hostname and hostnames aren't provided
+			error_Hostname = "warning"
+		}else{
+			//hostnames is provided but not hostname
+			httpListener_json.Properties.HostNames = make([]string,len(httpListener_plan.Host_names))
+			for i := 0; i < len(httpListener_plan.Host_names); i++ {
+				httpListener_json.Properties.HostNames[i] = httpListener_plan.Host_names[i].Value
+			}
+		}
+	}
+	return httpListener_json,error_SslCertificateName,error_Hostname
+}
+func generateHTTPListenerState(gw ApplicationGateway, HTTPListenerName string) Http_listener {
+	//retrieve json element from gw
+	index := getHTTPListenerElementKey(gw, HTTPListenerName)
+	httpListener_json := gw.Properties.HTTPListeners[index]
+	
+	// Map response body to resource schema attribute
+	var httpListener_state Http_listener
+	httpListener_state = Http_listener{
+		Name:                       	types.String	{Value: httpListener_json.Name},
+		Id:                         	types.String	{Value: httpListener_json.ID},
+		Protocol:                   	types.String	{Value: httpListener_json.Properties.Protocol},
+		Require_sni: 					types.Bool		{Value: httpListener_json.Properties.RequireServerNameIndication},
+		Ssl_certificate_name:       	types.String	{},
+		Frontend_ip_configuration_name:	types.String	{},
+		Frontend_port_name:       		types.String	{},
+		Host_name:       				types.String	{Value: httpListener_json.Properties.HostName},
+		Host_names:						[]types.String	{},			
+	}
+
+	//map host_names. check if it is an empty array.
+	if len(httpListener_json.Properties.HostNames)!=0 {
+		httpListener_state.Host_names = make([]types.String,len(httpListener_json.Properties.HostNames))
+		for i := 0; i < len(httpListener_json.Properties.HostNames); i++ {
+			httpListener_state.Host_names[i] = types.String{Value: httpListener_json.Properties.HostNames[i]}
+		}
+	}else{
+		//we have to verify if it has to be nil or empty array
+		httpListener_state.Host_names = nil
+	}
+
+	//map Frontend_ip_configuration_name
+	//split the Frontend_ip_configuration_name ID using the separator "/". the Frontend_ip_configuration_name name is the last one
+	if httpListener_json.Properties.FrontendIPConfiguration != nil {
+		splitted_list := strings.Split(httpListener_json.Properties.FrontendIPConfiguration.ID,"/")
+		httpListener_state.Frontend_ip_configuration_name = types.String{Value: splitted_list[len(splitted_list)-1]}
+	}else{
+		fmt.Printf("\nWWWWWWWWWWWWWWWWWW  warning: FrontendIPConfiguration =\n %+v. It shouldn't be null",httpListener_json.Properties.FrontendIPConfiguration)
+		httpListener_state.Frontend_ip_configuration_name = types.String{Null: true}
+	}
+
+	//map Frontend_port_name
+	//split the Frontend_port_name ID using the separator "/". the Frontend_port_name name is the last one
+	if httpListener_json.Properties.FrontendPort != nil {
+		splitted_list := strings.Split(httpListener_json.Properties.FrontendPort.ID,"/")
+		httpListener_state.Frontend_port_name = types.String{Value: splitted_list[len(splitted_list)-1]}
+	}else{
+		fmt.Printf("\nWWWWWWWWWWWWWWWWWW  warning: FrontendPort =\n %+v. It shouldn't be null",httpListener_json.Properties.FrontendPort)
+		httpListener_state.Frontend_port_name = types.String{Null: true}
+	}
+
+	//map Ssl_certificate_name
+	//split the Ssl_certificate_name ID using the separator "/". the Ssl_certificate_name name is the last one
+	if httpListener_json.Properties.SslCertificate != nil {
+		splitted_list := strings.Split(httpListener_json.Properties.SslCertificate.ID,"/")
+		httpListener_state.Ssl_certificate_name = types.String{Value: splitted_list[len(splitted_list)-1]}
+	}else{
+		httpListener_state.Ssl_certificate_name = types.String{Null: true}
+	}
+
+	return httpListener_state
+}
+func getHTTPListenerElementKey(gw ApplicationGateway, HTTPListenerName string) int {
+	key := -1
+	for i := len(gw.Properties.HTTPListeners) - 1; i >= 0; i-- {
+		if gw.Properties.HTTPListeners[i].Name == HTTPListenerName {
+			key = i
+		}
+	}
+	return key
+}
+func checkHTTPListenerElement(gw ApplicationGateway, HTTPListenerName string) bool {
+	exist := false
+	for i := len(gw.Properties.HTTPListeners) - 1; i >= 0; i-- {
+		if gw.Properties.HTTPListeners[i].Name == HTTPListenerName {
+			exist = true
+		}
+	}
+	return exist
+}
+func removeHTTPListenerElement(gw *ApplicationGateway, HTTPListenerName string) {
+	for i := len(gw.Properties.HTTPListeners) - 1; i >= 0; i-- {
+		if gw.Properties.HTTPListeners[i].Name == HTTPListenerName {
+			gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners[:i], gw.Properties.HTTPListeners[i+1:]...)
+		}
+	}
+}

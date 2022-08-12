@@ -92,17 +92,16 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,probeName stri
 			TrustedRootCertificates *[]struct{
 				ID string "json:\"id,omitempty\""
 			} "json:\"trustedRootCertificates\""
-			}{	//initialisation of the Properties Struct
-				CookieBasedAffinity:			backend_plan.Cookie_based_affinity.Value,
-				AffinityCookieName:				backend_plan.Affinity_cookie_name.Value,
-				PickHostNameFromBackendAddress: bool(backend_plan.Pick_host_name_from_backend_address.Value),
-				Port: 							int(backend_plan.Port.Value),
-				Protocol: 						backend_plan.Protocol.Value,
-				RequestTimeout: 				int(backend_plan.Request_timeout.Value),
-			},
+		}{	//initialisation of the Properties Struct
+			CookieBasedAffinity:			backend_plan.Cookie_based_affinity.Value,
+			AffinityCookieName:				backend_plan.Affinity_cookie_name.Value,
+			PickHostNameFromBackendAddress: bool(backend_plan.Pick_host_name_from_backend_address.Value),
+			Port: 							int(backend_plan.Port.Value),
+			Protocol: 						backend_plan.Protocol.Value,
+			RequestTimeout: 				int(backend_plan.Request_timeout.Value),
+		},
 		Type: "Microsoft.Network/applicationGateways/backendHttpSettingsCollection",
 	}
-
 	
 	//the probe name should treated specifically to construct the ID
 	probe_string := "/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+"/providers/Microsoft.Network/applicationGateways/"+agw_name+"/probes/"
@@ -119,24 +118,17 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,probeName stri
 		}else{
 			//Error exit
 			error = "fatal"
-		}
-		
-	}else{
-		//backend_json.Properties.Probe = 
+		}		
 	}	
-	//fmt.Printf("\nHHHHHHHHHHHHHH  backend_json =\n %+v ",backend_json)
 	
-	// add the backend to the agw and update the agw
 	return backend_json,error
 }
 func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettingsName string) Backend_http_settings {
-	// we have to give the nb_Fqdns and nb_IpAddress in order to make this function reusable in create, read and update method
+	//retrieve json element from gw
 	index := getBackendHTTPSettingsElementKey(gw, BackendHTTPSettingsName)
 	backend_json := gw.Properties.BackendHTTPSettingsCollection[index]
-	//fmt.Printf("\nqqqqqqqqqqqqqqq backend_json (fromgw_response) =\n %+v ",backend_json)
-	// Map response body to resource schema attribute
-	//split the probe ID using the separator "/". the probe name is the last one
 	
+	// Map response body to resource schema attribute	
 	var backend_state Backend_http_settings
 	backend_state = Backend_http_settings{
 		Name:                                types.String	{Value: backend_json.Name},
@@ -151,6 +143,7 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 	}
 	//verify if optional parameters are provided, otherwise, they have to set to null
 	if backend_json.Properties.Probe != nil {
+		//split the probe ID using the separator "/". the probe name is the last one
 		splitted_list := strings.Split(backend_json.Properties.Probe.ID,"/")
 		backend_state.Probe_name = types.String{Value: splitted_list[len(splitted_list)-1]}
 	}else{

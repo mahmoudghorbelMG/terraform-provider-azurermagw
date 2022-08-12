@@ -12,4 +12,5 @@ type WebappBinding struct {
 	Backend_address_pool	Backend_address_pool 	`tfsdk:"backend_address_pool"`
 	Backend_http_settings   Backend_http_settings	`tfsdk:"backend_http_settings"`
 	Probe					Probe_tf				`tfsdk:"probe"`
+	Http_listeners			[]Http_listener			`tfsdk:"http_listener"`
 }
