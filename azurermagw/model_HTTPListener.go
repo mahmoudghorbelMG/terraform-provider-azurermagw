@@ -55,7 +55,7 @@ type Http_listener struct {
 	Host_name  							types.String	`tfsdk:"host_name"`	
 	Host_names  						[]types.String	`tfsdk:"host_names"`	
 	//optional
-	Require_sni 						types.Bool		`tfsdk:"require_sni "`	//default to false
+	Require_sni 						types.Bool		`tfsdk:"require_sni"`	//default to false
 	Ssl_certificate_name 				types.String	`tfsdk:"ssl_certificate_name"`							
 	//Ssl_profile_name 
 	//Firewall_policy_id 
