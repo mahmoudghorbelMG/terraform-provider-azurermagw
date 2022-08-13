@@ -698,7 +698,9 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 
 	/*************** Special for Http listeners **********************/
 	fmt.Printf("\n888888888888888888888  len(plan.Http_listeners) =\n %+v ",len(plan.Http_listeners))
-	httpListeners_state := make([]Http_listener,len(plan.Http_listeners))
+	//httpListeners_state := make([]Http_listener,len(plan.Http_listeners))
+	var httpListeners_state []Http_listener
+	fmt.Printf("\n888888888888888888888  len(plan.Http_listeners) =\n %+v ",len(plan.Http_listeners))
 	for i := 0; i < len(plan.Http_listeners); i++ {
 		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listeners[i].Name.Value)
 		fmt.Printf("\n/////////////////////  httpListener_state =\n %+v ",httpListener_state)
