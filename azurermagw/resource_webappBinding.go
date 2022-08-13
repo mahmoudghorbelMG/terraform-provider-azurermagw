@@ -606,14 +606,14 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//preparing the new elements (json) from the plan
 	for i := 0; i < len(plan.Http_listeners); i++ {
 		//SslCertificateName := plan.SslCertificate.Name.Value // (not yet implemented till now)
-		SslCertificateName:="SslCertificateName"
+		SslCertificateName:="default-citeo-adelphe-cert"
 		httpListener_plan := plan.Http_listeners[i]
 		httpListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(httpListener_plan,SslCertificateName,
 			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 		if error_SslCertificateName == "fatal" {
 			//wrong SslCertificate Name
 			resp.Diagnostics.AddError(
-			"Unable to update binding. The SslCertificate name ("+SslCertificateName+") declared in Http_listener: "+ 
+			"Unable to update binding. The SslCertificate name ("+httpListener_plan.Ssl_certificate_name.Value+") declared in Http_listener: "+ 
 			httpListener_plan.Name.Value+" doesn't match the SslCertificate name conf : "+SslCertificateName,
 			"Please, change probe name then retry.",)
 			return
