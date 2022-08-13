@@ -455,7 +455,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	}
 
 	// *********** Processing the http Listeners *********** //
-	httpListeners_state := make([]Http_listener,len(state.Http_listeners))
+	var httpListeners_state []Http_listener
 	for i := 0; i < len(state.Http_listeners); i++ {
 		//check if the backend Http listener  exists in the gateway, otherwise, it was removed manually
 		var httpListener_state Http_listener
