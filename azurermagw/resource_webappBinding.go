@@ -646,14 +646,15 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			//if it is about http Listener update with a new name,
 			//remove the old http Listener (with its old name) from the gateway
 			//to identify the old name, we have to use the param ID of the http Listener.
-			fmt.Printf("\nSSSSSSSSSSSSSSSSSSSS  httpListener ID =\n %+v ",httpListener_plan.Id.Value)
-	
+			fmt.Printf("\n----------------------  httpListener ID =\n %+v ",httpListener_plan.Id.Value)
 			oldHttpListenerKey := getHTTPListenerElementKey_state(state.Http_listeners,httpListener_plan.Id.Value)
 			if oldHttpListenerKey != -1 {
 				removeHTTPListenerElement(&gw, state.Http_listeners[oldHttpListenerKey].Name.Value)
 			}
 		}
 		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpListener_json)	
+		fmt.Printf("\nSSSSSSSSSSSSSSSSSSSS  httpListener_json =\n %+v ",httpListener_json)
+			
 	}
 	
 	//add the new elements (http Listener elements are already added). 
@@ -696,11 +697,14 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	probe_state	:= generateProbeState(gw_response,probe_json.Name)
 
 	/*************** Special for Http listeners **********************/
+	fmt.Printf("\n++++++++++++++++++++++  len(plan.Http_listeners) =\n %+v ",len(plan.Http_listeners))
 	httpListeners_state := make([]Http_listener,len(plan.Http_listeners))
 	for i := 0; i < len(plan.Http_listeners); i++ {
 		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listeners[i].Name.Value)
 		httpListeners_state = append(httpListeners_state, httpListener_state)
 	}
+	fmt.Printf("\n++++++++++++++++++++++  httpListeners_state =\n %+v ",httpListeners_state)
+	
 	/******************************************************************/
 	
 	// Generate resource state struct
