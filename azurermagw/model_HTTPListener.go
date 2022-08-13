@@ -163,7 +163,7 @@ func createHTTPListener(httpListener_plan Http_listener,SslCertificateName strin
 }
 func generateHTTPListenerState(gw ApplicationGateway, HTTPListenerName string) Http_listener {
 	//retrieve json element from gw
-	index := getHTTPListenerElementKey(gw, HTTPListenerName)
+	index := getHTTPListenerElementKey_gw(gw, HTTPListenerName)
 	httpListener_json := gw.Properties.HTTPListeners[index]
 	
 	// Map response body to resource schema attribute
@@ -222,10 +222,19 @@ func generateHTTPListenerState(gw ApplicationGateway, HTTPListenerName string) H
 
 	return httpListener_state
 }
-func getHTTPListenerElementKey(gw ApplicationGateway, HTTPListenerName string) int {
+func getHTTPListenerElementKey_gw(gw ApplicationGateway, HTTPListenerName string) int {
 	key := -1
 	for i := len(gw.Properties.HTTPListeners) - 1; i >= 0; i-- {
 		if gw.Properties.HTTPListeners[i].Name == HTTPListenerName {
+			key = i
+		}
+	}
+	return key
+}
+func getHTTPListenerElementKey_state(httpListeners_state []Http_listener, HTTPListenerID string) int {
+	key := -1
+	for i := len(httpListeners_state) - 1; i >= 0; i-- {
+		if httpListeners_state[i].Id.Value == HTTPListenerID {
 			key = i
 		}
 	}
@@ -236,6 +245,16 @@ func checkHTTPListenerElement(gw ApplicationGateway, HTTPListenerName string) bo
 	for i := len(gw.Properties.HTTPListeners) - 1; i >= 0; i-- {
 		if gw.Properties.HTTPListeners[i].Name == HTTPListenerName {
 			exist = true
+		}
+	}
+	return exist
+}
+func checkHTTPListenerElement_special(httpListeners_plan []Http_listener, HTTPListenerName string) int {
+	//the var exist will count the occurence number of HTTPListenerName in the array httpListeners_plan
+	exist := 0
+	for i := len(httpListeners_plan) - 1; i >= 0; i-- {
+		if httpListeners_plan[i].Name.Value == HTTPListenerName {
+			exist++
 		}
 	}
 	return exist

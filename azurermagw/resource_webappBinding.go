@@ -522,7 +522,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	backendAddressPool_plan := plan.Backend_address_pool
 	backendAddressPool_json := createBackendAddressPool(backendAddressPool_plan)
 	
-	//check if the backend name in the plan and state are different, that means that the
+	//check if the backend name in the plan and state are different, that means that
 	//it is about backend AddressPool update  with the same name
 	if backendAddressPool_plan.Name.Value == state.Backend_address_pool.Name.Value {
 		//so we remove the old one before adding the new one.
@@ -556,7 +556,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		)
 		return
 	}
-	//check if the backend HTTPSettings name in the plan and state are different, that means that the
+	//check if the backend HTTPSettings name in the plan and state are different, that means that
 	//it is about backend HTTPSettings update  with the same name
 	if backendHTTPSettings_plan.Name.Value == state.Backend_http_settings.Name.Value {
 		//it is about backend http settings update  with the same name
@@ -582,7 +582,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	probe_plan := plan.Probe	
 	probe_json := createProbe(probe_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 
-	//check if the probe name in the plan and state are different,that means that the
+	//check if the probe name in the plan and state are different,that means that
 	//it is about probe update  with the same name
 	if probe_plan.Name.Value == state.Probe.Name.Value {
 		//so we remove the old one before adding the new one.
@@ -604,7 +604,6 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 
 	// *********** Processing http Listeners *********** //	
 	//preparing the new elements (json) from the plan
-	//####################################################
 	for i := 0; i < len(plan.Http_listeners); i++ {
 		//SslCertificateName := plan.SslCertificate.Name.Value // (not yet implemented till now)
 		SslCertificateName:="SslCertificateName"
@@ -627,15 +626,15 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 				"Please, change HTTPListener configuration then retry.",)
 			return
 		}
-		//check if the http Listener name in the plan and state are different, that means that the
+		//check if the http Listener name in the plan and state are different, that means that
 		//it is about a http Listener update  with the same name
-		if httpListener_plan.Name.Value == state.Http_listeners[i].Name.Value {
-			//it is about backend http settings update  with the same name
+		if checkHTTPListenerElement_special(state.Http_listeners,httpListener_plan.Name.Value) == 1 {
+			//it is about http Listener update  with the same name
 			//so we remove the old one before adding the new one.
 			removeHTTPListenerElement(&gw, httpListener_json.Name)
-		}else{
-			// it's about http Listener update with a new name
-			// we have to check if the new http Listener name is already used
+		}else{// that means that there is no http Listener in the state with that name
+			// it's about http Listener update with a new name, or adding new http Listener
+			// we have to check if the new http Listener name is already used in the gw
 			if checkHTTPListenerElement(gw, httpListener_json.Name) {
 				//this is an error. issue an exit error.
 				resp.Diagnostics.AddError(
@@ -644,8 +643,13 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 				)
 				return
 			}
-			//remove the old http Listener (old name) from the gateway
-			removeHTTPListenerElement(&gw, state.Http_listeners[i].Name.Value)
+			//if it is about http Listener update with a new name,
+			//remove the old http Listener (with its old name) from the gateway
+			//to identify the old name, we have to use the param ID of the http Listener.
+			oldHttpListenerKey := getHTTPListenerElementKey_state(state.Http_listeners,httpListener_plan.Id.Value)
+			if oldHttpListenerKey != -1 {
+				removeHTTPListenerElement(&gw, state.Http_listeners[oldHttpListenerKey].Name.Value)
+			}
 		}
 		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpListener_json)	
 	}
@@ -778,7 +782,7 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool)
 	backendAddressPool_plan 	:= plan.Backend_address_pool 
 	backendHTTPSettings_plan 	:= plan.Backend_http_settings
 	probe_plan 					:= plan.Probe
-	httpListener_plan 					:= plan.Probe
+	httpListeners_plan 			:= plan.Http_listeners
 	if checkBackendAddressPoolElement(gw, backendAddressPool_plan.Name.Value) {
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- BackendAddressPool: "+backendAddressPool_plan.Name.Value)
@@ -791,10 +795,18 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool)
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- Probe: "+probe_plan.Name.Value)
 	}
-	if checkProbeElement(gw, httpListener_plan.Name.Value) {
-		exist = true 
-		existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpListener_plan.Name.Value)
+	for i := 0; i < len(httpListeners_plan); i++ {
+		if checkHTTPListenerElement(gw, httpListeners_plan[i].Name.Value) {
+			exist = true 
+			existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpListeners_plan[i].Name.Value)
+		}
+		if checkHTTPListenerElement_special(httpListeners_plan,httpListeners_plan[i].Name.Value) > 1 {
+			exist = true 
+			existing_element_list = append(existing_element_list,"\n	- HTTPListener (new configuration): "+httpListeners_plan[i].Name.Value)
+		
+		}
 	}
+	
 	return existing_element_list,exist
 }
 
