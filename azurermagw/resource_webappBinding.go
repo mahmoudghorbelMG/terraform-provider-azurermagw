@@ -646,6 +646,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			//if it is about http Listener update with a new name,
 			//remove the old http Listener (with its old name) from the gateway
 			//to identify the old name, we have to use the param ID of the http Listener.
+			fmt.Printf("\nSSSSSSSSSSSSSSSSSSSS  httpListener ID =\n %+v ",httpListener_plan.Id.Value)
+	
 			oldHttpListenerKey := getHTTPListenerElementKey_state(state.Http_listeners,httpListener_plan.Id.Value)
 			if oldHttpListenerKey != -1 {
 				removeHTTPListenerElement(&gw, state.Http_listeners[oldHttpListenerKey].Name.Value)
