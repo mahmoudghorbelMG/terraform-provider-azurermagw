@@ -328,14 +328,22 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			"Please, change probe name then retry.",)
 			return
 		}
-		if error_Hostname == "fatal" {
+		if error_Hostname == "fatal-exclusivity" {
 			//hostname and hostnames are mutually exclusive. only one should be provided
 			resp.Diagnostics.AddError(
-				"Unable to create binding. In HTTP Listener "+ plan.Http_listeners[i].Name.Value+" Hostname and Hostnames are mutually exclusive. "+
+				"Unable to create binding. In HTTP Listener "+ plan.Http_listeners[i].Name.Value+", Hostname and Hostnames are mutually exclusive. "+
 				"Only one should be provided",
 				"Please, change HTTPListener configuration then retry.",)
 			return
 		}
+		if error_Hostname == "fatal-missing" {
+			//hostname and hostnames are mutually exclusive. only one should be provided
+			resp.Diagnostics.AddError(
+				"Unable to create binding. In HTTP Listener "+ plan.Http_listeners[i].Name.Value+", both Hostname and Hostnames are missing. "+
+				"At least and only one should be provided",
+				"Please, change HTTPListener configuration then retry.",)
+			return
+		}		
 		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpListener_json)	
 	}
 
@@ -619,11 +627,19 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			"Please, change probe name then retry.",)
 			return
 		}
-		if error_Hostname == "fatal" {
+		if error_Hostname == "fatal-exclusivity" {
 			//hostname and hostnames are mutually exclusive. only one should be provided
 			resp.Diagnostics.AddError(
 				"Unable to update binding. In HTTP Listener "+ httpListener_plan.Name.Value+" Hostname and Hostnames are mutually exclusive. "+
 				"Only one should be provided",
+				"Please, change HTTPListener configuration then retry.",)
+			return
+		}
+		if error_Hostname == "fatal-missing" {
+			//hostname and hostnames are mutually exclusive. only one should be provided
+			resp.Diagnostics.AddError(
+				"Unable to update binding. In HTTP Listener "+ httpListener_plan.Name.Value+" Both Hostname and Hostnames are missing. "+
+				"At least and only one should be provided",
 				"Please, change HTTPListener configuration then retry.",)
 			return
 		}

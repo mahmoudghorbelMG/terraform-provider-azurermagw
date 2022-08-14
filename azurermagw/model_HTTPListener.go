@@ -145,12 +145,12 @@ func createHTTPListener(httpListener_plan Http_listener,SslCertificateName strin
 		}else{
 			//both hostname and hostnames are provided
 			//the hostname is provided but not the hostnames
-			error_Hostname = "fatal"
+			error_Hostname = "fatal-exclusivity"
 		}
 	}else{
 		if len(httpListener_plan.Host_names)==0 {
 			//both hostname and hostnames aren't provided
-			error_Hostname = "warning"
+			error_Hostname = "fatal-missing"
 		}else{
 			//hostnames is provided but not hostname
 			httpListener_json.Properties.HostNames = make([]string,len(httpListener_plan.Host_names))
