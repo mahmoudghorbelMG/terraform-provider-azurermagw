@@ -176,10 +176,12 @@ func generateHTTPListenerState(gw ApplicationGateway, HTTPListenerName string) H
 		Ssl_certificate_name:       	types.String	{},
 		Frontend_ip_configuration_name:	types.String	{},
 		Frontend_port_name:       		types.String	{},
-		Host_name:       				types.String	{Value: httpListener_json.Properties.HostName},
+		Host_name:       				types.String	{},
 		Host_names:						[]types.String	{},			
 	}
-
+	if httpListener_json.Properties.HostName != "" {
+		httpListener_state.Host_name.Value = httpListener_json.Properties.HostName
+	}
 	//map host_names. check if it is an empty array.
 	if len(httpListener_json.Properties.HostNames)!=0 {
 		httpListener_state.Host_names = make([]types.String,len(httpListener_json.Properties.HostNames))
