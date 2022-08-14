@@ -181,6 +181,8 @@ func generateHTTPListenerState(gw ApplicationGateway, HTTPListenerName string) H
 	}
 	if httpListener_json.Properties.HostName != "" {
 		httpListener_state.Host_name = types.String{Value: httpListener_json.Properties.HostName}
+	}else{
+		httpListener_state.Host_name.Null = true
 	}
 	//map host_names. check if it is an empty array.
 	if len(httpListener_json.Properties.HostNames)!=0 {
