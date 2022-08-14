@@ -54,7 +54,6 @@ type Match	struct{
 }
 
 func createProbe(probe_plan Probe_tf,AZURE_SUBSCRIPTION_ID string, rg_name string, agw_name string) Probe_json{	
-	fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  probe_plan =\n %+v ",probe_plan)
 	probe_json := Probe_json{
 		Name:       probe_plan.Name.Value,
 		//ID:         "",
