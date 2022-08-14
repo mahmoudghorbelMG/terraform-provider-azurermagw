@@ -631,6 +631,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		if checkHTTPListenerElement_special(state.Http_listeners,httpListener_plan.Name.Value) == 1 {
 			//it's about http Listener update  with the same name
 			//so we remove the old one before adding the new one.
+			fmt.Printf("\n----------------------  the old http to be removed from gw (same name) =\n %+v ",httpListener_json.Name)
 			removeHTTPListenerElement(&gw, httpListener_json.Name)
 		}else{// that means that there is no http Listener in the state with that name
 			// it's about http Listener update with a new name, or adding new http Listener
@@ -649,7 +650,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			// 2) same FrontendIpConfiguration and 3)same HostName or HostNames.
 			oldHttpListenerKey := getHTTPListenerElementKey_state(state.Http_listeners,httpListener_plan)
 			if oldHttpListenerKey != -1 {
-				fmt.Printf("\n----------------------  httpListener ID =\n %+v ",httpListener_plan.Id.Value)
+				fmt.Printf("\n----------------------  the old http to be removed from gw =\n %+v ",state.Http_listeners[oldHttpListenerKey].Name.Value)
 				removeHTTPListenerElement(&gw, state.Http_listeners[oldHttpListenerKey].Name.Value)
 			}
 		}
