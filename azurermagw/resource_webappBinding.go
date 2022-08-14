@@ -361,7 +361,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		gw_response,plan.Backend_http_settings.Name.Value)
 	probe_state := generateProbeState(gw_response,plan.Probe.Name.Value)
 	
-	httpListeners_state := make([]Http_listener,len(plan.Http_listeners))
+	var httpListeners_state []Http_listener
 	for i := 0; i < len(plan.Http_listeners); i++ {
 		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listeners[i].Name.Value)
 		httpListeners_state = append(httpListeners_state, httpListener_state)
