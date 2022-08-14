@@ -317,14 +317,14 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	// Http_listener is an array.
 	for i := 0; i < len(plan.Http_listeners); i++ {
 		//SslCertificateName := plan.SslCertificate.Name.Value // (not yet implemented till now)
-		SslCertificateName:="SslCertificateName"
+		SslCertificateName:="default-citeo-adelphe-cert"
 		httpListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(plan.Http_listeners[i],SslCertificateName,
 			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 		if error_SslCertificateName == "fatal" {
 			//wrong SslCertificate Name
 			resp.Diagnostics.AddError(
 			"Unable to create binding. The SslCertificate name ("+SslCertificateName+") declared in Http_listener: "+ 
-			plan.Http_listeners[i].Name.Value+" doesn't match the SslCertificate name conf : "+SslCertificateName,
+			plan.Http_listeners[i].Name.Value+" doesn't match the SslCertificate name conf : "+plan.Http_listeners[i].Ssl_certificate_name.Value,
 			"Please, change probe name then retry.",)
 			return
 		}
