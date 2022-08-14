@@ -601,7 +601,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		//remove the old backend http settings (old name) from the gateway
 		removeProbeElement(&gw, state.Probe.Name.Value)
 	}
-
+	fmt.Printf("\nVVVVVVVVVVVVVVVVVVVVV  plan.Http_listeners =\n %+v ",plan.Http_listeners)
+			
 	// *********** Processing http Listeners *********** //	
 	//preparing the new elements (json) from the plan
 	for i := 0; i < len(plan.Http_listeners); i++ {
@@ -699,10 +700,10 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	probe_state	:= generateProbeState(gw_response,probe_json.Name)
 
 	/*************** Special for Http listeners **********************/
-	fmt.Printf("\n888888888888888888888  len(plan.Http_listeners) =\n %+v ",len(plan.Http_listeners))
+	//fmt.Printf("\n888888888888888888888  len(plan.Http_listeners) =\n %+v ",len(plan.Http_listeners))
 	//httpListeners_state := make([]Http_listener,len(plan.Http_listeners))
 	var httpListeners_state []Http_listener
-	fmt.Printf("\n888888888888888888888  len(plan.Http_listeners) =\n %+v ",len(plan.Http_listeners))
+	//fmt.Printf("\n888888888888888888888  len(plan.Http_listeners) =\n %+v ",len(plan.Http_listeners))
 	for i := 0; i < len(plan.Http_listeners); i++ {
 		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listeners[i].Name.Value)
 		fmt.Printf("\n/////////////////////  httpListener_state =\n %+v ",httpListener_state)
