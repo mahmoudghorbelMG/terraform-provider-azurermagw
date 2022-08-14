@@ -184,7 +184,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 					ElemType: types.StringType,
 				},*/
 				/*************************/
-				Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
+				Attributes: tfsdk.SetNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
 						Required: true,
@@ -225,7 +225,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 						Type:     types.StringType,
 						Optional: true,
 					},
-				},tfsdk.ListNestedAttributesOptions{}),
+				},tfsdk.SetNestedAttributesOptions{}),
 			},
 		},
 	}, nil
@@ -315,6 +315,13 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		createProbe(plan.Probe,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName))
 
 	// Http_listener is an array.
+	if len(plan.Http_listeners)==0 {
+		resp.Diagnostics.AddError(
+			"Unable to create binding. At least, one Http listener must be declared. ",
+			"Please, add a Http listener then retry.",
+		)
+		return
+	}
 	for i := 0; i < len(plan.Http_listeners); i++ {
 		//SslCertificateName := plan.SslCertificate.Name.Value // (not yet implemented till now)
 		SslCertificateName:="default-citeo-adelphe-cert"
@@ -630,7 +637,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		if error_Hostname == "fatal-exclusivity" {
 			//hostname and hostnames are mutually exclusive. only one should be provided
 			resp.Diagnostics.AddError(
-				"Unable to update binding. In HTTP Listener "+ httpListener_plan.Name.Value+" Hostname and Hostnames are mutually exclusive. "+
+				"Unable to update binding. In HTTP Listener "+ httpListener_plan.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
 				"Only one should be provided",
 				"Please, change HTTPListener configuration then retry.",)
 			return
@@ -638,7 +645,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		if error_Hostname == "fatal-missing" {
 			//hostname and hostnames are mutually exclusive. only one should be provided
 			resp.Diagnostics.AddError(
-				"Unable to update binding. In HTTP Listener "+ httpListener_plan.Name.Value+" Both Hostname and Hostnames are missing. "+
+				"Unable to update binding. In HTTP Listener "+ httpListener_plan.Name.Value+", Both Hostname and Hostnames are missing. "+
 				"At least and only one should be provided",
 				"Please, change HTTPListener configuration then retry.",)
 			return
