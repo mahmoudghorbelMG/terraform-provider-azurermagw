@@ -231,14 +231,53 @@ func getHTTPListenerElementKey_gw(gw ApplicationGateway, HTTPListenerName string
 	}
 	return key
 }
-func getHTTPListenerElementKey_state(httpListeners_state []Http_listener, HTTPListenerID string) int {
+func getHTTPListenerElementKey_state(httpListeners_state []Http_listener, httpListener_plan Http_listener) int {
 	key := -1
 	for i := len(httpListeners_state) - 1; i >= 0; i-- {
-		if httpListeners_state[i].Id.Value == HTTPListenerID {
-			key = i
+		//3 conditions has to be satisfied: 1)same Frontend Port, 2) same FrontendIpConfiguration and 3)same HostName or HostNames.
+		//condition 1
+		condition_1 := false
+		if httpListeners_state[i].Frontend_port_name.Value == httpListener_plan.Frontend_port_name.Value {
+			condition_1 = true
 		}
+		condition_2 := false
+		if httpListeners_state[i].Frontend_ip_configuration_name.Value == httpListener_plan.Frontend_ip_configuration_name.Value {
+			condition_2 = true
+		}
+		condition_3 := false		
+		if httpListeners_state[i].Host_name.Value == httpListener_plan.Host_name.Value && httpListener_plan.Host_name.Value != ""{
+			condition_3 = true
+		}else{
+			if httpListener_plan.Host_name.Value == "" {			
+				if httpListeners_state[i].Host_name.Value == "" {
+					for i := 0; i < len(httpListeners_state[i].Host_names); i++ {
+						if check(httpListener_plan.Host_names,httpListeners_state[i].Host_names[i].Value){
+							condition_3 = true
+						}
+					}
+				}else{
+					condition_3 = check(httpListener_plan.Host_names,httpListeners_state[i].Host_name.Value)					
+				}
+			}else{
+				if httpListeners_state[i].Host_name.Value=="" {
+					condition_3 = check(httpListeners_state[i].Host_names,httpListener_plan.Host_name.Value)
+				}
+			}
+		}
+		if condition_1&&condition_2&&condition_3 {
+			key = i
+			return key
+		}		
 	}
 	return key
+}
+func check(hostnames []types.String, hostname string) bool{
+	for i := 0; i < len(hostnames); i++ {
+		if hostnames[i].Value == hostname{
+			return true
+		}
+	}
+	return false
 }
 func checkHTTPListenerElement(gw ApplicationGateway, HTTPListenerName string) bool {
 	exist := false

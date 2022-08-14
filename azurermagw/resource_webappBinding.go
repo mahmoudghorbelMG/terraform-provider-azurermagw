@@ -89,7 +89,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 					"pick_host_name_from_backend_address": {
 						Type:     types.BoolType,
 						//this params should be optional but whith default value (false)
-						//to implment this, it requires additional effort. Actually, it is easier for me
+						//to implment this, it requires additional effort. Actually, it's easier for me
 						//to make it Required :)
 						Optional: true,
 						Computed: true,
@@ -523,7 +523,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	backendAddressPool_json := createBackendAddressPool(backendAddressPool_plan)
 	
 	//check if the backend name in the plan and state are different, that means that
-	//it is about backend AddressPool update  with the same name
+	//it's about backend AddressPool update  with the same name
 	if backendAddressPool_plan.Name.Value == state.Backend_address_pool.Name.Value {
 		//so we remove the old one before adding the new one.
 		removeBackendAddressPoolElement(&gw, backendAddressPool_json.Name)
@@ -557,9 +557,9 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		return
 	}
 	//check if the backend HTTPSettings name in the plan and state are different, that means that
-	//it is about backend HTTPSettings update  with the same name
+	//it's about backend HTTPSettings update  with the same name
 	if backendHTTPSettings_plan.Name.Value == state.Backend_http_settings.Name.Value {
-		//it is about backend http settings update  with the same name
+		//it's about backend http settings update  with the same name
 		//so we remove the old one before adding the new one.
 		removeBackendHTTPSettingsElement(&gw, backendHTTPSettings_json.Name)
 	}else{
@@ -583,7 +583,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	probe_json := createProbe(probe_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 
 	//check if the probe name in the plan and state are different,that means that
-	//it is about probe update  with the same name
+	//it's about probe update  with the same name
 	if probe_plan.Name.Value == state.Probe.Name.Value {
 		//so we remove the old one before adding the new one.
 		removeProbeElement(&gw, probe_json.Name)
@@ -627,9 +627,9 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			return
 		}
 		//check if the http Listener name in the plan and state are different, that means that
-		//it is about a http Listener update  with the same name
+		//it's about a http Listener update  with the same name
 		if checkHTTPListenerElement_special(state.Http_listeners,httpListener_plan.Name.Value) == 1 {
-			//it is about http Listener update  with the same name
+			//it's about http Listener update  with the same name
 			//so we remove the old one before adding the new one.
 			removeHTTPListenerElement(&gw, httpListener_json.Name)
 		}else{// that means that there is no http Listener in the state with that name
@@ -643,12 +643,13 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 				)
 				return
 			}
-			//if it is about http Listener update with a new name,
-			//remove the old http Listener (with its old name) from the gateway
-			//to identify the old name, we have to use the param ID of the http Listener.
-			fmt.Printf("\n----------------------  httpListener ID =\n %+v ",httpListener_plan.Id.Value)
-			oldHttpListenerKey := getHTTPListenerElementKey_state(state.Http_listeners,httpListener_plan.Id.Value)
+			//if it's about http Listener update with a new name, remove the old http Listener (with its old name) from gw
+			//However, how can we identify the old http Listener ???
+			//to identify the http listener with old name, 3 conditions has to be satisfied: 1)same Frontend Port
+			// 2) same FrontendIpConfiguration and 3)same HostName or HostNames.
+			oldHttpListenerKey := getHTTPListenerElementKey_state(state.Http_listeners,httpListener_plan)
 			if oldHttpListenerKey != -1 {
+				fmt.Printf("\n----------------------  httpListener ID =\n %+v ",httpListener_plan.Id.Value)
 				removeHTTPListenerElement(&gw, state.Http_listeners[oldHttpListenerKey].Name.Value)
 			}
 		}
