@@ -586,9 +586,20 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 				Backend_address_pool	: backendAddressPool_state,
 				Backend_http_settings	: backendHTTPSettings_state,
 				Probe					: probe_state,
-				Http_listener			: state.Http_listener,
+				Http_listener			: nil,//state.Http_listener,
 				Https_listener			: &httpsListener_state,
 			}
+		}
+	}else{
+		result = WebappBinding{
+			Name					: types.String{Value: webappBindingName},
+			Agw_name				: state.Agw_name,
+			Agw_rg					: state.Agw_rg,
+			Backend_address_pool	: backendAddressPool_state,
+			Backend_http_settings	: backendHTTPSettings_state,
+			Probe					: probe_state,
+			Http_listener			: state.Http_listener,
+			Https_listener			: &httpsListener_state,
 		}
 	}
 		/*
