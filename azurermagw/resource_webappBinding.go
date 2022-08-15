@@ -443,7 +443,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		httpListener_state = Http_listener{}
 	}
 	
-	httpsListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
+	httpsListener_state 	:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
 	
 
 	// Generate resource state struct
