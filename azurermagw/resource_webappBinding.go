@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	//"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -595,7 +596,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	
 	//Get the agw in order to update it with new values from plan
 	resourceGroupName := plan.Agw_rg.Value
 	applicationGatewayName := plan.Agw_name.Value
@@ -693,7 +694,10 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 
 	// *********** Processing http Listener *********** //	
 	//preparing the new elements (json) from the plan
+	tflog.Info(ctx,"plan.Http_listener before if :", plan.Http_listener)
+	
 	if &plan.Http_listener != nil {
+		tflog.Info(ctx,"in if :")
 		SslCertificateName:=""
 		httpListener_plan := plan.Http_listener
 		httpListener_json, _,error_Hostname := createHTTPListener(httpListener_plan,SslCertificateName,
@@ -804,7 +808,6 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		)
 		return
 	}
-
 
 	// Generate new states 
 	/*********** Special for Backend Address Pool ********************/
