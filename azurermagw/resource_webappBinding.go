@@ -700,7 +700,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	// *********** Processing http Listener *********** //	
 	tflog.Info(ctx,"\n*********** Processing http Listener ***********")
 	//preparing the new elements (json) from the plan
-	tflog.Info(ctx,"plan.Http_listener before if :", plan.Http_listener)
+	tflog.Info(ctx,"plan.Http_listener before if :",  map[string]interface{}{"plan.Http_listener ": plan.Http_listener,})
 	
 	if &plan.Http_listener != nil {
 		tflog.Info(ctx,"in if :")
