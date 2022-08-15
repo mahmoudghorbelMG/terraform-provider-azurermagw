@@ -580,7 +580,8 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 
 // Update resource
 func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
-	fmt.Println("\n######################## Update Method ########################")
+	//fmt.Println("\n######################## Update Method ########################")
+	tflog.Info(ctx,"\n######################## Update Method ########################")
 	// Get plan values
 	var plan WebappBinding
 	diags := req.Plan.Get(ctx, &plan)
@@ -608,6 +609,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//		- we have also to prevent element name updating and manual deletion
 	
 	// *********** Processing backend address pool *********** //	
+	tflog.Info(ctx,"\n*********** Processing backend address pool ***********")
+	
 	//preparing the new elements (json) from the plan
 	backendAddressPool_plan := plan.Backend_address_pool
 	backendAddressPool_json := createBackendAddressPool(backendAddressPool_plan)
@@ -633,6 +636,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	}
 
 	// *********** Processing backend http settings *********** //	
+	tflog.Info(ctx,"\n*********** Processing backend http settings ***********")
 	//preparing the new elements (json) from the plan
 	backendHTTPSettings_plan := plan.Backend_http_settings
 	backendHTTPSettings_json, error_probeName := createBackendHTTPSettings(backendHTTPSettings_plan,plan.Probe.Name.Value,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
@@ -668,6 +672,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	}
 
 	// *********** Processing the probe *********** //	
+	tflog.Info(ctx,"\n*********** Processing the probe ***********")
 	//preparing the new elements (json) from the plan
 	probe_plan := plan.Probe	
 	probe_json := createProbe(probe_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
@@ -693,6 +698,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	}
 
 	// *********** Processing http Listener *********** //	
+	tflog.Info(ctx,"\n*********** Processing http Listener ***********")
 	//preparing the new elements (json) from the plan
 	tflog.Info(ctx,"plan.Http_listener before if :", plan.Http_listener)
 	
