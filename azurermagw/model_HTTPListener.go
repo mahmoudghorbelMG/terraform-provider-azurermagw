@@ -63,7 +63,7 @@ type Http_listener struct {
 
 }
 
-func createHTTPListener(httpListener_plan Http_listener,SslCertificateName string, AZURE_SUBSCRIPTION_ID string, 
+func createHTTPListener(httpListener_plan *Http_listener,SslCertificateName string, AZURE_SUBSCRIPTION_ID string, 
 								rg_name string, agw_name string) (HTTPListener, string, string){
 	//fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  httpListener_plan =\n %+v ",httpListener_plan)
 	httpListener_json := HTTPListener{

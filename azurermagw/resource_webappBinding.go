@@ -268,13 +268,6 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 		},
 	}, nil
 }
-/*
-func stringArrayDefault(defaultValue []string) {
-	return stringArrayDefaultModifier{
-        Default: defaultValue,
-    }
-}*/
-
 func intDefault(defaultValue int64) intDefaultModifier{
 	return intDefaultModifier{
         Default: defaultValue,
@@ -361,10 +354,10 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	h = &plan.Http_listener*/
 	fmt.Println("\n######################## Create Method 4 ########################")
 	
-	if hasField(plan,"Http_listener"){
-		fmt.Println("\n######################## Create Method 5 ########################")
+	//if hasField(plan,"Http_listener"){
 	
-	//if h != nil {
+	if &plan.Http_listener != nil {
+		fmt.Println("\n######################## Create Method 5 ########################")
 		SslCertificateName:=""
 		httpListener_json, _,error_Hostname := createHTTPListener(plan.Http_listener,SslCertificateName,
 				r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
@@ -441,8 +434,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	probe_state := generateProbeState(gw_response,plan.Probe.Name.Value)
 	
 	var httpListener_state Http_listener
-	if hasField(plan,"Http_listener"){
-	//if &plan.Http_listener != nil {
+	//if hasField(plan,"Http_listener"){
+	if &plan.Http_listener != nil {
 		httpListener_state 	= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
 	}else{
 		httpListener_state = Http_listener{}
@@ -460,8 +453,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listener			: httpListener_state,
-		Https_listener			: httpsListener_state,
+		Http_listener			: &httpListener_state,
+		Https_listener			: &httpsListener_state,
 	}
 	//store to the created objecy to the terraform state
 	diags = resp.State.Set(ctx, result)
@@ -544,8 +537,8 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	//check if the Http listener  exists in the old state (because it's optional param) 
 	//in order to check if it's in the gateway, otherwise, it was removed manually
 	var httpListener_state Http_listener
-	if hasField(state,"Http_listener"){
-	//if &state.Http_listener != nil{
+	//if hasField(state,"Http_listener"){
+	if &state.Http_listener != nil{
 		httpListenerName := state.Http_listener.Name.Value
 		if checkHTTPListenerElement(gw, httpListenerName) {
 			httpListener_state 	= generateHTTPListenerState(gw,httpListenerName)
@@ -572,8 +565,8 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listener			: httpListener_state,
-		Https_listener			: httpsListener_state,
+		Http_listener			: &httpListener_state,
+		Https_listener			: &httpsListener_state,
 	}
 
 	state = result
@@ -708,8 +701,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//preparing the new elements (json) from the plan
 	tflog.Info(ctx,"plan.Http_listener before if :",  map[string]interface{}{"plan.Http_listener ": plan.Http_listener,})
 	fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  httpListener_plan =\n %+v ",plan.Http_listener)
-	if hasField(plan,"Http_listener"){
-	//if &plan.Http_listener != nil {
+	//if hasField(plan,"Http_listener"){
+	if &plan.Http_listener != nil {
 		tflog.Info(ctx,"in if :")
 		SslCertificateName:=""
 		httpListener_plan := plan.Http_listener
@@ -844,8 +837,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 
 	/*************** Special for Http listener **********************/
 	var httpListener_state Http_listener
-	if hasField(plan,"Http_listener"){
-	//if &plan.Http_listener != nil {
+	//if hasField(plan,"Http_listener"){
+	if &plan.Http_listener != nil {
 		httpListener_state 	= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
 	}else{
 		httpListener_state = Http_listener{}
@@ -861,8 +854,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listener			: httpListener_state,
-		Https_listener			: httpsListener_state,
+		Http_listener			: &httpListener_state,
+		Https_listener			: &httpsListener_state,
 	}
 	//store to the created objecy to the terraform state
 	diags = resp.State.Set(ctx, result)
@@ -898,8 +891,8 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	removeProbeElement(&gw,probeName)
 	removeHTTPListenerElement(&gw,HTTPSListenerName)
 	/*************** Special for Http listener **********************/
-	if hasField(state,"Http_listener"){
-	//if &state.Http_listener != nil {
+	//if hasField(state,"Http_listener"){
+	if &state.Http_listener != nil {
 		removeHTTPListenerElement(&gw,state.Http_listener.Name.Value)
 	}	
 		
@@ -956,7 +949,8 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool)
 	}
 	fmt.Println("\n######################## Create Method inside check before if ########################")
 	
-	if hasField(plan,"Http_listener"){
+	//if hasField(plan,"Http_listener"){
+	if &plan.Http_listener != nil {
 		httpListener_plan 			:= plan.Http_listener
 		if checkHTTPListenerElement(gw, httpListener_plan.Name.Value) {
 			exist = true 
