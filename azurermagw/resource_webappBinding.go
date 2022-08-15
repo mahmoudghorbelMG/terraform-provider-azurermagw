@@ -176,7 +176,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 				}),
 			},
 			"http_listener": {
-				Required: true,
+				Optional: true,
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
@@ -929,7 +929,6 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool)
 	backendAddressPool_plan 	:= plan.Backend_address_pool 
 	backendHTTPSettings_plan 	:= plan.Backend_http_settings
 	probe_plan 					:= plan.Probe
-	httpListener_plan 			:= plan.Http_listener
 	httpsListener_plan 			:= plan.Https_listener
 	if checkBackendAddressPoolElement(gw, backendAddressPool_plan.Name.Value) {
 		exist = true 
@@ -943,17 +942,20 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool)
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- Probe: "+probe_plan.Name.Value)
 	}
-	if checkHTTPListenerElement(gw, httpListener_plan.Name.Value) {
-		exist = true 
-		existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpListener_plan.Name.Value)
-	}
 	if checkHTTPListenerElement(gw, httpsListener_plan.Name.Value) {
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpsListener_plan.Name.Value)
 	}
-	if httpListener_plan.Name.Value == httpsListener_plan.Name.Value {
-		exist = true 
-		existing_element_list = append(existing_element_list,"\n	- HTTP and HTTPS Listener (new): "+httpListener_plan.Name.Value)
+	if hasField(plan,"Http_listener"){
+		httpListener_plan 			:= plan.Http_listener
+		if checkHTTPListenerElement(gw, httpListener_plan.Name.Value) {
+			exist = true 
+			existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpListener_plan.Name.Value)
+		}
+		if httpListener_plan.Name.Value == httpsListener_plan.Name.Value {
+			exist = true 
+			existing_element_list = append(existing_element_list,"\n	- HTTP and HTTPS Listener (new): "+httpListener_plan.Name.Value)
+		}
 	}
 	return existing_element_list,exist
 }
