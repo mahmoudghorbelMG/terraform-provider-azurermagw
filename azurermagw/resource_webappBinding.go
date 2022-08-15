@@ -770,24 +770,27 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 				"Please, change HTTPListener configuration then retry.",)
 			return
 		}
-		//new http listener is ok. now we have to remove the old one
-		if httpListener_plan.Name.Value == state.Http_listener.Name.Value {
-			//so we remove the old one before adding the new one.
-			removeHTTPListenerElement(&gw, httpListener_json.Name)
-		}else{
-			// it's most likely about http Listener update with a new name
-			// we have to check if the new http Listener name is already used
-			if checkHTTPListenerElement(gw, httpListener_json.Name) {
-				//this is an error. issue an exit error.
-				resp.Diagnostics.AddError(
-					"Unable to update the app gateway. The new http Listener name : "+ httpListener_json.Name+" already exists.",
-					" Please, change the name.",
-				)
-				return
+		//new http listener is ok. now we have to remove the old one if there is already one, else, nothing to remove
+		if state.Http_listener != nil {
+			if httpListener_plan.Name.Value == state.Http_listener.Name.Value {
+				//so we remove the old one before adding the new one.
+				removeHTTPListenerElement(&gw, httpListener_json.Name)
+			}else{
+				// it's most likely about http Listener update with a new name
+				// we have to check if the new http Listener name is already used
+				if checkHTTPListenerElement(gw, httpListener_json.Name) {
+					//this is an error. issue an exit error.
+					resp.Diagnostics.AddError(
+						"Unable to update the app gateway. The new http Listener name : "+ httpListener_json.Name+" already exists.",
+						" Please, change the name.",
+					)
+					return
+				}
+				//remove the old http Listener (old name) from the gateway
+				removeHTTPListenerElement(&gw, state.Http_listener.Name.Value)
 			}
-			//remove the old http Listener (old name) from the gateway
-			removeHTTPListenerElement(&gw, state.Http_listener.Name.Value)
-		}
+		}		
+
 		//we have to add the http listener here because it's optional
 		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners, httpListener_json)			
 	}
