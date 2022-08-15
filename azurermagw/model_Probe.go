@@ -2,7 +2,7 @@ package azurermagw
 
 import (
 	//"fmt"
-	"fmt"
+	//"fmt"
 	//"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"

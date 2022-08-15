@@ -179,11 +179,6 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 			},
 			"http_listener": {
 				Optional: true,
-				/*************************/
-				/*Type: types.ListType{
-					ElemType: types.StringType,
-				},*/
-				/*************************/
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
@@ -229,11 +224,6 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 			},
 			"https_listener": {
 				Required: true,
-				/*************************/
-				/*Type: types.ListType{
-					ElemType: types.StringType,
-				},*/
-				/*************************/
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
