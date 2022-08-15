@@ -455,6 +455,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			Backend_address_pool	: backendAddressPool_state,
 			Backend_http_settings	: backendHTTPSettings_state,
 			Probe					: probe_state,
+			Http_listener			: plan.Http_listener,
 			Https_listener			: &httpsListener_state,
 		}
 	}
@@ -585,6 +586,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 				Backend_address_pool	: backendAddressPool_state,
 				Backend_http_settings	: backendHTTPSettings_state,
 				Probe					: probe_state,
+				Http_listener			: state.Http_listener,
 				Https_listener			: &httpsListener_state,
 			}
 		}
@@ -893,11 +895,22 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			Backend_address_pool	: backendAddressPool_state,
 			Backend_http_settings	: backendHTTPSettings_state,
 			Probe					: probe_state,
+			Http_listener			: plan.Http_listener,
 			Https_listener			: &httpsListener_state,
 		}
 	}
 	/***************************************************************/
-		
+	
+	/* var result = WebappBinding{
+		Name					: state.Name,
+		Agw_name				: types.String{Value: gw_response.Name},
+		Agw_rg					: state.Agw_rg,
+		Backend_address_pool	: backendAddressPool_state,
+		Backend_http_settings	: backendHTTPSettings_state,
+		Probe					: probe_state,
+		Http_listener			: &httpListener_state,
+		Https_listener			: &httpsListener_state,
+	}*/
 	//store to the created objecy to the terraform state
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
