@@ -443,6 +443,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	}else{
 		httpListener_state = Http_listener{}
 	}
+	tflog.Info(ctx,"[CREATE] httpListener_state :",  map[string]interface{}{"httpListener_state ": httpListener_state,})
 	
 	httpsListener_state 	:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
 	
