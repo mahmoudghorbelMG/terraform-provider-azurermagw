@@ -432,19 +432,35 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	backendHTTPSettings_state 	:= generateBackendHTTPSettingsState(
 		gw_response,plan.Backend_http_settings.Name.Value)
 	probe_state := generateProbeState(gw_response,plan.Probe.Name.Value)
-	
-	var httpListener_state Http_listener
-	//if hasField(plan,"Http_listener"){
-	if plan.Http_listener != nil {
-		httpListener_state 	= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
-	}/*else{
-		httpListener_state = Http_listener{}
-	}*/
-	tflog.Info(ctx,"[CREATE] httpListener_state :",  map[string]interface{}{"httpListener_state ": httpListener_state,})
-	
 	httpsListener_state 	:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
 	
-
+	var result WebappBinding
+	if plan.Http_listener != nil {
+		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
+		result = WebappBinding{
+			Name					: plan.Name,
+			Agw_name				: types.String{Value: gw_response.Name},
+			Agw_rg					: plan.Agw_rg,
+			Backend_address_pool	: backendAddressPool_state,
+			Backend_http_settings	: backendHTTPSettings_state,
+			Probe					: probe_state,
+			Http_listener			: &httpListener_state,
+			Https_listener			: &httpsListener_state,
+		}
+	}else{
+		result = WebappBinding{
+			Name					: plan.Name,
+			Agw_name				: types.String{Value: gw_response.Name},
+			Agw_rg					: plan.Agw_rg,
+			Backend_address_pool	: backendAddressPool_state,
+			Backend_http_settings	: backendHTTPSettings_state,
+			Probe					: probe_state,
+			Https_listener			: &httpsListener_state,
+		}
+	}
+	
+	
+/*
 	// Generate resource state struct
 	var result = WebappBinding{
 		Name					: plan.Name,
@@ -455,7 +471,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		Probe					: probe_state,
 		Http_listener			: &httpListener_state,
 		Https_listener			: &httpsListener_state,
-	}
+	}*/
 	//store to the created objecy to the terraform state
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
@@ -533,30 +549,47 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		probe_state = Probe_tf{}
 	}
 
-	// *********** Processing the http Listener *********** //
-	//check if the Http listener  exists in the old state (because it's optional param) 
-	//in order to check if it's in the gateway, otherwise, it was removed manually
-	var httpListener_state Http_listener
-	//if hasField(state,"Http_listener"){
-	if state.Http_listener != nil{
-		httpListenerName := state.Http_listener.Name.Value
-		if checkHTTPListenerElement(gw, httpListenerName) {
-			httpListener_state 	= generateHTTPListenerState(gw,httpListenerName)
-		}else{
-			httpListener_state = Http_listener{}
-		}
-	}
-	
 	// *********** Processing the https Listener *********** //
 	//check if the Https listener  exists in in the gateway, otherwise, it was removed manually
 	var httpsListener_state Http_listener
 	httpsListenerName := state.Https_listener.Name.Value
 	if checkHTTPListenerElement(gw, httpsListenerName) {
 		httpsListener_state = generateHTTPListenerState(gw,httpsListenerName)
-	}/*else{
+	}else{
 		httpsListener_state = Http_listener{}
-	}*/
-		
+	}
+
+	// *********** Processing the http Listener *********** //
+	//check if the Http listener  exists in the old state (because it's optional param) 
+	//in order to check if it's in the gateway, otherwise, it was removed manually
+	var result WebappBinding
+	if state.Http_listener != nil{
+		httpListenerName := state.Http_listener.Name.Value
+		if checkHTTPListenerElement(gw, httpListenerName) {
+			httpListener_state 	:= generateHTTPListenerState(gw,httpListenerName)
+			result = WebappBinding{
+				Name					: types.String{Value: webappBindingName},
+				Agw_name				: state.Agw_name,
+				Agw_rg					: state.Agw_rg,
+				Backend_address_pool	: backendAddressPool_state,
+				Backend_http_settings	: backendHTTPSettings_state,
+				Probe					: probe_state,
+				Http_listener			: &httpListener_state,
+				Https_listener			: &httpsListener_state,
+			}
+		}else{
+			result = WebappBinding{
+				Name					: types.String{Value: webappBindingName},
+				Agw_name				: state.Agw_name,
+				Agw_rg					: state.Agw_rg,
+				Backend_address_pool	: backendAddressPool_state,
+				Backend_http_settings	: backendHTTPSettings_state,
+				Probe					: probe_state,
+				Https_listener			: &httpsListener_state,
+			}
+		}
+	}
+		/*
 	// Generate resource state struct
 	var result = WebappBinding{
 		Name					: types.String{Value: webappBindingName},
@@ -567,7 +600,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		Probe					: probe_state,
 		Http_listener			: &httpListener_state,
 		Https_listener			: &httpsListener_state,
-	}
+	}*/
 
 	state = result
 	diags = resp.State.Set(ctx, &state)
@@ -834,29 +867,37 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	backendAddressPool_state	:= generateBackendAddressPoolState(gw_response, backendAddressPool_json.Name,nb_Fqdns,nb_IpAddress)
 	backendHTTPSettings_state	:= generateBackendHTTPSettingsState(gw_response,backendHTTPSettings_json.Name)
 	probe_state	:= generateProbeState(gw_response,probe_json.Name)
-
-	/*************** Special for Http listener **********************/
-	var httpListener_state Http_listener
-	//if hasField(plan,"Http_listener"){
-	if plan.Http_listener != nil {
-		httpListener_state 	= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
-	}/*else{
-		httpListener_state = Http_listener{}
-	}*/
-	/***************************************************************/
 	httpsListener_state 	:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
+	
+	/*************** Special for Http listener **********************/
+	// Generate resource state struct 
 		
-	// Generate resource state struct
-	var result = WebappBinding{
-		Name					: state.Name,
-		Agw_name				: types.String{Value: gw_response.Name},
-		Agw_rg					: state.Agw_rg,
-		Backend_address_pool	: backendAddressPool_state,
-		Backend_http_settings	: backendHTTPSettings_state,
-		Probe					: probe_state,
-		Http_listener			: &httpListener_state,
-		Https_listener			: &httpsListener_state,
+	var result WebappBinding
+	if plan.Http_listener != nil {
+		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
+		result = WebappBinding{
+			Name					: state.Name,
+			Agw_name				: types.String{Value: gw_response.Name},
+			Agw_rg					: state.Agw_rg,
+			Backend_address_pool	: backendAddressPool_state,
+			Backend_http_settings	: backendHTTPSettings_state,
+			Probe					: probe_state,
+			Http_listener			: &httpListener_state,
+			Https_listener			: &httpsListener_state,
+		}
+	}else{
+		result = WebappBinding{
+			Name					: state.Name,
+			Agw_name				: types.String{Value: gw_response.Name},
+			Agw_rg					: state.Agw_rg,
+			Backend_address_pool	: backendAddressPool_state,
+			Backend_http_settings	: backendHTTPSettings_state,
+			Probe					: probe_state,
+			Https_listener			: &httpsListener_state,
+		}
 	}
+	/***************************************************************/
+		
 	//store to the created objecy to the terraform state
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
