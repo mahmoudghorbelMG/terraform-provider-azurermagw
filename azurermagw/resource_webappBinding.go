@@ -178,13 +178,63 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 				}),
 			},
 			"http_listener": {
+				Optional: true,
+				/*************************/
+				/*Type: types.ListType{
+					ElemType: types.StringType,
+				},*/
+				/*************************/
+				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+					"name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"id": {
+						Type:     types.StringType,
+						Computed: true,
+					},
+					"frontend_ip_configuration_name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"frontend_port_name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"require_sni": {
+						Type:     types.BoolType,
+						Optional: true,
+						Computed: true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{boolDefault(false)},
+					},
+					"protocol": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"host_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"host_names": {
+						Type: types.ListType{
+							ElemType: types.StringType,
+						},
+						Optional: true,
+					},
+					/*"ssl_certificate_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},*/
+				},),
+			},
+			"https_listener": {
 				Required: true,
 				/*************************/
 				/*Type: types.ListType{
 					ElemType: types.StringType,
 				},*/
 				/*************************/
-				Attributes: tfsdk.SetNestedAttributes(map[string]tfsdk.Attribute{
+				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
 						Required: true,
@@ -225,7 +275,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 						Type:     types.StringType,
 						Optional: true,
 					},
-				},tfsdk.SetNestedAttributesOptions{}),
+				},),
 			},
 		},
 	}, nil
@@ -315,30 +365,23 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		createProbe(plan.Probe,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName))
 
 	// Http_listener is an array.
-	if len(plan.Http_listeners)==0 {
+	/*if len(plan.Http_listeners)==0 {
 		resp.Diagnostics.AddError(
 			"Unable to create binding. At least, one Http listener must be declared. ",
 			"Please, add a Http listener then retry.",
 		)
 		return
-	}
-	for i := 0; i < len(plan.Http_listeners); i++ {
-		//SslCertificateName := plan.SslCertificate.Name.Value // (not yet implemented till now)
-		SslCertificateName:="default-citeo-adelphe-cert"
-		httpListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(plan.Http_listeners[i],SslCertificateName,
-			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-		if error_SslCertificateName == "fatal" {
-			//wrong SslCertificate Name
-			resp.Diagnostics.AddError(
-			"Unable to create binding. The SslCertificate name ("+SslCertificateName+") declared in Http_listener: "+ 
-			plan.Http_listeners[i].Name.Value+" doesn't match the SslCertificate name conf : "+plan.Http_listeners[i].Ssl_certificate_name.Value,
-			"Please, change probe name then retry.",)
-			return
-		}
+	}*/
+	/************* Processing Http listener **************/
+	// no ssl certificate to provider, so no need to check error_SslCertificateName
+	if &plan.Http_listener != nil {
+		SslCertificateName:=""
+		httpListener_json, _,error_Hostname := createHTTPListener(plan.Http_listener,SslCertificateName,
+				r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 		if error_Hostname == "fatal-exclusivity" {
 			//hostname and hostnames are mutually exclusive. only one should be provided
 			resp.Diagnostics.AddError(
-				"Unable to create binding. In HTTP Listener "+ plan.Http_listeners[i].Name.Value+", Hostname and Hostnames are mutually exclusive. "+
+				"Unable to create binding. In HTTP Listener "+ plan.Http_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
 				"Only one should be provided",
 				"Please, change HTTPListener configuration then retry.",)
 			return
@@ -346,13 +389,44 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		if error_Hostname == "fatal-missing" {
 			//hostname and hostnames are mutually exclusive. only one should be provided
 			resp.Diagnostics.AddError(
-				"Unable to create binding. In HTTP Listener "+ plan.Http_listeners[i].Name.Value+", both Hostname and Hostnames are missing. "+
+				"Unable to create binding. In HTTP Listener "+ plan.Http_listener.Name.Value+", both Hostname and Hostnames are missing. "+
 				"At least and only one should be provided",
 				"Please, change HTTPListener configuration then retry.",)
 			return
-		}		
-		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpListener_json)	
+		}
+		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpListener_json)
 	}
+	/************* Processing Https listener **************/
+	//SslCertificateName := plan.SslCertificate.Name.Value // (not yet implemented till now)
+	SslCertificateName :="default-citeo-adelphe-cert"
+	httpsListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(plan.Https_listener,SslCertificateName,
+		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	if error_SslCertificateName == "fatal" {
+		//wrong SslCertificate Name
+		resp.Diagnostics.AddError(
+		"Unable to create binding. The SslCertificate name ("+SslCertificateName+") declared in Http_listener: "+ 
+		plan.Https_listener.Name.Value+" doesn't match the SslCertificate name conf : "+plan.Https_listener.Ssl_certificate_name.Value,
+		"Please, change probe name then retry.",)
+		return
+	}
+	if error_Hostname == "fatal-exclusivity" {
+		//hostname and hostnames are mutually exclusive. only one should be provided
+		resp.Diagnostics.AddError(
+			"Unable to create binding. In HTTP Listener "+ plan.Https_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
+			"Only one should be provided",
+			"Please, change HTTPListener configuration then retry.",)
+		return
+	}
+	if error_Hostname == "fatal-missing" {
+		//hostname and hostnames are mutually exclusive. only one should be provided
+		resp.Diagnostics.AddError(
+			"Unable to create binding. In HTTP Listener "+ plan.Https_listener.Name.Value+", both Hostname and Hostnames are missing. "+
+			"At least and only one should be provided",
+			"Please, change HTTPListener configuration then retry.",)
+		return
+	}		
+	gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpsListener_json)	
+	
 
 	//call the API to update the gw
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
@@ -376,11 +450,15 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		gw_response,plan.Backend_http_settings.Name.Value)
 	probe_state := generateProbeState(gw_response,plan.Probe.Name.Value)
 	
-	var httpListeners_state []Http_listener
-	for i := 0; i < len(plan.Http_listeners); i++ {
-		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listeners[i].Name.Value)
-		httpListeners_state = append(httpListeners_state, httpListener_state)
+	var httpListener_state Http_listener
+	if &plan.Http_listener != nil {
+		httpListener_state 	= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
+	}else{
+		httpListener_state = Http_listener{}
 	}
+	
+	httpsListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
+	
 
 	// Generate resource state struct
 	var result = WebappBinding{
@@ -390,7 +468,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listeners			: httpListeners_state,
+		Http_listener			: httpListener_state,
+		Https_listener			: httpsListener_state,
 	}
 	//store to the created objecy to the terraform state
 	diags = resp.State.Set(ctx, result)
@@ -469,21 +548,29 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		probe_state = Probe_tf{}
 	}
 
-	// *********** Processing the http Listeners *********** //
-	var httpListeners_state []Http_listener
-	for i := 0; i < len(state.Http_listeners); i++ {
-		//check if the backend Http listener  exists in the gateway, otherwise, it was removed manually
-		var httpListener_state Http_listener
-		httpListenerName := state.Http_listeners[i].Name.Value
-		if checkHTTPListenerElement(gw,httpListenerName) {
+	// *********** Processing the http Listener *********** //
+	//check if the Http listener  exists in the old state (because it's optional param) 
+	//in order to check if it's in the gateway, otherwise, it was removed manually
+	var httpListener_state Http_listener
+	if &state.Http_listener != nil{
+		httpListenerName := state.Http_listener.Name.Value
+		if checkHTTPListenerElement(gw, httpListenerName) {
 			httpListener_state 	= generateHTTPListenerState(gw,httpListenerName)
 		}else{
-			//generate an empty backendHTTPSettings_state because it was removed manually
 			httpListener_state = Http_listener{}
-		}		
-		httpListeners_state = append(httpListeners_state, httpListener_state)
+		}
 	}
 	
+	// *********** Processing the https Listener *********** //
+	//check if the Https listener  exists in in the gateway, otherwise, it was removed manually
+	var httpsListener_state Http_listener
+	httpsListenerName := state.Https_listener.Name.Value
+	if checkHTTPListenerElement(gw, httpsListenerName) {
+		httpsListener_state = generateHTTPListenerState(gw,httpsListenerName)
+	}else{
+		httpsListener_state = Http_listener{}
+	}
+		
 	// Generate resource state struct
 	var result = WebappBinding{
 		Name					: types.String{Value: webappBindingName},
@@ -492,7 +579,8 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listeners			: httpListeners_state,
+		Http_listener			: httpListener_state,
+		Https_listener			: httpsListener_state,
 	}
 
 	state = result
@@ -529,7 +617,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 
 	//for all elements (attributes), prepare the new elements (json) from the plan
 	//Verify if the agw already contains the elements to be updated beacause:
-	//		- the older ones should be removed before updating. 
+	//		- the older ones has be removed before updating. 
 	//		- we have also to prevent element name updating and manual deletion
 	
 	// *********** Processing backend address pool *********** //	
@@ -543,12 +631,12 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		//so we remove the old one before adding the new one.
 		removeBackendAddressPoolElement(&gw, backendAddressPool_json.Name)
 	}else{
-		// it's about backend update with a new name
+		// it's most likely about backend update with a new name
 		// we have to check if the new backend name is already used
 		if checkBackendAddressPoolElement(gw, backendAddressPool_json.Name) {
 			//this is an error. issue an exit error.
 			resp.Diagnostics.AddError(
-				"Unable to update the app gateway. The Backend Adresse pool name : "+ backendAddressPool_json.Name+" already exists.",
+				"Unable to update the app gateway. The new Backend Adresse pool name : "+ backendAddressPool_json.Name+" already exists.",
 				" Please, change the name.",
 			)
 			return
@@ -583,7 +671,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		if checkBackendHTTPSettingsElement(gw, backendHTTPSettings_json.Name) {
 			//this is an error. issue an exit error.
 			resp.Diagnostics.AddError(
-				"Unable to update the app gateway. The Backend HTTP settings name : "+ backendHTTPSettings_json.Name+" already exists.",
+				"Unable to update the app gateway. The new Backend HTTP settings name : "+ backendHTTPSettings_json.Name+" already exists.",
 				" Please, change the name then retry.",
 			)
 			return
@@ -608,7 +696,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		if checkProbeElement(gw, probe_json.Name) {
 			//this is an error. issue an exit error.
 			resp.Diagnostics.AddError(
-				"Unable to update the app gateway. The probe name : "+ probe_json.Name+" already exists.",
+				"Unable to update the app gateway. The new probe name : "+ probe_json.Name+" already exists.",
 				" Please, change the name.",
 			)
 			return
@@ -616,24 +704,14 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		//remove the old backend http settings (old name) from the gateway
 		removeProbeElement(&gw, state.Probe.Name.Value)
 	}
-	fmt.Printf("\nVVVVVVVVVVVVVVVVVVVVV  plan.Http_listeners =\n %+v ",plan.Http_listeners)
-			
-	// *********** Processing http Listeners *********** //	
+
+	// *********** Processing http Listener *********** //	
 	//preparing the new elements (json) from the plan
-	for i := 0; i < len(plan.Http_listeners); i++ {
-		//SslCertificateName := plan.SslCertificate.Name.Value // (not yet implemented till now)
-		SslCertificateName:="default-citeo-adelphe-cert"
-		httpListener_plan := plan.Http_listeners[i]
-		httpListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(httpListener_plan,SslCertificateName,
-			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-		if error_SslCertificateName == "fatal" {
-			//wrong SslCertificate Name
-			resp.Diagnostics.AddError(
-			"Unable to update binding. The SslCertificate name ("+httpListener_plan.Ssl_certificate_name.Value+") declared in Http_listener: "+ 
-			httpListener_plan.Name.Value+" doesn't match the SslCertificate name conf : "+SslCertificateName,
-			"Please, change probe name then retry.",)
-			return
-		}
+	if &plan.Http_listener != nil {
+		SslCertificateName:=""
+		httpListener_plan := plan.Http_listener
+		httpListener_json, _,error_Hostname := createHTTPListener(httpListener_plan,SslCertificateName,
+				r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 		if error_Hostname == "fatal-exclusivity" {
 			//hostname and hostnames are mutually exclusive. only one should be provided
 			resp.Diagnostics.AddError(
@@ -645,49 +723,89 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		if error_Hostname == "fatal-missing" {
 			//hostname and hostnames are mutually exclusive. only one should be provided
 			resp.Diagnostics.AddError(
-				"Unable to update binding. In HTTP Listener "+ httpListener_plan.Name.Value+", Both Hostname and Hostnames are missing. "+
+				"Unable to update binding. In HTTP Listener "+ httpListener_plan.Name.Value+", both Hostname and Hostnames are missing. "+
 				"At least and only one should be provided",
 				"Please, change HTTPListener configuration then retry.",)
 			return
 		}
-		//check if the http Listener name in the plan and state are different, that means that
-		//it's about a http Listener update  with the same name
-		if checkHTTPListenerElement_special(state.Http_listeners,httpListener_plan.Name.Value) == 1 {
-			//it's about http Listener update  with the same name
+		//new http listener is ok. now we have to remove the old one
+		if httpListener_plan.Name.Value == state.Http_listener.Name.Value {
 			//so we remove the old one before adding the new one.
-			fmt.Printf("\n----------------------  the old http to be removed from gw (same name) =\n %+v ",httpListener_json.Name)
 			removeHTTPListenerElement(&gw, httpListener_json.Name)
-		}else{// that means that there is no http Listener in the state with that name
-			// it's about http Listener update with a new name, or adding new http Listener
-			// we have to check if the new http Listener name is already used in the gw
+		}else{
+			// it's most likely about http Listener update with a new name
+			// we have to check if the new http Listener name is already used
 			if checkHTTPListenerElement(gw, httpListener_json.Name) {
 				//this is an error. issue an exit error.
 				resp.Diagnostics.AddError(
-					"Unable to update the app gateway. The http Listener name : "+ httpListener_json.Name+" already exists.",
-					" Please, change the name then retry.",
+					"Unable to update the app gateway. The new http Listener name : "+ httpListener_json.Name+" already exists.",
+					" Please, change the name.",
 				)
 				return
 			}
-			//if it's about http Listener update with a new name, remove the old http Listener (with its old name) from gw
-			//However, how can we identify the old http Listener ???
-			//to identify the http listener with old name, 3 conditions has to be satisfied: 1)same Frontend Port
-			// 2) same FrontendIpConfiguration and 3)same HostName or HostNames.
-			oldHttpListenerKey := getHTTPListenerElementKey_state(state.Http_listeners,httpListener_plan)
-			if oldHttpListenerKey != -1 {
-				fmt.Printf("\n----------------------  the old http to be removed from gw =\n %+v ",state.Http_listeners[oldHttpListenerKey].Name.Value)
-				removeHTTPListenerElement(&gw, state.Http_listeners[oldHttpListenerKey].Name.Value)
-			}
+			//remove the old http Listener (old name) from the gateway
+			removeHTTPListenerElement(&gw, state.Http_listener.Name.Value)
 		}
-		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpListener_json)	
-		fmt.Printf("\nSSSSSSSSSSSSSSSSSSSS  httpListener_json =\n %+v ",httpListener_json)
+		//we have to add the http listener here because it's optional
+		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners, httpListener_json)			
+	}
 			
+	// *********** Processing https Listener *********** //	
+	//preparing the new elements (json) from the plan
+	//SslCertificateName := plan.SslCertificate.Name.Value // (not yet implemented till now)
+	SslCertificateName:="default-citeo-adelphe-cert"
+	httpsListener_plan := plan.Http_listener
+	httpsListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(httpsListener_plan,SslCertificateName,
+			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	if error_SslCertificateName == "fatal" {
+		//wrong SslCertificate Name
+		resp.Diagnostics.AddError(
+		"Unable to update binding. The SslCertificate name ("+SslCertificateName+") declared in Http_listener: "+ 
+		plan.Https_listener.Name.Value+" doesn't match the SslCertificate name conf : "+plan.Https_listener.Ssl_certificate_name.Value,
+		"Please, change probe name then retry.",)
+		return
+	}
+	if error_Hostname == "fatal-exclusivity" {
+		//hostname and hostnames are mutually exclusive. only one should be provided
+		resp.Diagnostics.AddError(
+			"Unable to update binding. In HTTPS Listener "+ httpsListener_plan.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
+			"Only one should be provided",
+			"Please, change HTTPS Listener configuration then retry.",)
+		return
+	}
+	if error_Hostname == "fatal-missing" {
+		//hostname and hostnames are mutually exclusive. only one should be provided
+		resp.Diagnostics.AddError(
+			"Unable to update binding. In HTTPS Listener "+ httpsListener_plan.Name.Value+", both Hostname and Hostnames are missing. "+
+			"At least and only one should be provided",
+			"Please, change HTTPS Listener configuration then retry.",)
+		return
+	}
+	//new http listener is ok. now we have to remove the old one
+	if httpsListener_plan.Name.Value == state.Https_listener.Name.Value {
+		//so we remove the old one before adding the new one.
+		removeHTTPListenerElement(&gw, httpsListener_json.Name)
+	}else{
+		// it's most likely about http Listener update with a new name
+		// we have to check if the new http Listener name is already used
+		if checkHTTPListenerElement(gw, httpsListener_json.Name) {
+			//this is an error. issue an exit error.
+			resp.Diagnostics.AddError(
+				"Unable to update the app gateway. The new http Listener name : "+ httpsListener_json.Name+" already exists.",
+				" Please, change the name.",
+			)
+			return
+		}
+		//remove the old http Listener (old name) from the gateway
+		removeHTTPListenerElement(&gw, state.Https_listener.Name.Value)
 	}
 	
 	//add the new elements (http Listener elements are already added). 
 	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backendAddressPool_json)
 	gw.Properties.BackendHTTPSettingsCollection = append(gw.Properties.BackendHTTPSettingsCollection, backendHTTPSettings_json)
 	gw.Properties.Probes = append(gw.Properties.Probes, probe_json)
-	
+	gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners, httpsListener_json)
+
 	//and update the gateway
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 
@@ -701,8 +819,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		return
 	}
 
-	// Generate new states 
 
+	// Generate new states 
 	/*********** Special for Backend Address Pool ********************/
 	// in the Read method, the number of fqdns and Ip in a Backendpool should be calculated from the json object and not the plan or state,
 	// because the purpose of the read is to see if there is a difference between the real element and the satate stored localy.
@@ -722,20 +840,16 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	backendHTTPSettings_state	:= generateBackendHTTPSettingsState(gw_response,backendHTTPSettings_json.Name)
 	probe_state	:= generateProbeState(gw_response,probe_json.Name)
 
-	/*************** Special for Http listeners **********************/
-	//fmt.Printf("\n888888888888888888888  len(plan.Http_listeners) =\n %+v ",len(plan.Http_listeners))
-	//httpListeners_state := make([]Http_listener,len(plan.Http_listeners))
-	var httpListeners_state []Http_listener
-	//fmt.Printf("\n888888888888888888888  len(plan.Http_listeners) =\n %+v ",len(plan.Http_listeners))
-	for i := 0; i < len(plan.Http_listeners); i++ {
-		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listeners[i].Name.Value)
-		fmt.Printf("\n/////////////////////  httpListener_state =\n %+v ",httpListener_state)
-		httpListeners_state = append(httpListeners_state, httpListener_state)
+	/*************** Special for Http listener **********************/
+	var httpListener_state Http_listener
+	if &plan.Http_listener != nil {
+		httpListener_state 	= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
+	}else{
+		httpListener_state = Http_listener{}
 	}
-	fmt.Printf("\n++++++++++++++++++++++  httpListeners_state =\n %+v ",httpListeners_state)
-	
-	/******************************************************************/
-	
+	/***************************************************************/
+	httpsListener_state 	:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
+		
 	// Generate resource state struct
 	var result = WebappBinding{
 		Name					: state.Name,
@@ -744,7 +858,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listeners			: httpListeners_state,
+		Http_listener			: httpListener_state,
+		Https_listener			: httpsListener_state,
 	}
 	//store to the created objecy to the terraform state
 	diags = resp.State.Set(ctx, result)
@@ -768,23 +883,22 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	backendAddressPoolName := state.Backend_address_pool.Name.Value
 	backendHTTPSettingsName := state.Backend_http_settings.Name.Value
 	probeName := state.Probe.Name.Value
-	
+	HTTPSListenerName := state.Https_listener.Name.Value
 	//Get the agw
 	resourceGroupName := state.Agw_rg.Value
 	applicationGatewayName := state.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 	
-	//remove the backend from the gw
+	//remove the elements from the gw
 	removeBackendAddressPoolElement(&gw, backendAddressPoolName)
 	removeBackendHTTPSettingsElement(&gw,backendHTTPSettingsName)
 	removeProbeElement(&gw,probeName)
-	/*************** Special for Http listeners **********************/
-	for i := 0; i < len(state.Http_listeners); i++ {
-		HTTPListenerName := state.Http_listeners[i].Name.Value		
-		removeHTTPListenerElement(&gw,HTTPListenerName)
-	}
-	/******************************************************************/
-	
+	removeHTTPListenerElement(&gw,HTTPSListenerName)
+	/*************** Special for Http listener **********************/
+	if &state.Http_listener != nil {
+		removeHTTPListenerElement(&gw,state.Http_listener.Name.Value)
+	}	
+		
 	//and update the gateway
 	_, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 	//verify if the API response is 200 (that means, normaly, elements were deleted to the gateway), otherwise exit error
@@ -817,7 +931,8 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool)
 	backendAddressPool_plan 	:= plan.Backend_address_pool 
 	backendHTTPSettings_plan 	:= plan.Backend_http_settings
 	probe_plan 					:= plan.Probe
-	httpListeners_plan 			:= plan.Http_listeners
+	httpListener_plan 			:= plan.Http_listener
+	httpsListener_plan 			:= plan.Https_listener
 	if checkBackendAddressPoolElement(gw, backendAddressPool_plan.Name.Value) {
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- BackendAddressPool: "+backendAddressPool_plan.Name.Value)
@@ -830,18 +945,18 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool)
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- Probe: "+probe_plan.Name.Value)
 	}
-	for i := 0; i < len(httpListeners_plan); i++ {
-		if checkHTTPListenerElement(gw, httpListeners_plan[i].Name.Value) {
-			exist = true 
-			existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpListeners_plan[i].Name.Value)
-		}
-		if checkHTTPListenerElement_special(httpListeners_plan,httpListeners_plan[i].Name.Value) > 1 {
-			exist = true 
-			existing_element_list = append(existing_element_list,"\n	- HTTPListener (new configuration): "+httpListeners_plan[i].Name.Value)
-		
-		}
+	if checkHTTPListenerElement(gw, httpListener_plan.Name.Value) {
+		exist = true 
+		existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpListener_plan.Name.Value)
 	}
-	
+	if checkHTTPListenerElement(gw, httpsListener_plan.Name.Value) {
+		exist = true 
+		existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpsListener_plan.Name.Value)
+	}
+	if httpListener_plan.Name.Value == httpsListener_plan.Name.Value {
+		exist = true 
+		existing_element_list = append(existing_element_list,"\n	- HTTP and HTTPS Listener (new): "+httpListener_plan.Name.Value)
+	}
 	return existing_element_list,exist
 }
 
