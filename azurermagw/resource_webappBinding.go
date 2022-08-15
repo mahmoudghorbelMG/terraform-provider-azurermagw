@@ -351,19 +351,11 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	gw.Properties.Probes = append(gw.Properties.Probes,
 		createProbe(plan.Probe,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName))
 
-	// Http_listener is an array.
-	/*if len(plan.Http_listeners)==0 {
-		resp.Diagnostics.AddError(
-			"Unable to create binding. At least, one Http listener must be declared. ",
-			"Please, add a Http listener then retry.",
-		)
-		return
-	}*/
 	/************* Processing Http listener **************/
 	// no ssl certificate to provider, so no need to check error_SslCertificateName
 	if &plan.Http_listener != nil {
 		SslCertificateName:=""
-		httpListener_json, _,error_Hostname := createHTTPListener(plan.Http_listener,SslCertificateName,
+		httpListener_json, _,error_Hostname := createHTTPListener(*plan.Http_listener,SslCertificateName,
 				r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 		if error_Hostname == "fatal-exclusivity" {
 			//hostname and hostnames are mutually exclusive. only one should be provided
@@ -456,7 +448,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listener			: httpListener_state,
+		Http_listener			: &httpListener_state,
 		Https_listener			: httpsListener_state,
 	}
 	//store to the created objecy to the terraform state
@@ -567,7 +559,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listener			: httpListener_state,
+		Http_listener			: &httpListener_state,
 		Https_listener			: httpsListener_state,
 	}
 
@@ -707,7 +699,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		tflog.Info(ctx,"in if :")
 		SslCertificateName:=""
 		httpListener_plan := plan.Http_listener
-		httpListener_json, _,error_Hostname := createHTTPListener(httpListener_plan,SslCertificateName,
+		httpListener_json, _,error_Hostname := createHTTPListener(*httpListener_plan,SslCertificateName,
 				r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 		if error_Hostname == "fatal-exclusivity" {
 			//hostname and hostnames are mutually exclusive. only one should be provided
@@ -752,7 +744,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//SslCertificateName := plan.SslCertificate.Name.Value // (not yet implemented till now)
 	SslCertificateName:="default-citeo-adelphe-cert"
 	httpsListener_plan := plan.Http_listener
-	httpsListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(httpsListener_plan,SslCertificateName,
+	httpsListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(*httpsListener_plan,SslCertificateName,
 			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 	if error_SslCertificateName == "fatal" {
 		//wrong SslCertificate Name
@@ -854,7 +846,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listener			: httpListener_state,
+		Http_listener			: &httpListener_state,
 		Https_listener			: httpsListener_state,
 	}
 	//store to the created objecy to the terraform state
