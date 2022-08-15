@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -353,9 +354,13 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 
 	/************* Processing Http listener **************/
 	// no ssl certificate to provider, so no need to check error_SslCertificateName
-	if &plan.Http_listener != nil {
+	/*var h *Http_listener	
+	h = &plan.Http_listener*/
+	
+	if hasField(plan,"Http_listener"){
+	//if h != nil {
 		SslCertificateName:=""
-		httpListener_json, _,error_Hostname := createHTTPListener(*plan.Http_listener,SslCertificateName,
+		httpListener_json, _,error_Hostname := createHTTPListener(plan.Http_listener,SslCertificateName,
 				r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 		if error_Hostname == "fatal-exclusivity" {
 			//hostname and hostnames are mutually exclusive. only one should be provided
@@ -430,7 +435,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	probe_state := generateProbeState(gw_response,plan.Probe.Name.Value)
 	
 	var httpListener_state Http_listener
-	if &plan.Http_listener != nil {
+	if hasField(plan,"Http_listener"){
+	//if &plan.Http_listener != nil {
 		httpListener_state 	= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
 	}else{
 		httpListener_state = Http_listener{}
@@ -448,7 +454,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listener			: &httpListener_state,
+		Http_listener			: httpListener_state,
 		Https_listener			: httpsListener_state,
 	}
 	//store to the created objecy to the terraform state
@@ -532,7 +538,8 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	//check if the Http listener  exists in the old state (because it's optional param) 
 	//in order to check if it's in the gateway, otherwise, it was removed manually
 	var httpListener_state Http_listener
-	if &state.Http_listener != nil{
+	if hasField(state,"Http_listener"){
+	//if &state.Http_listener != nil{
 		httpListenerName := state.Http_listener.Name.Value
 		if checkHTTPListenerElement(gw, httpListenerName) {
 			httpListener_state 	= generateHTTPListenerState(gw,httpListenerName)
@@ -559,7 +566,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listener			: &httpListener_state,
+		Http_listener			: httpListener_state,
 		Https_listener			: httpsListener_state,
 	}
 
@@ -695,11 +702,12 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//preparing the new elements (json) from the plan
 	tflog.Info(ctx,"plan.Http_listener before if :",  map[string]interface{}{"plan.Http_listener ": plan.Http_listener,})
 	fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  httpListener_plan =\n %+v ",plan.Http_listener)
-	if &plan.Http_listener != nil {
+	if hasField(plan,"Http_listener"){
+	//if &plan.Http_listener != nil {
 		tflog.Info(ctx,"in if :")
 		SslCertificateName:=""
 		httpListener_plan := plan.Http_listener
-		httpListener_json, _,error_Hostname := createHTTPListener(*httpListener_plan,SslCertificateName,
+		httpListener_json, _,error_Hostname := createHTTPListener(httpListener_plan,SslCertificateName,
 				r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 		if error_Hostname == "fatal-exclusivity" {
 			//hostname and hostnames are mutually exclusive. only one should be provided
@@ -743,13 +751,13 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//preparing the new elements (json) from the plan
 	//SslCertificateName := plan.SslCertificate.Name.Value // (not yet implemented till now)
 	SslCertificateName:="default-citeo-adelphe-cert"
-	httpsListener_plan := plan.Http_listener
-	httpsListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(*httpsListener_plan,SslCertificateName,
+	httpsListener_plan := plan.Https_listener
+	httpsListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(httpsListener_plan,SslCertificateName,
 			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 	if error_SslCertificateName == "fatal" {
 		//wrong SslCertificate Name
 		resp.Diagnostics.AddError(
-		"Unable to update binding. The SslCertificate name ("+SslCertificateName+") declared in Http_listener: "+ 
+		"Unable to update binding. The SslCertificate name ("+SslCertificateName+") declared in Https_listener: "+ 
 		plan.Https_listener.Name.Value+" doesn't match the SslCertificate name conf : "+plan.Https_listener.Ssl_certificate_name.Value,
 		"Please, change probe name then retry.",)
 		return
@@ -830,7 +838,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 
 	/*************** Special for Http listener **********************/
 	var httpListener_state Http_listener
-	if &plan.Http_listener != nil {
+	if hasField(plan,"Http_listener"){
+	//if &plan.Http_listener != nil {
 		httpListener_state 	= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
 	}else{
 		httpListener_state = Http_listener{}
@@ -846,7 +855,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listener			: &httpListener_state,
+		Http_listener			: httpListener_state,
 		Https_listener			: httpsListener_state,
 	}
 	//store to the created objecy to the terraform state
@@ -883,7 +892,8 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	removeProbeElement(&gw,probeName)
 	removeHTTPListenerElement(&gw,HTTPSListenerName)
 	/*************** Special for Http listener **********************/
-	if &state.Http_listener != nil {
+	if hasField(state,"Http_listener"){
+	//if &state.Http_listener != nil {
 		removeHTTPListenerElement(&gw,state.Http_listener.Name.Value)
 	}	
 		
@@ -1051,4 +1061,14 @@ func printToFile(str string, fileName string) {
 	}
 	mw := io.MultiWriter(os.Stdout, file)
 	fmt.Fprintln(mw, str)
+}
+func hasField(v interface{}, name string) bool {
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Ptr {
+	  rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+	  return false
+	}
+	return rv.FieldByName(name).IsValid()
 }
