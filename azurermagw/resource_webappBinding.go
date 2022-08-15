@@ -317,7 +317,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
+	fmt.Println("\n######################## Create Method 2 ########################")
+	
 	//Get the agw (app gateway) from Azure with its Rest API
 	resourceGroupName := plan.Agw_rg.Value
 	applicationGatewayName := plan.Agw_name.Value
@@ -332,7 +333,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		)
 		return
 	}
-
+	fmt.Println("\n######################## Create Method 3 ########################")
+	
 	//create, map and add the new elements (json) object from the plan (plan) to the agw object
 	gw.Properties.BackendAddressPools = append(
 		gw.Properties.BackendAddressPools, createBackendAddressPool(
@@ -356,8 +358,11 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	// no ssl certificate to provider, so no need to check error_SslCertificateName
 	/*var h *Http_listener	
 	h = &plan.Http_listener*/
+	fmt.Println("\n######################## Create Method 4 ########################")
 	
 	if hasField(plan,"Http_listener"){
+		fmt.Println("\n######################## Create Method 5 ########################")
+	
 	//if h != nil {
 		SslCertificateName:=""
 		httpListener_json, _,error_Hostname := createHTTPListener(plan.Http_listener,SslCertificateName,
@@ -923,6 +928,8 @@ func (r resourceWebappBinding) ImportState(ctx context.Context, req tfsdk.Import
 func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool){
 	//This function allows to check if an element name in the required new configuration (plan WebappBinding) already exist in the gw.
 	//if so, the provider has to stop executing and issue an exit error
+	fmt.Println("\n######################## Create Method inside check ########################")
+	
 	exist := false
 	var existing_element_list [] string
 	//Create new var for all configurations
@@ -946,6 +953,8 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool)
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpsListener_plan.Name.Value)
 	}
+	fmt.Println("\n######################## Create Method inside check before if ########################")
+	
 	if hasField(plan,"Http_listener"){
 		httpListener_plan 			:= plan.Http_listener
 		if checkHTTPListenerElement(gw, httpListener_plan.Name.Value) {
@@ -957,6 +966,8 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool)
 			existing_element_list = append(existing_element_list,"\n	- HTTP and HTTPS Listener (new): "+httpListener_plan.Name.Value)
 		}
 	}
+	fmt.Println("\n######################## Create Method inside check after if ########################")
+	
 	return existing_element_list,exist
 }
 
