@@ -309,6 +309,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		)
 		return
 	}
+	fmt.Println("\n######################## Create Method1 ########################")
 	
 	// Retrieve values from plan
 	var plan WebappBinding
