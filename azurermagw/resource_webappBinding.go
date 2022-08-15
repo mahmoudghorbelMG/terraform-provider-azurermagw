@@ -437,9 +437,9 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	//if hasField(plan,"Http_listener"){
 	if plan.Http_listener != nil {
 		httpListener_state 	= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
-	}else{
+	}/*else{
 		httpListener_state = Http_listener{}
-	}
+	}*/
 	tflog.Info(ctx,"[CREATE] httpListener_state :",  map[string]interface{}{"httpListener_state ": httpListener_state,})
 	
 	httpsListener_state 	:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
@@ -553,9 +553,9 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	httpsListenerName := state.Https_listener.Name.Value
 	if checkHTTPListenerElement(gw, httpsListenerName) {
 		httpsListener_state = generateHTTPListenerState(gw,httpsListenerName)
-	}else{
+	}/*else{
 		httpsListener_state = Http_listener{}
-	}
+	}*/
 		
 	// Generate resource state struct
 	var result = WebappBinding{
@@ -840,9 +840,9 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//if hasField(plan,"Http_listener"){
 	if plan.Http_listener != nil {
 		httpListener_state 	= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
-	}else{
+	}/*else{
 		httpListener_state = Http_listener{}
-	}
+	}*/
 	/***************************************************************/
 	httpsListener_state 	:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
 		
@@ -951,6 +951,8 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_pla
 	
 	//if hasField(plan,"Http_listener"){
 	if httpListener_plan != nil {
+		fmt.Println("\n######################## Create Method inside check inside if ########################")
+	
 		httpListener_plan 			:= httpListener_plan
 		if checkHTTPListenerElement(gw, httpListener_plan.Name.Value) {
 			exist = true 
