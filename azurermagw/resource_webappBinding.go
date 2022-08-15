@@ -455,7 +455,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			Backend_address_pool	: backendAddressPool_state,
 			Backend_http_settings	: backendHTTPSettings_state,
 			Probe					: probe_state,
-			Http_listener			: plan.Http_listener,
+			Http_listener			: nil,//plan.Http_listener,
 			Https_listener			: &httpsListener_state,
 		}
 	}
@@ -598,7 +598,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 			Backend_address_pool	: backendAddressPool_state,
 			Backend_http_settings	: backendHTTPSettings_state,
 			Probe					: probe_state,
-			Http_listener			: state.Http_listener,
+			Http_listener			: nil,//state.Http_listener,
 			Https_listener			: &httpsListener_state,
 		}
 	}
@@ -906,7 +906,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			Backend_address_pool	: backendAddressPool_state,
 			Backend_http_settings	: backendHTTPSettings_state,
 			Probe					: probe_state,
-			Http_listener			: plan.Http_listener,
+			Http_listener			: nil,//plan.Http_listener,
 			Https_listener			: &httpsListener_state,
 		}
 	}
