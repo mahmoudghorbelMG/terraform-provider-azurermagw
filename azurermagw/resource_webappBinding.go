@@ -356,7 +356,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	
 	//if hasField(plan,"Http_listener"){
 	
-	if &plan.Http_listener != nil {
+	if plan.Http_listener != nil {
 		fmt.Println("\n######################## Create Method 5 ########################")
 		SslCertificateName:=""
 		httpListener_json, _,error_Hostname := createHTTPListener(plan.Http_listener,SslCertificateName,
@@ -435,7 +435,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	
 	var httpListener_state Http_listener
 	//if hasField(plan,"Http_listener"){
-	if &plan.Http_listener != nil {
+	if plan.Http_listener != nil {
 		httpListener_state 	= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
 	}else{
 		httpListener_state = Http_listener{}
@@ -538,7 +538,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	//in order to check if it's in the gateway, otherwise, it was removed manually
 	var httpListener_state Http_listener
 	//if hasField(state,"Http_listener"){
-	if &state.Http_listener != nil{
+	if state.Http_listener != nil{
 		httpListenerName := state.Http_listener.Name.Value
 		if checkHTTPListenerElement(gw, httpListenerName) {
 			httpListener_state 	= generateHTTPListenerState(gw,httpListenerName)
@@ -702,7 +702,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	tflog.Info(ctx,"plan.Http_listener before if :",  map[string]interface{}{"plan.Http_listener ": plan.Http_listener,})
 	fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  httpListener_plan =\n %+v ",plan.Http_listener)
 	//if hasField(plan,"Http_listener"){
-	if &plan.Http_listener != nil {
+	if plan.Http_listener != nil {
 		tflog.Info(ctx,"in if :")
 		SslCertificateName:=""
 		httpListener_plan := plan.Http_listener
@@ -838,7 +838,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	/*************** Special for Http listener **********************/
 	var httpListener_state Http_listener
 	//if hasField(plan,"Http_listener"){
-	if &plan.Http_listener != nil {
+	if plan.Http_listener != nil {
 		httpListener_state 	= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
 	}else{
 		httpListener_state = Http_listener{}
@@ -892,7 +892,7 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	removeHTTPListenerElement(&gw,HTTPSListenerName)
 	/*************** Special for Http listener **********************/
 	//if hasField(state,"Http_listener"){
-	if &state.Http_listener != nil {
+	if state.Http_listener != nil {
 		removeHTTPListenerElement(&gw,state.Http_listener.Name.Value)
 	}	
 		
