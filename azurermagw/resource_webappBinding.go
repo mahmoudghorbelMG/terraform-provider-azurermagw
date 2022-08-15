@@ -168,10 +168,6 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 									ElemType: types.StringType,
 								},
 								Required: true,
-								/*
-								Optional: true,
-								Computed: true,
-								PlanModifiers: tfsdk.AttributePlanModifiers{stringArrayDefault("200-399")},*/
 							},
 						}),
 					},
@@ -216,10 +212,10 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 						},
 						Optional: true,
 					},
-					/*"ssl_certificate_name": {
+					"ssl_certificate_name": {
 						Type:     types.StringType,
 						Optional: true,
-					},*/
+					},
 				},),
 			},
 			"https_listener": {
