@@ -319,7 +319,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 	
 	//Check if the agw already contains an existing element that has the same name of a new element to add
-	exist_element, exist := checkElementName(gw, plan)
+	exist_element, exist := checkElementName(gw, plan,plan.Http_listener)
 	if exist {
 		resp.Diagnostics.AddError(
 			"Unable to create binding. At least, these elements already exists in the app gateway: "+ fmt.Sprint(exist_element),
@@ -919,7 +919,7 @@ func (r resourceWebappBinding) ImportState(ctx context.Context, req tfsdk.Import
 }
 
 
-func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool){
+func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_plan *Http_listener) ([]string,bool){
 	//This function allows to check if an element name in the required new configuration (plan WebappBinding) already exist in the gw.
 	//if so, the provider has to stop executing and issue an exit error
 	fmt.Println("\n######################## Create Method inside check ########################")
@@ -950,8 +950,8 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding) ([]string,bool)
 	fmt.Println("\n######################## Create Method inside check before if ########################")
 	
 	//if hasField(plan,"Http_listener"){
-	if &plan.Http_listener != nil {
-		httpListener_plan 			:= plan.Http_listener
+	if httpListener_plan != nil {
+		httpListener_plan 			:= httpListener_plan
 		if checkHTTPListenerElement(gw, httpListener_plan.Name.Value) {
 			exist = true 
 			existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpListener_plan.Name.Value)
