@@ -580,7 +580,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 
 // Update resource
 func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
-	//fmt.Println("\n######################## Update Method ########################")
+	fmt.Println("\n######################## Update Method ########################")
 	tflog.Info(ctx,"\n######################## Update Method ########################")
 	// Get plan values
 	var plan WebappBinding
@@ -701,7 +701,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	tflog.Info(ctx,"\n*********** Processing http Listener ***********")
 	//preparing the new elements (json) from the plan
 	tflog.Info(ctx,"plan.Http_listener before if :",  map[string]interface{}{"plan.Http_listener ": plan.Http_listener,})
-	
+	fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  httpListener_plan =\n %+v ",plan.Http_listener)
 	if &plan.Http_listener != nil {
 		tflog.Info(ctx,"in if :")
 		SslCertificateName:=""
