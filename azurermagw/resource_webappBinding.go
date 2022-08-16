@@ -747,9 +747,9 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//preparing the new elements (json) from the plan
 	tflog.Info(ctx,"plan.Http_listener before if :",  map[string]interface{}{"plan.Http_listener ": plan.Http_listener,})
 	fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  httpListener_plan =\n %+v ",plan.Http_listener)
-	//if hasField(plan,"Http_listener"){
 	if plan.Http_listener != nil {
 		tflog.Info(ctx,"in if :")
+		//No SSL certificate to check.
 		SslCertificateName:=""
 		httpListener_plan := plan.Http_listener
 		httpListener_json, _,error_Hostname := createHTTPListener(httpListener_plan,SslCertificateName,
@@ -793,6 +793,11 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 
 		//we have to add the http listener here because it's optional
 		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners, httpListener_json)			
+	}else{//plan.Http_listener = nil, no http listener in the plan (ex: removed)
+		//check if there is an old one in the state in order to remove it
+		if state.Http_listener != nil {
+			removeHTTPListenerElement(&gw, state.Http_listener.Name.Value)
+		}
 	}
 			
 	// *********** Processing https Listener *********** //	
