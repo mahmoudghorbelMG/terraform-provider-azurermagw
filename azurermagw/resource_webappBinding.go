@@ -265,6 +265,32 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 					},
 				},),
 			},
+			"ssl_certificate": {
+				Required: true,
+				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+					"name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"id": {
+						Type:     types.StringType,
+						Computed: true,
+					},
+					"key_vault_secret_id": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"data": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"password": {
+						Type:     types.StringType,
+						Optional: true,
+						Sensitive: true,
+					},
+				}),
+			},
 		},
 	}, nil
 }
@@ -302,7 +328,6 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		)
 		return
 	}
-	fmt.Println("\n######################## Create Method1 ########################")
 	
 	// Retrieve values from plan
 	var plan WebappBinding
@@ -311,7 +336,6 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	fmt.Println("\n######################## Create Method 2 ########################")
 	
 	//Get the agw (app gateway) from Azure with its Rest API
 	resourceGroupName := plan.Agw_rg.Value
@@ -322,18 +346,19 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	exist_element, exist := checkElementName(gw, plan,plan.Http_listener)
 	if exist {
 		resp.Diagnostics.AddError(
-			"Unable to create binding. At least, these elements already exists in the app gateway: "+ fmt.Sprint(exist_element),
-			"Please, change their names.",
+			"Unable to create binding. This (these) element(s) already exist(s) in the app gateway: \n"+ fmt.Sprint(exist_element),
+			"Please, change its (their) name(s) then retry.",
 		)
 		return
 	}
-	fmt.Println("\n######################## Create Method 3 ########################")
 	
-	//create, map and add the new elements (json) object from the plan (plan) to the agw object
+	//create, map and add the new elements (json) object from the plan to the agw object
+	/************* generate and add BackendAddressPool **************/
 	gw.Properties.BackendAddressPools = append(
 		gw.Properties.BackendAddressPools, createBackendAddressPool(
 			plan.Backend_address_pool))
 
+	/************* generate and add Backend HTTP Settings **************/
 	backendHTTPSettings_json, error_probeName := createBackendHTTPSettings(plan.Backend_http_settings,plan.Probe.Name.Value,
 												r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 	if error_probeName== "fatal" {
@@ -345,19 +370,43 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		return
 	}
 	gw.Properties.BackendHTTPSettingsCollection = append(gw.Properties.BackendHTTPSettingsCollection,backendHTTPSettings_json)
+	
+	/************* generate and add probe **************/
 	gw.Properties.Probes = append(gw.Properties.Probes,
 		createProbe(plan.Probe,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName))
 
-	/************* Processing Http listener **************/
-	// no ssl certificate to provider, so no need to check error_SslCertificateName
-	/*var h *Http_listener	
-	h = &plan.Http_listener*/
-	fmt.Println("\n######################## Create Method 4 ########################")
-	
-	//if hasField(plan,"Http_listener"){
-	
+	/************* generate and add ssl Certificate **************/
+	sslCertificate_json, error_exclusivity,error_password := createSslCertificate(plan.Ssl_certificate,
+			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	if error_exclusivity== "fatal-both-exist" {
+		resp.Diagnostics.AddError(
+		"Unable to create binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, 2 optional parameters mutually exclusive "+ 
+		"are declared: Data and Key_vault_secret_id. Only one has to be provided. ",
+		"Please, change configuration then retry.",
+		)
+		return
+	}
+	if error_exclusivity== "fatal-both-miss" {
+		resp.Diagnostics.AddError(
+		"Unable to create binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, both optional parameters mutually exclusive "+ 
+		"are missing: Data and Key_vault_secret_id. At least and only one has to be provided. ",
+		"Please, change configuration then retry.",
+		)
+		return
+	}
+	if error_password== "fatal" {
+		resp.Diagnostics.AddError(
+		"Unable to create binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, Data parameters (pfx file content) "+ 
+		"is provided without password. ",
+		"Please, add password then retry.",
+		)
+		return
+	}
+	gw.Properties.SslCertificates = append(gw.Properties.SslCertificates,sslCertificate_json)
+
+	/************* generate and add Http listener **************/
+	// no ssl certificate to provide, so no need to check error_SslCertificateName
 	if plan.Http_listener != nil {
-		fmt.Println("\n######################## Create Method 5 ########################")
 		SslCertificateName:=""
 		httpListener_json, _,error_Hostname := createHTTPListener(plan.Http_listener,SslCertificateName,
 				r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
@@ -379,9 +428,10 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		}
 		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpListener_json)
 	}
-	/************* Processing Https listener **************/
-	//SslCertificateName := plan.SslCertificate.Name.Value // (not yet implemented till now)
-	SslCertificateName :="default-citeo-adelphe-cert"
+	
+	/************* generate and add Https listener **************/
+	SslCertificateName := plan.Ssl_certificate.Name.Value
+	//SslCertificateName :="default-citeo-adelphe-cert"
 	httpsListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(plan.Https_listener,SslCertificateName,
 		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 	if error_SslCertificateName == "fatal" {
@@ -410,7 +460,6 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	}		
 	gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpsListener_json)	
 	
-
 	//call the API to update the gw
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 	
@@ -433,7 +482,9 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		gw_response,plan.Backend_http_settings.Name.Value)
 	probe_state := generateProbeState(gw_response,plan.Probe.Name.Value)
 	httpsListener_state 	:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
+	sslCertificate_state 	:= generateSslCertificateState(gw_response,plan.Ssl_certificate.Name.Value)
 	
+	//i moved "Generate resource state struct" with http listner block before it depends on the later.
 	var result WebappBinding
 	if plan.Http_listener != nil {
 		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
@@ -446,6 +497,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			Probe					: probe_state,
 			Http_listener			: &httpListener_state,
 			Https_listener			: &httpsListener_state,
+			Ssl_certificate			: sslCertificate_state,
 		}
 	}else{
 		result = WebappBinding{
@@ -457,10 +509,10 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			Probe					: probe_state,
 			Http_listener			: nil,//plan.Http_listener,
 			Https_listener			: &httpsListener_state,
+			Ssl_certificate			: sslCertificate_state,
 		}
 	}
-	
-	
+		
 /*
 	// Generate resource state struct
 	var result = WebappBinding{
@@ -560,9 +612,20 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		httpsListener_state = Http_listener{}
 	}
 
+	// *********** Processing the SSL Certificate *********** //
+	//check if the SSL Certificate  exists in in the gateway, otherwise, it was removed manually
+	var sslCertificate_state Ssl_certificate
+	sslCertificateName := state.Https_listener.Name.Value
+	if checkHTTPListenerElement(gw, sslCertificateName) {
+		sslCertificate_state = generateSslCertificateState(gw,sslCertificateName)
+	}else{
+		sslCertificate_state = Ssl_certificate{}
+	}
+
 	// *********** Processing the http Listener *********** //
 	//check if the Http listener  exists in the old state (because it's optional param) 
 	//in order to check if it's in the gateway, otherwise, it was removed manually
+	//i moved "Generate resource state struct" with http listner block before it depends on the later.
 	var result WebappBinding
 	if state.Http_listener != nil{
 		httpListenerName := state.Http_listener.Name.Value
@@ -577,6 +640,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 				Probe					: probe_state,
 				Http_listener			: &httpListener_state,
 				Https_listener			: &httpsListener_state,
+				Ssl_certificate			: sslCertificate_state,
 			}
 		}else{
 			result = WebappBinding{
@@ -588,6 +652,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 				Probe					: probe_state,
 				Http_listener			: nil,//state.Http_listener,
 				Https_listener			: &httpsListener_state,
+				Ssl_certificate			: sslCertificate_state,
 			}
 		}
 	}else{
@@ -600,6 +665,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 			Probe					: probe_state,
 			Http_listener			: nil,//state.Http_listener,
 			Https_listener			: &httpsListener_state,
+			Ssl_certificate			: sslCertificate_state,
 		}
 	}
 		/*
@@ -654,8 +720,6 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//		- we have also to prevent element name updating and manual deletion
 	
 	// *********** Processing backend address pool *********** //	
-	tflog.Info(ctx,"\n*********** Processing backend address pool ***********")
-	
 	//preparing the new elements (json) from the plan
 	backendAddressPool_plan := plan.Backend_address_pool
 	backendAddressPool_json := createBackendAddressPool(backendAddressPool_plan)
@@ -672,7 +736,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			//this is an error. issue an exit error.
 			resp.Diagnostics.AddError(
 				"Unable to update the app gateway. The new Backend Adresse pool name : "+ backendAddressPool_json.Name+" already exists.",
-				" Please, change the name.",
+				" Please, change the name then retry.",
 			)
 			return
 		}
@@ -734,7 +798,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			//this is an error. issue an exit error.
 			resp.Diagnostics.AddError(
 				"Unable to update the app gateway. The new probe name : "+ probe_json.Name+" already exists.",
-				" Please, change the name.",
+				" Please, change the name then retry.",
 			)
 			return
 		}
@@ -782,7 +846,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 					//this is an error. issue an exit error.
 					resp.Diagnostics.AddError(
 						"Unable to update the app gateway. The new http Listener name : "+ httpListener_json.Name+" already exists.",
-						" Please, change the name.",
+						" Please, change the name then retry.",
 					)
 					return
 				}
@@ -849,12 +913,65 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		//remove the old http Listener (old name) from the gateway
 		removeHTTPListenerElement(&gw, state.Https_listener.Name.Value)
 	}
-	
+
+	// *********** Processing SSL Certificate *********** //	
+	tflog.Info(ctx,"\n*********** Processing SSL Certificate ***********")
+	//preparing the new elements (json) from the plan
+	sslCertificate_plan := plan.Ssl_certificate
+	sslCertificate_json, error_exclusivity,error_password := createSslCertificate(plan.Ssl_certificate,
+		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	if error_exclusivity== "fatal-both-exist" {
+		resp.Diagnostics.AddError(
+		"Unable to update binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, 2 optional parameters mutually exclusive "+ 
+		"are declared: Data and Key_vault_secret_id. Only one has to be provided. ",
+		"Please, change configuration then retry.",
+		)
+		return
+	}
+	if error_exclusivity== "fatal-both-miss" {
+		resp.Diagnostics.AddError(
+		"Unable to update binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, both optional parameters mutually exclusive "+ 
+		"are missing: Data and Key_vault_secret_id. At least and only one has to be provided. ",
+		"Please, change configuration then retry.",
+		)
+		return
+	}
+	if error_password== "fatal" {
+		resp.Diagnostics.AddError(
+		"Unable to update binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, Data parameters (pfx file content) "+ 
+		"is provided without password. ",
+		"Please, add password then retry.",
+		)
+		return
+	}
+	//check if the SSL Certificate name in the plan and state are different, that means that
+	//it's about SSL Certificate update  with the same name
+	if sslCertificate_plan.Name.Value == state.Ssl_certificate.Name.Value {
+		//it's about SSL Certificate update  with the same name
+		//so we remove the old one before adding the new one.
+		removeSslCertificateElement(&gw, sslCertificate_json.Name)
+	}else{
+		// it's about SSL Certificate update with a new name
+		// we have to check if the new SSL Certificate name is already used
+		if checkSslCertificateElement(gw, sslCertificate_json.Name) {
+			//this is an error. issue an exit error.
+			resp.Diagnostics.AddError(
+				"Unable to update the app gateway. The new SSL Certificate name : "+ sslCertificate_json.Name+" already exists.",
+				" Please, change the name then retry.",
+			)
+			return
+		}
+		//remove the old SSL Certificate (old name) from the gateway
+		removeSslCertificateElement(&gw, state.Ssl_certificate.Name.Value)
+	}
+
+
 	//add the new elements (http Listener elements are already added). 
 	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backendAddressPool_json)
 	gw.Properties.BackendHTTPSettingsCollection = append(gw.Properties.BackendHTTPSettingsCollection, backendHTTPSettings_json)
 	gw.Properties.Probes = append(gw.Properties.Probes, probe_json)
 	gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners, httpsListener_json)
+	gw.Properties.SslCertificates = append(gw.Properties.SslCertificates, sslCertificate_json)
 
 	//and update the gateway
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
@@ -887,12 +1004,14 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	
 	backendAddressPool_state	:= generateBackendAddressPoolState(gw_response, backendAddressPool_json.Name,nb_Fqdns,nb_IpAddress)
 	backendHTTPSettings_state	:= generateBackendHTTPSettingsState(gw_response,backendHTTPSettings_json.Name)
-	probe_state	:= generateProbeState(gw_response,probe_json.Name)
-	httpsListener_state 	:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
-	
+	probe_state					:= generateProbeState(gw_response,probe_json.Name)
+	httpsListener_state 		:= generateHTTPListenerState(gw_response,httpsListener_json.Name)
+	sslCertificate_state 		:= generateSslCertificateState(gw_response,sslCertificate_json.Name)
+
 	/*************** Special for Http listener **********************/
 	// Generate resource state struct 
-		
+	//i moved "Generate resource state struct" with http listner block before it depends on the later.
+	
 	var result WebappBinding
 	if plan.Http_listener != nil {
 		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
@@ -905,6 +1024,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			Probe					: probe_state,
 			Http_listener			: &httpListener_state,
 			Https_listener			: &httpsListener_state,
+			Ssl_certificate			: sslCertificate_state,
 		}
 	}else{
 		result = WebappBinding{
@@ -916,6 +1036,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			Probe					: probe_state,
 			Http_listener			: nil,//plan.Http_listener,
 			Https_listener			: &httpsListener_state,
+			Ssl_certificate			: sslCertificate_state,
 		}
 	}
 	/***************************************************************/
@@ -949,10 +1070,12 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 		return
 	}
 	// Get elements names from state
-	backendAddressPoolName := state.Backend_address_pool.Name.Value
+	backendAddressPoolName 	:= state.Backend_address_pool.Name.Value
 	backendHTTPSettingsName := state.Backend_http_settings.Name.Value
-	probeName := state.Probe.Name.Value
-	HTTPSListenerName := state.Https_listener.Name.Value
+	probeName 				:= state.Probe.Name.Value
+	httpsListenerName 		:= state.Https_listener.Name.Value
+	sslCertificateName 		:= state.Ssl_certificate.Name.Value
+
 	//Get the agw
 	resourceGroupName := state.Agw_rg.Value
 	applicationGatewayName := state.Agw_name.Value
@@ -962,7 +1085,9 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	removeBackendAddressPoolElement(&gw, backendAddressPoolName)
 	removeBackendHTTPSettingsElement(&gw,backendHTTPSettingsName)
 	removeProbeElement(&gw,probeName)
-	removeHTTPListenerElement(&gw,HTTPSListenerName)
+	removeHTTPListenerElement(&gw,httpsListenerName)
+	removeSslCertificateElement(&gw,sslCertificateName)
+	
 	/*************** Special for Http listener **********************/
 	//if hasField(state,"Http_listener"){
 	if state.Http_listener != nil {
@@ -991,12 +1116,9 @@ func (r resourceWebappBinding) ImportState(ctx context.Context, req tfsdk.Import
 	//tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("id"), req, resp)
 }
 
-
 func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_plan *Http_listener) ([]string,bool){
 	//This function allows to check if an element name in the required new configuration (plan WebappBinding) already exist in the gw.
 	//if so, the provider has to stop executing and issue an exit error
-	fmt.Println("\n######################## Create Method inside check ########################")
-	
 	exist := false
 	var existing_element_list [] string
 	//Create new var for all configurations
@@ -1004,6 +1126,8 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_pla
 	backendHTTPSettings_plan 	:= plan.Backend_http_settings
 	probe_plan 					:= plan.Probe
 	httpsListener_plan 			:= plan.Https_listener
+	sslCertificate_plan			:= plan.Ssl_certificate
+
 	if checkBackendAddressPoolElement(gw, backendAddressPool_plan.Name.Value) {
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- BackendAddressPool: "+backendAddressPool_plan.Name.Value)
@@ -1020,12 +1144,7 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_pla
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpsListener_plan.Name.Value)
 	}
-	fmt.Println("\n######################## Create Method inside check before if ########################")
-	
-	//if hasField(plan,"Http_listener"){
 	if httpListener_plan != nil {
-		fmt.Println("\n######################## Create Method inside check inside if ########################")
-	
 		httpListener_plan 			:= httpListener_plan
 		if checkHTTPListenerElement(gw, httpListener_plan.Name.Value) {
 			exist = true 
@@ -1036,7 +1155,10 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_pla
 			existing_element_list = append(existing_element_list,"\n	- HTTP and HTTPS Listener (new): "+httpListener_plan.Name.Value)
 		}
 	}
-	fmt.Println("\n######################## Create Method inside check after if ########################")
+	if checkSslCertificateElement(gw, sslCertificate_plan.Name.Value) {
+		exist = true 
+		existing_element_list = append(existing_element_list,"\n	- SSL Certificate: "+sslCertificate_plan.Name.Value)
+	}
 	
 	return existing_element_list,exist
 }

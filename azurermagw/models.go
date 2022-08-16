@@ -14,4 +14,5 @@ type WebappBinding struct {
 	Probe					Probe_tf				`tfsdk:"probe"`
 	Http_listener			*Http_listener			`tfsdk:"http_listener"`
 	Https_listener			*Http_listener			`tfsdk:"https_listener"`
+	Ssl_certificate			Ssl_certificate			`tfsdk:"ssl_certificate"`
 }

@@ -88,7 +88,9 @@ func createHTTPListener(httpListener_plan *Http_listener,SslCertificateName stri
 			SslCertificate *struct{
 				ID string "json:\"id,omitempty\""
 			} "json:\"sslCertificate\""; 
-			SslProfile *struct{ID string "json:\"id,omitempty\""} "json:\"sslProfile\""; 
+			SslProfile *struct{
+				ID string "json:\"id,omitempty\""
+			} "json:\"sslProfile\""; 
 			CustomErrorConfigurations *[]struct{
 				CustomErrorPageURL string "json:\"customErrorPageUrl,omitempty\""; 
 				StatusCode string "json:\"statusCode,omitempty\""

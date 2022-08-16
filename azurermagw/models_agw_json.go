@@ -276,21 +276,7 @@ type ApplicationGateway struct {
 			Tier     string `json:"tier"`
 			Capacity int    `json:"capacity"`
 		} `json:"sku"`
-		SslCertificates []struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
-			Properties struct {
-				ProvisioningState string `json:"provisioningState"`
-				PublicCertData    string `json:"publicCertData,omitempty"`
-				KeyVaultSecretID  string `json:"keyVaultSecretId,omitempty"`
-				Password          string `json:"password,omitempty"`
-				HTTPListeners     []struct {
-					ID string `json:"id"`
-				} `json:"httpListeners"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"sslCertificates"`
+		SslCertificates []SslCertificate `json:"sslCertificates"`
 		SslPolicy struct {
 			CipherSuites         []string `json:"cipherSuites,omitempty"`
 			DisabledSslProtocols []string `json:"disabledSslProtocols,omitempty"`
