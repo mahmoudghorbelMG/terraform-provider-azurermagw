@@ -866,8 +866,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			
 	// *********** Processing https Listener *********** //	
 	//preparing the new elements (json) from the plan
-	//SslCertificateName := plan.SslCertificate.Name.Value // (not yet implemented till now)
-	SslCertificateName:="default-citeo-adelphe-cert"
+	SslCertificateName := plan.Ssl_certificate.Name.Value // (not yet implemented till now)
+	//SslCertificateName:="default-citeo-adelphe-cert"
 	httpsListener_plan := plan.Https_listener
 	httpsListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(httpsListener_plan,SslCertificateName,
 			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
