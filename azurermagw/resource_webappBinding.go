@@ -616,7 +616,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	//check if the SSL Certificate  exists in in the gateway, otherwise, it was removed manually
 	var sslCertificate_state Ssl_certificate
 	sslCertificateName := state.Ssl_certificate.Name.Value
-	if checkHTTPListenerElement(gw, sslCertificateName) {
+	if checkSslCertificateElement(gw, sslCertificateName) {
 		sslCertificate_state = generateSslCertificateState(gw,sslCertificateName)
 	}else{
 		sslCertificate_state = Ssl_certificate{}
