@@ -291,6 +291,43 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 					},
 				}),
 			},
+			"redirect_configuration": {
+				Required: true,
+				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+					"name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"id": {
+						Type:     types.StringType,
+						Computed: true,
+					},
+					"redirect_type": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"target_listener_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"target_url": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"include_path": {
+						Type:     types.BoolType,
+						Optional: true,
+						Computed: true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{boolDefault(false)},
+					},
+					"include_query_string": {
+						Type:     types.BoolType,
+						Optional: true,
+						Computed: true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{boolDefault(false)},
+					},
+				}),
+			},
 		},
 	}, nil
 }
@@ -375,35 +412,6 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	gw.Properties.Probes = append(gw.Properties.Probes,
 		createProbe(plan.Probe,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName))
 
-	/************* generate and add ssl Certificate **************/
-	sslCertificate_json, error_exclusivity,error_password := createSslCertificate(plan.Ssl_certificate,
-			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-	if error_exclusivity== "fatal-both-exist" {
-		resp.Diagnostics.AddError(
-		"Unable to create binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, 2 optional parameters mutually exclusive "+ 
-		"are declared: Data and Key_vault_secret_id. Only one has to be provided. ",
-		"Please, change configuration then retry.",
-		)
-		return
-	}
-	if error_exclusivity== "fatal-both-miss" {
-		resp.Diagnostics.AddError(
-		"Unable to create binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, both optional parameters mutually exclusive "+ 
-		"are missing: Data and Key_vault_secret_id. At least and only one has to be provided. ",
-		"Please, change configuration then retry.",
-		)
-		return
-	}
-	if error_password== "fatal" {
-		resp.Diagnostics.AddError(
-		"Unable to create binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, Data parameters (pfx file content) "+ 
-		"is provided without password. ",
-		"Please, add password then retry.",
-		)
-		return
-	}
-	gw.Properties.SslCertificates = append(gw.Properties.SslCertificates,sslCertificate_json)
-
 	/************* generate and add Http listener **************/
 	// no ssl certificate to provide, so no need to check error_SslCertificateName
 	if plan.Http_listener != nil {
@@ -411,19 +419,19 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		httpListener_json, _,error_Hostname := createHTTPListener(plan.Http_listener,SslCertificateName,
 				r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 		if error_Hostname == "fatal-exclusivity" {
-			//hostname and hostnames are mutually exclusive. only one should be provided
+			//hostname and hostnames are mutually exclusive. only one should be set
 			resp.Diagnostics.AddError(
 				"Unable to create binding. In HTTP Listener "+ plan.Http_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
-				"Only one should be provided",
+				"Only one should be set",
 				"Please, change HTTPListener configuration then retry.",)
 			return
 		}
 		if error_Hostname == "fatal-missing" {
-			//hostname and hostnames are mutually exclusive. only one should be provided
+			//hostname and hostnames are mutually exclusive. only one should be set
 			resp.Diagnostics.AddError(
 				"Unable to create binding. In HTTP Listener "+ plan.Http_listener.Name.Value+", both Hostname and Hostnames are missing. "+
-				"At least and only one should be provided",
-				"Please, change HTTPListener configuration then retry.",)
+				"At least and only one should be set",
+				"Please, change HTTP Listener configuration then retry.",)
 			return
 		}
 		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpListener_json)
@@ -443,23 +451,82 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		return
 	}
 	if error_Hostname == "fatal-exclusivity" {
-		//hostname and hostnames are mutually exclusive. only one should be provided
+		//hostname and hostnames are mutually exclusive. only one should be set
 		resp.Diagnostics.AddError(
 			"Unable to create binding. In HTTP Listener "+ plan.Https_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
-			"Only one should be provided",
+			"Only one should be set",
 			"Please, change HTTPListener configuration then retry.",)
 		return
 	}
 	if error_Hostname == "fatal-missing" {
-		//hostname and hostnames are mutually exclusive. only one should be provided
+		//hostname and hostnames are mutually exclusive. only one should be set
 		resp.Diagnostics.AddError(
 			"Unable to create binding. In HTTP Listener "+ plan.Https_listener.Name.Value+", both Hostname and Hostnames are missing. "+
-			"At least and only one should be provided",
+			"At least and only one should be set",
 			"Please, change HTTPListener configuration then retry.",)
 		return
 	}		
 	gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpsListener_json)	
 	
+	/************* generate and add ssl Certificate **************/
+	sslCertificate_json, error_exclusivity,error_password := createSslCertificate(plan.Ssl_certificate,
+		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	if error_exclusivity== "fatal-both-exist" {
+		resp.Diagnostics.AddError(
+		"Unable to create binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, 2 optional parameters mutually exclusive "+ 
+		"are declared: Data and Key_vault_secret_id. Only one has to be set. ",
+		"Please, change configuration then retry.",
+		)
+		return
+	}
+	if error_exclusivity== "fatal-both-miss" {
+		resp.Diagnostics.AddError(
+		"Unable to create binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, both optional parameters mutually exclusive "+ 
+		"are missing: Data and Key_vault_secret_id. At least and only one has to be set. ",
+		"Please, change configuration then retry.",
+		)
+		return
+	}
+	if error_password== "fatal" {
+		resp.Diagnostics.AddError(
+		"Unable to create binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, Data parameter (pfx file content) "+ 
+		"is provided without password. ",
+		"Please, add password then retry.",
+		)
+		return
+	}
+	gw.Properties.SslCertificates = append(gw.Properties.SslCertificates,sslCertificate_json)
+
+	/************* generate and add Redirect Configuration **************/
+	redirectConfiguration_json, error_exclusivity,error_target := createRedirectConfiguration(plan.Redirect_configuration,plan.Https_listener.Name.Value,
+		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	if error_exclusivity== "fatal-both-exist" {
+		resp.Diagnostics.AddError(
+		"Unable to create binding. In the Redirect Configuration ("+redirectConfiguration_json.Name+"), 2 optional parameters mutually exclusive "+ 
+		"are declared: Target_listener_name and Target_url. Only one has to be set. ",
+		"Please, change configuration then retry.",
+		)
+		return
+	}
+	if error_exclusivity== "fatal-both-miss" {
+		resp.Diagnostics.AddError(
+		"Unable to create binding. In the Redirect Configuration  ("+redirectConfiguration_json.Name+"), both optional parameters mutually exclusive "+ 
+		"are missing: Target_listener_name and Target_url. At least and only one has to be set. ",
+		"Please, change configuration then retry.",
+		)
+		return
+	}
+	if error_target== "fatal" {
+		resp.Diagnostics.AddError(
+		"Unable to create binding. In the target HTTPS Listener ("+plan.Redirect_configuration.Target_listener_name.Value+") declared in Redirect Configuration : "+ 
+		plan.Redirect_configuration.Name.Value+" doesn't match the HTTPS Listener conf : "+plan.Https_listener.Name.Value,
+		"Please, change HTTPS Listener name then retry.",
+		)
+		return
+	}
+	gw.Properties.RedirectConfigurations = append(gw.Properties.RedirectConfigurations,redirectConfiguration_json)
+
+
 	//call the API to update the gw
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 	
@@ -476,14 +543,13 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	//generate the States based on gw_response from API.
 	nb_Fqdns 		:= len(plan.Backend_address_pool.Fqdns)
 	nb_IpAddress	:= len(plan.Backend_address_pool.Ip_addresses)
-	backendAddressPool_state 	:= generateBackendAddressPoolState(
-		gw_response,plan.Backend_address_pool.Name.Value,nb_Fqdns,nb_IpAddress)
-	backendHTTPSettings_state 	:= generateBackendHTTPSettingsState(
-		gw_response,plan.Backend_http_settings.Name.Value)
-	probe_state := generateProbeState(gw_response,plan.Probe.Name.Value)
-	httpsListener_state 	:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
-	sslCertificate_state 	:= generateSslCertificateState(gw_response,plan.Ssl_certificate.Name.Value)
-	
+	backendAddressPool_state 	:= generateBackendAddressPoolState(gw_response,plan.Backend_address_pool.Name.Value,nb_Fqdns,nb_IpAddress)
+	backendHTTPSettings_state 	:= generateBackendHTTPSettingsState(gw_response,plan.Backend_http_settings.Name.Value)
+	probe_state 				:= generateProbeState(gw_response,plan.Probe.Name.Value)
+	httpsListener_state 		:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
+	sslCertificate_state 		:= generateSslCertificateState(gw_response,plan.Ssl_certificate.Name.Value)
+	redirectConfiguration_state := generateRedirectConfigurationState(gw_response,plan.Redirect_configuration.Name.Value)
+
 	//i moved "Generate resource state struct" with http listner block before it depends on the later.
 	var result WebappBinding
 	if plan.Http_listener != nil {
@@ -498,6 +564,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			Http_listener			: &httpListener_state,
 			Https_listener			: &httpsListener_state,
 			Ssl_certificate			: sslCertificate_state,
+			Redirect_configuration	: redirectConfiguration_state,
 		}
 	}else{
 		result = WebappBinding{
@@ -510,6 +577,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			Http_listener			: nil,//plan.Http_listener,
 			Https_listener			: &httpsListener_state,
 			Ssl_certificate			: sslCertificate_state,
+			Redirect_configuration	: redirectConfiguration_state,
 		}
 	}
 		
@@ -622,6 +690,18 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		sslCertificate_state = Ssl_certificate{}
 	}
 
+	// *********** Processing the Redirect Configuration *********** //
+	var redirectConfiguration_state Redirect_configuration
+	redirectConfigurationName := state.Redirect_configuration.Name.Value
+	//check if the Redirect Configuration exists in the gateway, otherwise, it was removed manually
+	if checkRedirectConfigurationElement(gw, redirectConfigurationName) {
+		//generate BackendState
+		redirectConfiguration_state = generateRedirectConfigurationState(gw, redirectConfigurationName)
+	}else{
+		//generate an empty redirectConfiguration_state because it was removed manually
+		redirectConfiguration_state = Redirect_configuration{}
+	}
+	
 	// *********** Processing the http Listener *********** //
 	//check if the Http listener  exists in the old state (because it's optional param) 
 	//in order to check if it's in the gateway, otherwise, it was removed manually
@@ -641,6 +721,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 				Http_listener			: &httpListener_state,
 				Https_listener			: &httpsListener_state,
 				Ssl_certificate			: sslCertificate_state,
+				Redirect_configuration	: redirectConfiguration_state,
 			}
 		}else{
 			result = WebappBinding{
@@ -653,6 +734,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 				Http_listener			: nil,//state.Http_listener,
 				Https_listener			: &httpsListener_state,
 				Ssl_certificate			: sslCertificate_state,
+				Redirect_configuration	: redirectConfiguration_state,
 			}
 		}
 	}else{
@@ -666,6 +748,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 			Http_listener			: nil,//state.Http_listener,
 			Https_listener			: &httpsListener_state,
 			Ssl_certificate			: sslCertificate_state,
+			Redirect_configuration	: redirectConfiguration_state,
 		}
 	}
 		/*
@@ -688,7 +771,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		return
 	}
 }
-
+*************************** error here
 // Update resource
 func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
 	fmt.Println("\n######################## Update Method ########################")
@@ -819,18 +902,18 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		httpListener_json, _,error_Hostname := createHTTPListener(httpListener_plan,SslCertificateName,
 				r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 		if error_Hostname == "fatal-exclusivity" {
-			//hostname and hostnames are mutually exclusive. only one should be provided
+			//hostname and hostnames are mutually exclusive. only one should be set
 			resp.Diagnostics.AddError(
 				"Unable to update binding. In HTTP Listener "+ httpListener_plan.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
-				"Only one should be provided",
+				"Only one should be set",
 				"Please, change HTTPListener configuration then retry.",)
 			return
 		}
 		if error_Hostname == "fatal-missing" {
-			//hostname and hostnames are mutually exclusive. only one should be provided
+			//hostname and hostnames are mutually exclusive. only one should be set
 			resp.Diagnostics.AddError(
 				"Unable to update binding. In HTTP Listener "+ httpListener_plan.Name.Value+", both Hostname and Hostnames are missing. "+
-				"At least and only one should be provided",
+				"At least and only one should be set",
 				"Please, change HTTPListener configuration then retry.",)
 			return
 		}
@@ -880,18 +963,18 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		return
 	}
 	if error_Hostname == "fatal-exclusivity" {
-		//hostname and hostnames are mutually exclusive. only one should be provided
+		//hostname and hostnames are mutually exclusive. only one should be set
 		resp.Diagnostics.AddError(
 			"Unable to update binding. In HTTPS Listener "+ httpsListener_plan.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
-			"Only one should be provided",
+			"Only one should be set",
 			"Please, change HTTPS Listener configuration then retry.",)
 		return
 	}
 	if error_Hostname == "fatal-missing" {
-		//hostname and hostnames are mutually exclusive. only one should be provided
+		//hostname and hostnames are mutually exclusive. only one should be set
 		resp.Diagnostics.AddError(
 			"Unable to update binding. In HTTPS Listener "+ httpsListener_plan.Name.Value+", both Hostname and Hostnames are missing. "+
-			"At least and only one should be provided",
+			"At least and only one should be set",
 			"Please, change HTTPS Listener configuration then retry.",)
 		return
 	}
@@ -923,7 +1006,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	if error_exclusivity== "fatal-both-exist" {
 		resp.Diagnostics.AddError(
 		"Unable to update binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, 2 optional parameters mutually exclusive "+ 
-		"are declared: Data and Key_vault_secret_id. Only one has to be provided. ",
+		"are declared: Data and Key_vault_secret_id. Only one has to be set. ",
 		"Please, change configuration then retry.",
 		)
 		return
@@ -931,14 +1014,14 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	if error_exclusivity== "fatal-both-miss" {
 		resp.Diagnostics.AddError(
 		"Unable to update binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, both optional parameters mutually exclusive "+ 
-		"are missing: Data and Key_vault_secret_id. At least and only one has to be provided. ",
+		"are missing: Data and Key_vault_secret_id. At least and only one has to be set. ",
 		"Please, change configuration then retry.",
 		)
 		return
 	}
 	if error_password== "fatal" {
 		resp.Diagnostics.AddError(
-		"Unable to update binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, Data parameters (pfx file content) "+ 
+		"Unable to update binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, Data parameter (pfx file content) "+ 
 		"is provided without password. ",
 		"Please, add password then retry.",
 		)
@@ -1127,6 +1210,7 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_pla
 	probe_plan 					:= plan.Probe
 	httpsListener_plan 			:= plan.Https_listener
 	sslCertificate_plan			:= plan.Ssl_certificate
+	redirectConfiguration_plan	:= plan.Redirect_configuration
 
 	if checkBackendAddressPoolElement(gw, backendAddressPool_plan.Name.Value) {
 		exist = true 
@@ -1158,6 +1242,10 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_pla
 	if checkSslCertificateElement(gw, sslCertificate_plan.Name.Value) {
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- SSL Certificate: "+sslCertificate_plan.Name.Value)
+	}
+	if checkRedirectConfigurationElement(gw, redirectConfiguration_plan.Name.Value) {
+		exist = true 
+		existing_element_list = append(existing_element_list,"\n	- Redirect configuration: "+redirectConfiguration_plan.Name.Value)
 	}
 	
 	return existing_element_list,exist

@@ -15,4 +15,5 @@ type WebappBinding struct {
 	Http_listener			*Http_listener			`tfsdk:"http_listener"`
 	Https_listener			*Http_listener			`tfsdk:"https_listener"`
 	Ssl_certificate			Ssl_certificate			`tfsdk:"ssl_certificate"`
+	Redirect_configuration	Redirect_configuration	`tfsdk:"redirect_configuration"`
 }
