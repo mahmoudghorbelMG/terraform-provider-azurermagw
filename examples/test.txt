@@ -21,18 +21,37 @@ List of the minimum tests that should be applied when developping new app gatewa
     * modification of existing one
 - manual resource deletion
 
-Problems:
+Major Problems:
 - param AffinityCookieName in Backend_http_settings: When set to null initially, azure API don't allow changing it. 
-    Solution: put a default value ("ApplicationGatewayAffinity") as described in the Azure app gateway spec.
+    Y Solution: put a default value ("ApplicationGatewayAffinity") as described in the Azure app gateway spec.
 - the probe should be created before referencing it in backend http settings.
 - can't make default value of string array (like status_code in probe.match).
-    Solution: i make it required
+    Y Solution: i make it required
 - can't handle non optional SingleNestedAttributes like probe.match. 
-    Solution: i make it required
+    Y Solution: i make it required
 - when we make a param as optional(1), computed(2), with default value(3) and put it with the default value(4),
 if there is we delete this param in an update conf (plan), it is considered as "Nochanges" event
-    Solution: no solution. Just keep it in mind and don't panic.
+    Y Solution: no solution. Just keep it in mind and don't panic.
 - when i use intDefaultModifier for minServers, if i update the conf by deleting it, the last value still exist while showing 
 "no change" event in terraform plan. It should take the default value (0) and not keeping the last one
-    Solution: i change "diags := tfsdk.ValueAs(ctx, req.AttributePlan, &str)" in intDefaultModifier by "diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &str)"
-
+    Y Solution: i change "diags := tfsdk.ValueAs(ctx, req.AttributePlan, &str)" in intDefaultModifier by "diags := tfsdk.ValueAs(ctx, req.AttributeConfig, &str)"
+- When i use ListNestedAttributes for Http_listener, i faced 2 main problems:
+    1) when we have several http listeners for the same binding resource (ex: one for http et one for https) and we decide to 
+    the name of one of them, how can we identify the old one to remove it from the gw and then update with the new one.
+    2) if we remove on http listener from the declared list, the terraform update will show a very bad delta between plan
+    and state, because they are both ordered lists (tables) to be compared
+    * initial alternative: change to SetNestedAttributes which allow terraform to handle http listeners as non ordered tables
+    - problem: the delta beween plan and state (for http listeners) is huge even for small change. 
+    terraform plan to remove the whole http listeners list and add the new one. This is exactly the problem of azure provider
+    Y Sollution: i consider one http listener (optional, that why i use pointer, to avoid unhelded null value) and one 
+    https listenred that is required. this is my best.
+- when i add ssl certificat support, this error was issued when calling azure API: 
+        {
+        │     "error": {
+        │         "code": "ApplicationGatewayKeyVaultSecretRequiresUserAssignedIdentity",
+        │         "message": "Application Gateway '/subscriptions/b3ae2f08-8ccb-4640-949e-b4c0d2acfde6/resourceGroups/shared-app-gateway/providers/Microsoft.Network/applicationGateways/app-gateway' requires a 'UserAssigned' Identity with 'get' access policy to the referenced KeyVault. Please provide so by using top level 'Identity' property.",
+        │         "details": []
+        │     }
+        │ }
+that means that the gw doesn't have access to the key vault to catch the certificate.
+    Y Sollution: add an authorised managed identity (msi) to the gw.

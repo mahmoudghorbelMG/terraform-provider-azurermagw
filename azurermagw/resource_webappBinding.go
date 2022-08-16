@@ -615,7 +615,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	// *********** Processing the SSL Certificate *********** //
 	//check if the SSL Certificate  exists in in the gateway, otherwise, it was removed manually
 	var sslCertificate_state Ssl_certificate
-	sslCertificateName := state.Https_listener.Name.Value
+	sslCertificateName := state.Ssl_certificate.Name.Value
 	if checkHTTPListenerElement(gw, sslCertificateName) {
 		sslCertificate_state = generateSslCertificateState(gw,sslCertificateName)
 	}else{
@@ -1087,7 +1087,7 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	removeProbeElement(&gw,probeName)
 	removeHTTPListenerElement(&gw,httpsListenerName)
 	removeSslCertificateElement(&gw,sslCertificateName)
-	
+
 	/*************** Special for Http listener **********************/
 	//if hasField(state,"Http_listener"){
 	if state.Http_listener != nil {
