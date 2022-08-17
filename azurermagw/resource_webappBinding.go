@@ -771,7 +771,6 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		return
 	}
 }
-*************************** error here
 // Update resource
 func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
 	fmt.Println("\n######################## Update Method ########################")
@@ -936,8 +935,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 				//remove the old http Listener (old name) from the gateway
 				removeHTTPListenerElement(&gw, state.Http_listener.Name.Value)
 			}
-		}		
-
+		}
 		//we have to add the http listener here because it's optional
 		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners, httpListener_json)			
 	}else{//plan.Http_listener = nil, no http listener in the plan (ex: removed)
@@ -1048,13 +1046,65 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		removeSslCertificateElement(&gw, state.Ssl_certificate.Name.Value)
 	}
 
+	// *********** Processing Redirect Configuration *********** //	
+	tflog.Info(ctx,"\n*********** Processing Redirect Configuration ***********")
+	//preparing the new elements (json) from the plan
+	redirectConfiguration_plan := plan.Redirect_configuration
+	redirectConfiguration_json, error_exclusivity,error_target := createRedirectConfiguration(redirectConfiguration_plan,plan.Https_listener.Name.Value,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	// check the mutual exclusivity constraint
+	if error_exclusivity== "fatal-both-exist" {
+		resp.Diagnostics.AddError(
+		"Unable to update binding. In the Redirect Configuration ("+redirectConfiguration_json.Name+"), 2 optional parameters mutually exclusive "+ 
+		"are declared: Target_listener_name and Target_url. Only one has to be set. ",
+		"Please, change configuration then retry.",
+		)
+		return
+	}
+	if error_exclusivity== "fatal-both-miss" {
+		resp.Diagnostics.AddError(
+		"Unable to update binding. In the Redirect Configuration  ("+redirectConfiguration_json.Name+"), both optional parameters mutually exclusive "+ 
+		"are missing: Target_listener_name and Target_url. At least and only one has to be set. ",
+		"Please, change configuration then retry.",
+		)
+		return
+	}
+	//check the target listener if it match the https listener in the plan or not
+	if error_target== "fatal" {
+		resp.Diagnostics.AddError(
+		"Unable to update binding. In the target HTTPS Listener ("+plan.Redirect_configuration.Target_listener_name.Value+") declared in Redirect Configuration : "+ 
+		plan.Redirect_configuration.Name.Value+" doesn't match the HTTPS Listener conf : "+plan.Https_listener.Name.Value,
+		"Please, change HTTPS Listener name then retry.",
+		)
+		return
+	}	
+	//check if the Redirect Configuration name in the plan and state are different, that means that
+	//it's about Redirect Configuration update  with the same name
+	if redirectConfiguration_plan.Name.Value == state.Redirect_configuration.Name.Value {
+		//it's about Redirect Configuration update  with the same name
+		//so we remove the old one before adding the new one.
+		removeRedirectConfigurationElement(&gw, redirectConfiguration_json.Name)
+	}else{
+		// it's about Redirect Configuration update with a new name
+		// we have to check if the new Redirect Configuration name is already used
+		if checkRedirectConfigurationElement(gw, redirectConfiguration_json.Name) {
+			//this is an error. issue an exit error.
+			resp.Diagnostics.AddError(
+				"Unable to update the app gateway. The new Redirect Configuration name : "+ redirectConfiguration_json.Name+" already exists.",
+				" Please, change the name then retry.",
+			)
+			return
+		}
+		//remove the old Redirect Configuration (old name) from the gateway
+		removeRedirectConfigurationElement(&gw, state.Redirect_configuration.Name.Value)
+	}
 
-	//add the new elements (http Listener elements are already added). 
+	//add the new elements (http Listener element is already added because it's optional). 
 	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backendAddressPool_json)
 	gw.Properties.BackendHTTPSettingsCollection = append(gw.Properties.BackendHTTPSettingsCollection, backendHTTPSettings_json)
 	gw.Properties.Probes = append(gw.Properties.Probes, probe_json)
 	gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners, httpsListener_json)
 	gw.Properties.SslCertificates = append(gw.Properties.SslCertificates, sslCertificate_json)
+	gw.Properties.RedirectConfigurations = append(gw.Properties.RedirectConfigurations, redirectConfiguration_json)
 
 	//and update the gateway
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
@@ -1090,6 +1140,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	probe_state					:= generateProbeState(gw_response,probe_json.Name)
 	httpsListener_state 		:= generateHTTPListenerState(gw_response,httpsListener_json.Name)
 	sslCertificate_state 		:= generateSslCertificateState(gw_response,sslCertificate_json.Name)
+	redirectConfiguration_state := generateRedirectConfigurationState(gw_response,redirectConfiguration_json.Name)
 
 	/*************** Special for Http listener **********************/
 	// Generate resource state struct 
@@ -1108,6 +1159,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			Http_listener			: &httpListener_state,
 			Https_listener			: &httpsListener_state,
 			Ssl_certificate			: sslCertificate_state,
+			Redirect_configuration	: redirectConfiguration_state,
 		}
 	}else{
 		result = WebappBinding{
@@ -1120,6 +1172,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			Http_listener			: nil,//plan.Http_listener,
 			Https_listener			: &httpsListener_state,
 			Ssl_certificate			: sslCertificate_state,
+			Redirect_configuration	: redirectConfiguration_state,
 		}
 	}
 	/***************************************************************/
@@ -1153,11 +1206,12 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 		return
 	}
 	// Get elements names from state
-	backendAddressPoolName 	:= state.Backend_address_pool.Name.Value
-	backendHTTPSettingsName := state.Backend_http_settings.Name.Value
-	probeName 				:= state.Probe.Name.Value
-	httpsListenerName 		:= state.Https_listener.Name.Value
-	sslCertificateName 		:= state.Ssl_certificate.Name.Value
+	backendAddressPoolName 		:= state.Backend_address_pool.Name.Value
+	backendHTTPSettingsName 	:= state.Backend_http_settings.Name.Value
+	probeName 					:= state.Probe.Name.Value
+	httpsListenerName 			:= state.Https_listener.Name.Value
+	sslCertificateName 			:= state.Ssl_certificate.Name.Value
+	redirectConfigurationName 	:= state.Redirect_configuration.Name.Value
 
 	//Get the agw
 	resourceGroupName := state.Agw_rg.Value
@@ -1170,6 +1224,7 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	removeProbeElement(&gw,probeName)
 	removeHTTPListenerElement(&gw,httpsListenerName)
 	removeSslCertificateElement(&gw,sslCertificateName)
+	removeRedirectConfigurationElement(&gw,redirectConfigurationName)
 
 	/*************** Special for Http listener **********************/
 	//if hasField(state,"Http_listener"){
