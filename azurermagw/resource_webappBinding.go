@@ -471,24 +471,6 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		}
 		httpListener_json := createHTTPListener(plan.Http_listener,
 			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-		/*httpListener_json, _,error_Hostname := createHTTPListener(plan.Http_listener,SslCertificateName,
-				r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-		if error_Hostname == "fatal-exclusivity" {
-			//hostname and hostnames are mutually exclusive. only one should be set
-			resp.Diagnostics.AddError(
-				"Unable to create binding. In HTTP Listener "+ plan.Http_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
-				"Only one should be set",
-				"Please, change HTTPListener configuration then retry.",)
-			return
-		}
-		if error_Hostname == "fatal-missing" {
-			//hostname and hostnames are mutually exclusive. only one should be set
-			resp.Diagnostics.AddError(
-				"Unable to create binding. In HTTP Listener "+ plan.Http_listener.Name.Value+", both Hostname and Hostnames are missing. "+
-				"At least and only one should be set",
-				"Please, change HTTP Listener configuration then retry.",)
-			return
-		}*/
 		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpListener_json)
 	}
 	
@@ -497,36 +479,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		return
 	}
 	httpsListener_json := createHTTPListener(plan.Https_listener,
-		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-	
-	/*
-	httpsListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(plan.Https_listener,SslCertificateName,
-		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-	
-	if error_SslCertificateName == "fatal" {
-		//wrong SslCertificate Name
-		resp.Diagnostics.AddError(
-		"Unable to create binding. The SslCertificate name ("+SslCertificateName+") declared in Http_listener: "+ 
-		plan.Https_listener.Name.Value+" doesn't match the SslCertificate name conf : "+plan.Https_listener.Ssl_certificate_name.Value,
-		"Please, change probe name then retry.",)
-		return
-	}
-	if error_Hostname == "fatal-exclusivity" {
-		//hostname and hostnames are mutually exclusive. only one should be set
-		resp.Diagnostics.AddError(
-			"Unable to create binding. In HTTP Listener "+ plan.Https_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
-			"Only one should be set",
-			"Please, change HTTPListener configuration then retry.",)
-		return
-	}
-	if error_Hostname == "fatal-missing" {
-		//hostname and hostnames are mutually exclusive. only one should be set
-		resp.Diagnostics.AddError(
-			"Unable to create binding. In HTTP Listener "+ plan.Https_listener.Name.Value+", both Hostname and Hostnames are missing. "+
-			"At least and only one should be set",
-			"Please, change HTTPListener configuration then retry.",)
-		return
-	}	*/	
+		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)	
 	gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpsListener_json)	
 	
 	/************* generate and add ssl Certificate **************/
@@ -572,9 +525,23 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 
 	//i moved "Generate resource state struct" with http listner block before it depends on the later.
 	var result WebappBinding
+	result = WebappBinding{
+		Name					: plan.Name,
+		Agw_name				: types.String{Value: gw_response.Name},
+		Agw_rg					: plan.Agw_rg,
+		Backend_address_pool	: backendAddressPool_state,
+		Backend_http_settings	: backendHTTPSettings_state,
+		Probe					: probe_state,
+		//Http_listener			: &httpListener_state,
+		Https_listener			: &httpsListener_state,
+		Ssl_certificate			: sslCertificate_state,
+		Redirect_configuration	: redirectConfiguration_state,
+		Request_routing_rule	: requestRoutingRule_state,
+	}
 	if plan.Http_listener != nil {
 		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
-		result = WebappBinding{
+		result.Http_listener = &httpListener_state
+	/*	result = WebappBinding{
 			Name					: plan.Name,
 			Agw_name				: types.String{Value: gw_response.Name},
 			Agw_rg					: plan.Agw_rg,
@@ -586,9 +553,10 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			Ssl_certificate			: sslCertificate_state,
 			Redirect_configuration	: redirectConfiguration_state,
 			Request_routing_rule	: requestRoutingRule_state,
-		}
+		}*/
 	}else{
-		result = WebappBinding{
+		result.Http_listener = nil
+	/*	result = WebappBinding{
 			Name					: plan.Name,
 			Agw_name				: types.String{Value: gw_response.Name},
 			Agw_rg					: plan.Agw_rg,
@@ -600,7 +568,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			Ssl_certificate			: sslCertificate_state,
 			Redirect_configuration	: redirectConfiguration_state,
 			Request_routing_rule	: requestRoutingRule_state,
-		}
+		}*/
 	}
 		
 /*
@@ -964,24 +932,6 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		httpListener_plan := plan.Http_listener
 		httpListener_json := createHTTPListener(httpListener_plan,
 			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-		/*httpListener_json, _,error_Hostname := createHTTPListener(httpListener_plan,SslCertificateName,
-				r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-		if error_Hostname == "fatal-exclusivity" {
-			//hostname and hostnames are mutually exclusive. only one should be set
-			resp.Diagnostics.AddError(
-				"Unable to update binding. In HTTP Listener "+ httpListener_plan.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
-				"Only one should be set",
-				"Please, change HTTPListener configuration then retry.",)
-			return
-		}
-		if error_Hostname == "fatal-missing" {
-			//hostname and hostnames are mutually exclusive. only one should be set
-			resp.Diagnostics.AddError(
-				"Unable to update binding. In HTTP Listener "+ httpListener_plan.Name.Value+", both Hostname and Hostnames are missing. "+
-				"At least and only one should be set",
-				"Please, change HTTPListener configuration then retry.",)
-			return
-		}*/
 		//new http listener is ok. now we have to remove the old one if there is already one, else, nothing to remove
 		if state.Http_listener != nil {
 			if httpListener_plan.Name.Value == state.Http_listener.Name.Value {
@@ -1021,32 +971,6 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	httpsListener_plan := plan.Https_listener
 	httpsListener_json := createHTTPListener(httpsListener_plan,
 		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-	/*httpsListener_json, error_SslCertificateName,error_Hostname := createHTTPListener(httpsListener_plan,SslCertificateName,
-			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-	if error_SslCertificateName == "fatal" {
-		//wrong SslCertificate Name
-		resp.Diagnostics.AddError(
-		"Unable to update binding. The SslCertificate name ("+SslCertificateName+") declared in Https_listener: "+ 
-		plan.Https_listener.Name.Value+" doesn't match the SslCertificate name conf : "+plan.Https_listener.Ssl_certificate_name.Value,
-		"Please, change probe name then retry.",)
-		return
-	}
-	if error_Hostname == "fatal-exclusivity" {
-		//hostname and hostnames are mutually exclusive. only one should be set
-		resp.Diagnostics.AddError(
-			"Unable to update binding. In HTTPS Listener "+ httpsListener_plan.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
-			"Only one should be set",
-			"Please, change HTTPS Listener configuration then retry.",)
-		return
-	}
-	if error_Hostname == "fatal-missing" {
-		//hostname and hostnames are mutually exclusive. only one should be set
-		resp.Diagnostics.AddError(
-			"Unable to update binding. In HTTPS Listener "+ httpsListener_plan.Name.Value+", both Hostname and Hostnames are missing. "+
-			"At least and only one should be set",
-			"Please, change HTTPS Listener configuration then retry.",)
-		return
-	}*/
 	//new http listener is ok. now we have to remove the old one
 	if httpsListener_plan.Name.Value == state.Https_listener.Name.Value {
 		//so we remove the old one before adding the new one.
