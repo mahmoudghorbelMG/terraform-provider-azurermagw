@@ -1629,7 +1629,7 @@ func checkURLPathMapElement(gw ApplicationGateway, URLPathMapName string) bool {
 func generatePriority(gw ApplicationGateway, level string) int {
 	priority := 0
 	rand.Seed(time.Now().UnixNano())
-	var priorities []int
+	var priorities = make([]int,len(gw.Properties.RequestRoutingRules))
 	for i := 0; i < len(gw.Properties.RequestRoutingRules); i++ {
 		priorities[i] = gw.Properties.RequestRoutingRules[i].Properties.Priority
 	}
