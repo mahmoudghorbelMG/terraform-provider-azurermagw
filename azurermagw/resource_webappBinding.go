@@ -1635,7 +1635,7 @@ func generatePriority(gw ApplicationGateway, level string) int {
 	}
 	good_priority :=false
 	for good_priority == false{
-		priority := rand.Intn(300-1) + 1
+		priority = rand.Intn(300-1) + 1
 		for i := 0; i < len(priorities); i++ {
 			if priority == priorities[i] {
 				good_priority = true
