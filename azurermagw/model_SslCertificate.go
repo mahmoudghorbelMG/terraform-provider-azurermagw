@@ -5,6 +5,7 @@ import (
 	//"fmt"
 	//"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -32,7 +33,7 @@ type Ssl_certificate struct {
 	Password									types.String	`tfsdk:"password"`
 }
 
-func createSslCertificate(sslCertificate_plan Ssl_certificate,AZURE_SUBSCRIPTION_ID string, rg_name string, agw_name string) (SslCertificate, string, string){	
+func createSslCertificate(sslCertificate_plan Ssl_certificate,AZURE_SUBSCRIPTION_ID string, rg_name string, agw_name string) (SslCertificate){	
 	sslCertificate_json := SslCertificate{
 		Name:       sslCertificate_plan.Name.Value,
 		//ID:         "",
@@ -50,33 +51,34 @@ func createSslCertificate(sslCertificate_plan Ssl_certificate,AZURE_SUBSCRIPTION
 		},
 		Type: "Microsoft.Network/applicationGateways/sslCertificates",
 	}
-	var error_exclusivity string
-	var error_password string
+	//var error_exclusivity string
+	//var error_password string
 	//there is 2 constraints for SSLCertificate we have to check
 	//   1) Data and Key_vault_secret_id are optional but one of them has to be provided
 	//   2) If Data is provided, Password is required
 	if sslCertificate_plan.Key_vault_secret_id.Value != "" {
-		if sslCertificate_plan.Data.Value != "" {
+		/*if sslCertificate_plan.Data.Value != "" {
 			//both are provided
 			error_exclusivity = "fatal-both-exist"
-		}else{
+		}else{*/
 			//only Key_vault_secret_id is provided
 			sslCertificate_json.Properties.KeyVaultSecretID = sslCertificate_plan.Key_vault_secret_id.Value
-		}
-	}else{
+		//}
+	}/*else{*/
 		if sslCertificate_plan.Data.Value != "" {
 			//only data is provided. check the password
-			if sslCertificate_plan.Password.Value != "" {
+			//if sslCertificate_plan.Password.Value != "" {
+				sslCertificate_json.Properties.PublicCertData = sslCertificate_plan.Data.Value
 				sslCertificate_json.Properties.Password = sslCertificate_plan.Password.Value 
-			}else{
+			/*}else{
 				error_password = "fatal"
 			}
 		}else{
 			//both are empty
 			error_exclusivity = "fatal-both-miss"
-		}
+		}*/
 	}
-	return sslCertificate_json,error_exclusivity,error_password
+	return sslCertificate_json
 }
 func generateSslCertificateState(gw ApplicationGateway, SslCertificateName string) Ssl_certificate {
 	//retrieve json element from gw
@@ -128,4 +130,70 @@ func removeSslCertificateElement(gw *ApplicationGateway, SslCertificateName stri
 			gw.Properties.SslCertificates = append(gw.Properties.SslCertificates[:i], gw.Properties.SslCertificates[i+1:]...)
 		}
 	}
+}
+func checkSslCertificateCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+	//there is 2 constraints we have to check for SSLCertificate 
+	//   1) Data and Key_vault_secret_id are optional but one of them has to be provided
+	//   2) If Data is provided, Password is required
+	
+	//fatal-both-exist
+	if plan.Ssl_certificate.Key_vault_secret_id.Value != "" && plan.Ssl_certificate.Data.Value != "" {
+		resp.Diagnostics.AddError(
+			"Unable to create binding. In the SSL Certificate  ("+plan.Ssl_certificate.Name.Value+") configuration, 2 optional parameters mutually exclusive "+ 
+			"are declared: Data and Key_vault_secret_id. Only one has to be set. ",
+			"Please, change configuration then retry.",				)
+		return true
+	}	
+	//fatal-both-miss
+	if plan.Ssl_certificate.Key_vault_secret_id.Value == "" && plan.Ssl_certificate.Data.Value == "" {
+		resp.Diagnostics.AddError(
+			"Unable to create binding. In the SSL Certificate  ("+plan.Ssl_certificate.Name.Value+") configuration, both optional parameters mutually exclusive "+ 
+			"are missing: Data and Key_vault_secret_id. At least and only one has to be set. ",
+			"Please, change configuration then retry.",
+			)
+		return true
+	}
+	// miss password
+	if plan.Ssl_certificate.Data.Value != "" && plan.Ssl_certificate.Password.Value == "" {
+		resp.Diagnostics.AddError(
+			"Unable to create binding. In the SSL Certificate  ("+plan.Ssl_certificate.Name.Value+") configuration, Data parameter (pfx file content) "+ 
+			"is provided without password. ",
+			"Please, add password then retry.",
+			)
+		return true
+	}
+	return false
+}
+func checkSslCertificateUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+	//there is 2 constraints we have to check for SSLCertificate 
+	//   1) Data and Key_vault_secret_id are optional but one of them has to be provided
+	//   2) If Data is provided, Password is required
+	
+	//fatal-both-exist
+	if plan.Ssl_certificate.Key_vault_secret_id.Value != "" && plan.Ssl_certificate.Data.Value != "" {
+		resp.Diagnostics.AddError(
+			"Unable to update binding. In the SSL Certificate  ("+plan.Ssl_certificate.Name.Value+") configuration, 2 optional parameters mutually exclusive "+ 
+			"are declared: Data and Key_vault_secret_id. Only one has to be set. ",
+			"Please, change configuration then retry.",				)
+		return true
+	}	
+	//fatal-both-miss
+	if plan.Ssl_certificate.Key_vault_secret_id.Value == "" && plan.Ssl_certificate.Data.Value == "" {
+		resp.Diagnostics.AddError(
+			"Unable to update binding. In the SSL Certificate  ("+plan.Ssl_certificate.Name.Value+") configuration, both optional parameters mutually exclusive "+ 
+			"are missing: Data and Key_vault_secret_id. At least and only one has to be set. ",
+			"Please, change configuration then retry.",
+			)
+		return true
+	}
+	// miss password
+	if plan.Ssl_certificate.Data.Value != "" && plan.Ssl_certificate.Password.Value == "" {
+		resp.Diagnostics.AddError(
+			"Unable to update binding. In the SSL Certificate  ("+plan.Ssl_certificate.Name.Value+") configuration, Data parameter (pfx file content) "+ 
+			"is provided without password. ",
+			"Please, add password then retry.",
+			)
+		return true
+	}
+	return false
 }

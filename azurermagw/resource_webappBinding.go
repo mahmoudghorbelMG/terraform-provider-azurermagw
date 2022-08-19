@@ -450,30 +450,13 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	
 
 	/************* generate and add Backend HTTP Settings **************/
-	if plan.Backend_http_settings.Probe_name.Value != "" {
-		if plan.Backend_http_settings.Probe_name.Value != plan.Probe.Name.Value {
-			resp.Diagnostics.AddError(
-				"Unable to create binding. The probe name ("+plan.Backend_http_settings.Probe_name.Value+") declared in Backend_http_settings: "+ 
-				plan.Backend_http_settings.Name.Value+" doesn't match the probe name conf : "+plan.Probe.Name.Value,
-				"Please, change probe name then retry.",
-			)
-			return
-		}
+	if checkBackendHTTPSettingsCreate(plan,gw,resp){
+		return
 	}
 	backendHTTPSettings_json := createBackendHTTPSettings(plan.Backend_http_settings,r.p.AZURE_SUBSCRIPTION_ID,
 					resourceGroupName,applicationGatewayName)
 	gw.Properties.BackendHTTPSettingsCollection = append(gw.Properties.BackendHTTPSettingsCollection,backendHTTPSettings_json)
-	/*
-	backendHTTPSettings_json, error_probeName := createBackendHTTPSettings(plan.Backend_http_settings,plan.Probe.Name.Value,
-												r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-	if error_probeName== "fatal" {
-		resp.Diagnostics.AddError(
-			"Unable to create binding. The probe name ("+plan.Backend_http_settings.Probe_name.Value+") declared in Backend_http_settings: "+ 
-			plan.Backend_http_settings.Name.Value+" doesn't match the probe name conf : "+plan.Probe.Name.Value,
-			"Please, change probe name then retry.",
-		)
-		return
-	}*/	
+	
 	
 	/************* generate and add probe **************/
 	gw.Properties.Probes = append(gw.Properties.Probes,
@@ -536,8 +519,14 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpsListener_json)	
 	
 	/************* generate and add ssl Certificate **************/
-	sslCertificate_json, error_exclusivity,error_password := createSslCertificate(plan.Ssl_certificate,
+	if checkSslCertificateCreate(plan, gw, resp) {
+		return
+	}
+	sslCertificate_json := createSslCertificate(plan.Ssl_certificate,
 		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	/*sslCertificate_json, error_exclusivity,error_password := createSslCertificate(plan.Ssl_certificate,
+		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+		
 	if error_exclusivity== "fatal-both-exist" {
 		resp.Diagnostics.AddError(
 		"Unable to create binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, 2 optional parameters mutually exclusive "+ 
@@ -561,12 +550,13 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		"Please, add password then retry.",
 		)
 		return
-	}
+	}*/
 	gw.Properties.SslCertificates = append(gw.Properties.SslCertificates,sslCertificate_json)
 
 	/************* generate and add Redirect Configuration **************/
 	redirectConfiguration_json, error_exclusivity,error_target := createRedirectConfiguration(plan.Redirect_configuration,plan.Https_listener.Name.Value,
 		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+
 	if error_exclusivity== "fatal-both-exist" {
 		resp.Diagnostics.AddError(
 		"Unable to create binding. In the Redirect Configuration ("+redirectConfiguration_json.Name+"), 2 optional parameters mutually exclusive "+ 
@@ -913,97 +903,6 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	}
 
 	// *********** Processing request Routing Rule *********** //	
-	//check http_listener_name (https)
-
-	/*
-
-	if plan.Request_routing_rule.Http_listener_name.Value != plan.Https_listener.Name.Value {
-		// http_listener_name don't match with Https_listener.Name, issue exit error
-		resp.Diagnostics.AddError(
-			"Unable to update binding. The Https listener name ("+plan.Request_routing_rule.Http_listener_name.Value+
-			") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the Https listener name conf : "+
-			plan.Https_listener.Name.Value,"Please, change Https listener name then retry.",
-		)
-		return
-	}
-	//check mutual exclusivity
-	if plan.Request_routing_rule.Redirect_configuration_name.Value != "" {
-		//check if one or both are provided, then issue exit error
-		if plan.Request_routing_rule.Backend_address_pool_name.Value != "" ||
-		 	plan.Request_routing_rule.Backend_http_settings_name.Value != ""{
-			// mutual exclusivity error betwenn => exit
-			resp.Diagnostics.AddError(
-				"Unable to update binding. In the Request Routing Rule  ("+plan.Request_routing_rule.Name.Value+") configuration, "+
-				"redirect_configuration_name cannot be set if both backend_address_pool_name or backend_http_settings_name are set ",
-				"Please, change configuration then retry.",
-				)
-			return
-		}
-		//check redirect_configuration name
-		if plan.Request_routing_rule.Redirect_configuration_name.Value != plan.Redirect_configuration.Name.Value {
-			// redirect_configuration_name don't match with Redirect_configuration.Name, issue exit error
-			resp.Diagnostics.AddError(
-				"Unable to update binding. The redirect configuration name ("+plan.Request_routing_rule.Redirect_configuration_name.Value+
-				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the redirect configuration name conf : "+
-				plan.Redirect_configuration.Name.Value,"Please, change redirect configuration name then retry.",
-			)
-			return
-		}
-	}else{
-		//check if one or both are missing, then issue exit error
-		if plan.Request_routing_rule.Backend_address_pool_name.Value == "" ||
-			plan.Request_routing_rule.Backend_http_settings_name.Value == "" {
-			// mutual exclusivity error betwenn => exit			
-			resp.Diagnostics.AddError(
-				"Unable to update binding. In the Request Routing Rule  ("+plan.Request_routing_rule.Name.Value+") configuration, "+
-				"a paramameter is missing: [redirect_configuration_name] or [backend_address_pool_name and backend_http_settings_name]",
-				"Please, change configuration then retry.",
-				)
-			return
-		}
-		//it's ok, check next constraints
-		//check backend_address_pool_name 
-		if plan.Request_routing_rule.Backend_address_pool_name.Value != plan.Backend_address_pool.Name.Value {
-			resp.Diagnostics.AddError(
-				"Unable to update binding. The backend address pool name ("+plan.Request_routing_rule.Backend_address_pool_name.Value+
-				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the Backend_address_pool name conf : "+
-				plan.Backend_address_pool.Name.Value,"Please, change backend address pool name then retry.",
-			)
-			return
-		}
-		//check backend_http_settings_name 
-		if plan.Request_routing_rule.Backend_http_settings_name.Value != plan.Backend_http_settings.Name.Value {
-			resp.Diagnostics.AddError(
-				"Unable to update binding. The Backend http settings name ("+plan.Request_routing_rule.Backend_http_settings_name.Value+
-				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the Backend http settings name conf : "+
-				plan.Backend_http_settings.Name.Value,"Please, change Backend http settings name then retry.",
-			)
-			return
-		}
-	}
-	//check rewrite_rule_set_name
-	if plan.Request_routing_rule.Rewrite_rule_set_name.Value != ""{
-		if !checkRewriteRuleSetElement(gw,plan.Request_routing_rule.Rewrite_rule_set_name.Value){
-			resp.Diagnostics.AddError(
-				"Unable to update binding. The rewrite_rule_set name ("+plan.Request_routing_rule.Rewrite_rule_set_name.Value+
-				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't exist in the gateway.",
-				"Please, remove or change rewrite_rule_set name then retry.",
-			)
-			return
-		}
-	}
-	//check url_path_map_name
-	if plan.Request_routing_rule.Url_path_map_name.Value != ""{
-		if !checkURLPathMapElement(gw,plan.Request_routing_rule.Url_path_map_name.Value){
-			resp.Diagnostics.AddError(
-				"Unable to update binding. The url_path_map name ("+plan.Request_routing_rule.Url_path_map_name.Value+
-				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't exist in the gateway.",
-				"Please, remove or change url_path_map name then retry.",
-			)
-			return
-		}
-	}*/
-	
 	if checkRequestRoutingRuleUpdate(plan,gw,resp) {
 		return
 	}
@@ -1039,29 +938,13 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	}	
 	
 	// *********** Processing backend http settings *********** //	
-	//check the provided probe name 
-	if plan.Backend_http_settings.Probe_name.Value != "" {
-		if plan.Backend_http_settings.Probe_name.Value != plan.Probe.Name.Value {
-			resp.Diagnostics.AddError(
-				"Unable to update binding. The probe name ("+plan.Backend_http_settings.Probe_name.Value+") declared in Backend_http_settings: "+ 
-				plan.Backend_http_settings.Name.Value+" doesn't match the probe name conf : "+plan.Probe.Name.Value,
-				"Please, change probe name then retry.",
-			)
-			return
-		}
+	if checkBackendHTTPSettingsUpdate(plan,gw,resp){
+		return
 	}
 	//preparing the new elements (json) from the plan
 	backendHTTPSettings_plan := plan.Backend_http_settings
 	backendHTTPSettings_json:= createBackendHTTPSettings(backendHTTPSettings_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 	
-	/*if error_probeName== "fatal" {
-		resp.Diagnostics.AddError(
-			"Unable to update binding. The probe name ("+backendHTTPSettings_plan.Probe_name.Value+") declared in Backend_http_settings: "+ 
-			backendHTTPSettings_plan.Name.Value+" doesn't match the probe name conf : "+plan.Probe.Name.Value,
-			"Please, change probe name then retry.",
-		)
-		return
-	}*/
 	//check if the backend HTTPSettings name in the plan and state are different, that means that
 	//it's about backend HTTPSettings update  with the same name
 	if backendHTTPSettings_plan.Name.Value == state.Backend_http_settings.Name.Value {
@@ -1110,7 +993,6 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 
 	// *********** Processing http Listener *********** //	
 	//preparing the new elements (json) from the plan
-	//fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  httpListener_plan =\n %+v ",plan.Http_listener)
 	if plan.Http_listener != nil {
 		//No SSL certificate to check.
 		SslCertificateName:=""
@@ -1214,9 +1096,15 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 
 	// *********** Processing SSL Certificate *********** //	
 	//preparing the new elements (json) from the plan
+	if checkSslCertificateUpdate(plan, gw, resp){
+		return
+	}
 	sslCertificate_plan := plan.Ssl_certificate
-	sslCertificate_json, error_exclusivity,error_password := createSslCertificate(plan.Ssl_certificate,
+	sslCertificate_json := createSslCertificate(plan.Ssl_certificate,
 		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	/*sslCertificate_json, error_exclusivity,error_password := createSslCertificate(plan.Ssl_certificate,
+		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	
 	if error_exclusivity== "fatal-both-exist" {
 		resp.Diagnostics.AddError(
 		"Unable to update binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, 2 optional parameters mutually exclusive "+ 
@@ -1240,7 +1128,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		"Please, add password then retry.",
 		)
 		return
-	}
+	}*/
+
 	//check if the SSL Certificate name in the plan and state are different, that means that
 	//it's about SSL Certificate update  with the same name
 	if sslCertificate_plan.Name.Value == state.Ssl_certificate.Name.Value {

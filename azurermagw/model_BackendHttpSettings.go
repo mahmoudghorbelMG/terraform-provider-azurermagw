@@ -3,6 +3,8 @@ package azurermagw
 import (
 	//"fmt"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -165,4 +167,31 @@ func removeBackendHTTPSettingsElement(gw *ApplicationGateway, BackendHTTPSetting
 			gw.Properties.BackendHTTPSettingsCollection = append(gw.Properties.BackendHTTPSettingsCollection[:i], gw.Properties.BackendHTTPSettingsCollection[i+1:]...)
 		}
 	}
+}
+func checkBackendHTTPSettingsCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+	if plan.Backend_http_settings.Probe_name.Value != "" {
+		if plan.Backend_http_settings.Probe_name.Value != plan.Probe.Name.Value {
+			resp.Diagnostics.AddError(
+				"Unable to create binding. The probe name ("+plan.Backend_http_settings.Probe_name.Value+") declared in Backend_http_settings: "+ 
+				plan.Backend_http_settings.Name.Value+" doesn't match the probe name conf : "+plan.Probe.Name.Value,
+				"Please, change probe name then retry.",
+			)
+			return true
+		}
+	}
+	return false
+}
+func checkBackendHTTPSettingsUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+	//check the provided probe name 
+	if plan.Backend_http_settings.Probe_name.Value != "" {
+		if plan.Backend_http_settings.Probe_name.Value != plan.Probe.Name.Value {
+			resp.Diagnostics.AddError(
+				"Unable to update binding. The probe name ("+plan.Backend_http_settings.Probe_name.Value+") declared in Backend_http_settings: "+ 
+				plan.Backend_http_settings.Name.Value+" doesn't match the probe name conf : "+plan.Probe.Name.Value,
+				"Please, change probe name then retry.",
+			)
+			return true
+		}
+	}
+	return false
 }
