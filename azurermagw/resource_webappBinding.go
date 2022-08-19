@@ -1167,24 +1167,6 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_pla
 	
 	return existing_element_list,exist
 }
-func checkRewriteRuleSetElement(gw ApplicationGateway, RewriteRuleSetName string) bool {
-	exist := false
-	for i := len(gw.Properties.RewriteRuleSets) - 1; i >= 0; i-- {
-		if gw.Properties.RewriteRuleSets[i].Name == RewriteRuleSetName {
-			exist = true
-		}
-	}
-	return exist
-}
-func checkURLPathMapElement(gw ApplicationGateway, URLPathMapName string) bool {
-	exist := false
-	for i := len(gw.Properties.URLPathMaps) - 1; i >= 0; i-- {
-		if gw.Properties.URLPathMaps[i].Name == URLPathMapName {
-			exist = true
-		}
-	}
-	return exist
-}
 func generatePriority(gw ApplicationGateway, level string) int {
 	priority := 0
 	rand.Seed(time.Now().UnixNano())

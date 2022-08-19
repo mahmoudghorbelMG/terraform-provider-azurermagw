@@ -371,3 +371,21 @@ func checkRequestRoutingRuleUpdate(plan WebappBinding, gw ApplicationGateway, re
 	}
 	return false
 }
+func checkRewriteRuleSetElement(gw ApplicationGateway, RewriteRuleSetName string) bool {
+	exist := false
+	for i := len(gw.Properties.RewriteRuleSets) - 1; i >= 0; i-- {
+		if gw.Properties.RewriteRuleSets[i].Name == RewriteRuleSetName {
+			exist = true
+		}
+	}
+	return exist
+}
+func checkURLPathMapElement(gw ApplicationGateway, URLPathMapName string) bool {
+	exist := false
+	for i := len(gw.Properties.URLPathMaps) - 1; i >= 0; i-- {
+		if gw.Properties.URLPathMaps[i].Name == URLPathMapName {
+			exist = true
+		}
+	}
+	return exist
+}
