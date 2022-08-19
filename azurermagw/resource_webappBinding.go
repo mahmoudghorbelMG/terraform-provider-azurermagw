@@ -440,93 +440,6 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			plan.Backend_address_pool))
 	
 	/************* generate and add request Routing Rule **************/
-	//check http_listener_name (https)
-	/*if plan.Request_routing_rule.Http_listener_name.Value != plan.Https_listener.Name.Value {
-		// http_listener_name don't match with Https_listener.Name, issue exit error
-		resp.Diagnostics.AddError(
-			"Unable to create binding. The Https listener name ("+plan.Request_routing_rule.Http_listener_name.Value+
-			") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the Https listener name conf : "+
-			plan.Https_listener.Name.Value,"Please, change Https listener name then retry.",
-		)
-		return
-	}
-	//check mutual exclusivity
-	if plan.Request_routing_rule.Redirect_configuration_name.Value != "" {
-		//check if one or both are provided, then issue exit error
-		if plan.Request_routing_rule.Backend_address_pool_name.Value != "" ||
-		 	plan.Request_routing_rule.Backend_http_settings_name.Value != ""{
-			// mutual exclusivity error betwenn => exit
-			resp.Diagnostics.AddError(
-				"Unable to create binding. In the Request Routing Rule  ("+plan.Request_routing_rule.Name.Value+") configuration, "+
-				"redirect_configuration_name cannot be set if both backend_address_pool_name or backend_http_settings_name are set ",
-				"Please, change configuration then retry.",
-				)
-			return
-		}
-		//check redirect_configuration name
-		if plan.Request_routing_rule.Redirect_configuration_name.Value != plan.Redirect_configuration.Name.Value {
-			// redirect_configuration_name don't match with Redirect_configuration.Name, issue exit error
-			resp.Diagnostics.AddError(
-				"Unable to create binding. The redirect configuration name ("+plan.Request_routing_rule.Redirect_configuration_name.Value+
-				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the redirect configuration name conf : "+
-				plan.Redirect_configuration.Name.Value,"Please, change redirect configuration name then retry.",
-			)
-			return
-		}
-	}else{
-		//check if one or both are missing, then issue exit error
-		if plan.Request_routing_rule.Backend_address_pool_name.Value == "" ||
-			plan.Request_routing_rule.Backend_http_settings_name.Value == "" {
-			// mutual exclusivity error betwenn => exit			
-			resp.Diagnostics.AddError(
-				"Unable to create binding. In the Request Routing Rule  ("+plan.Request_routing_rule.Name.Value+") configuration, "+
-				"a paramameter is missing: [redirect_configuration_name] or [backend_address_pool_name and backend_http_settings_name]",
-				"Please, change configuration then retry.",
-				)
-			return
-		}
-		//it's ok, check next constraints
-		//check backend_address_pool_name 
-		if plan.Request_routing_rule.Backend_address_pool_name.Value != plan.Backend_address_pool.Name.Value {
-			resp.Diagnostics.AddError(
-				"Unable to create binding. The backend address pool name ("+plan.Request_routing_rule.Backend_address_pool_name.Value+
-				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the Backend_address_pool name conf : "+
-				plan.Backend_address_pool.Name.Value,"Please, change backend address pool name then retry.",
-			)
-			return
-		}
-		//check backend_http_settings_name 
-		if plan.Request_routing_rule.Backend_http_settings_name.Value != plan.Backend_http_settings.Name.Value {
-			resp.Diagnostics.AddError(
-				"Unable to create binding. The Backend http settings name ("+plan.Request_routing_rule.Backend_http_settings_name.Value+
-				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the Backend http settings name conf : "+
-				plan.Backend_http_settings.Name.Value,"Please, change Backend http settings name then retry.",
-			)
-			return
-		}
-	}
-	//check rewrite_rule_set_name
-	if plan.Request_routing_rule.Rewrite_rule_set_name.Value != ""{
-		if !checkRewriteRuleSetElement(gw,plan.Request_routing_rule.Rewrite_rule_set_name.Value){
-			resp.Diagnostics.AddError(
-				"Unable to create binding. The rewrite_rule_set name ("+plan.Request_routing_rule.Rewrite_rule_set_name.Value+
-				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't exist in the gateway.",
-				"Please, remove or change rewrite_rule_set name then retry.",
-			)
-			return
-		}
-	}
-	//check url_path_map_name
-	if plan.Request_routing_rule.Url_path_map_name.Value != ""{
-		if !checkURLPathMapElement(gw,plan.Request_routing_rule.Url_path_map_name.Value){
-			resp.Diagnostics.AddError(
-				"Unable to create binding. The url_path_map name ("+plan.Request_routing_rule.Url_path_map_name.Value+
-				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't exist in the gateway.",
-				"Please, remove or change url_path_map name then retry.",
-			)
-			return
-		}
-	}*/
 	if checkRequestRoutingRuleCreate(plan,gw,resp){
 		return
 	}
@@ -1001,6 +914,9 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 
 	// *********** Processing request Routing Rule *********** //	
 	//check http_listener_name (https)
+
+	/*
+
 	if plan.Request_routing_rule.Http_listener_name.Value != plan.Https_listener.Name.Value {
 		// http_listener_name don't match with Https_listener.Name, issue exit error
 		resp.Diagnostics.AddError(
@@ -1086,6 +1002,10 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			)
 			return
 		}
+	}*/
+	
+	if checkRequestRoutingRuleUpdate(plan,gw,resp) {
+		return
 	}
 	//to compute priority, check if Request Routing Rule exist in the state, so we get the old priority
 	// else, that means the old Request Routing Rule was removed manually, we have to generate a new priority
