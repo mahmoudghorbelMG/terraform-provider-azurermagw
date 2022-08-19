@@ -57,9 +57,8 @@ type Backend_http_settings struct {
 	Probe_name							types.String	`tfsdk:"probe_name"`							
 }
 
-func createBackendHTTPSettings(backend_plan Backend_http_settings,probeName string, AZURE_SUBSCRIPTION_ID string, 
-								rg_name string, agw_name string) (BackendHTTPSettings, string){
-	//fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  backend_plan =\n %+v ",backend_plan)
+func createBackendHTTPSettings(backend_plan Backend_http_settings, AZURE_SUBSCRIPTION_ID string, 
+								rg_name string, agw_name string) BackendHTTPSettings{
 	backend_json := BackendHTTPSettings{
 		Name:       backend_plan.Name.Value,
 		//ID:         "",
@@ -69,15 +68,10 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,probeName stri
 			CookieBasedAffinity string "json:\"cookieBasedAffinity,omitempty\""; 
 			PickHostNameFromBackendAddress bool "json:\"pickHostNameFromBackendAddress,omitempty\""; 
 			Port int "json:\"port,omitempty\""; 
-			Probe *struct{
-				ID string "json:\"id,omitempty\""
-			} "json:\"probe\""; 
+			Probe *struct{ID string "json:\"id,omitempty\""} "json:\"probe\""; 
 			Protocol string "json:\"protocol,omitempty\""; 
 			RequestTimeout int "json:\"requestTimeout,omitempty\""; 
-
-			AuthenticationCertificates *[]struct{
-				ID string "json:\"id\""
-			} "json:\"authenticationCertificates\""; 
+			AuthenticationCertificates *[]struct{ID string "json:\"id\""} "json:\"authenticationCertificates\""; 
 			ConnectionDraining *struct{
 				DrainTimeoutInSec int "json:\"drainTimeoutInSec,omitempty\""; 
 				Enabled bool "json:\"enabled,omitempty\""
@@ -86,12 +80,8 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,probeName stri
 			Path string "json:\"path,omitempty\""; 
 			ProbeEnabled bool "json:\"probeEnabled,omitempty\""; 
 			ProvisioningState string "json:\"provisioningState,omitempty\""; 
-			RequestRoutingRules *[]struct{
-				ID string "json:\"id,omitempty\""
-			} "json:\"requestRoutingRules\""; 
-			TrustedRootCertificates *[]struct{
-				ID string "json:\"id,omitempty\""
-			} "json:\"trustedRootCertificates\""
+			RequestRoutingRules *[]struct{ID string "json:\"id,omitempty\""} "json:\"requestRoutingRules\""; 
+			TrustedRootCertificates *[]struct{ID string "json:\"id,omitempty\""} "json:\"trustedRootCertificates\""
 		}{	//initialisation of the Properties Struct
 			CookieBasedAffinity:			backend_plan.Cookie_based_affinity.Value,
 			AffinityCookieName:				backend_plan.Affinity_cookie_name.Value,
@@ -106,22 +96,22 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings,probeName stri
 	//the probe name should treated specifically to construct the ID
 	probe_string := "/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+"/providers/Microsoft.Network/applicationGateways/"+agw_name+"/probes/"
 	// if there is à probe, then copy it, else, nil
-	var error string
+	//var error string
 	if backend_plan.Probe_name.Value != "" {
 		//we have to check here if the probe name matches probe name in terraform conf in plan.
-		if backend_plan.Probe_name.Value == probeName {
+		//if backend_plan.Probe_name.Value == probeName {
 			backend_json.Properties.Probe = &struct{
 				ID string "json:\"id,omitempty\""
 			}{
 				ID: probe_string + backend_plan.Probe_name.Value,
 			}
-		}else{
+		/*}else{
 			//Error exit
 			error = "fatal"
-		}		
+		}		*/
 	}	
 	
-	return backend_json,error
+	return backend_json
 }
 func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettingsName string) Backend_http_settings {
 	//retrieve json element from gw

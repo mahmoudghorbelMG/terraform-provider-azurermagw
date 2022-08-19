@@ -8,14 +8,16 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"reflect"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
+	//"github.com/hashicorp/terraform-plugin-log/tflog"
 	//"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -90,9 +92,6 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 					},
 					"pick_host_name_from_backend_address": {
 						Type:     types.BoolType,
-						//this params should be optional but whith default value (false)
-						//to implment this, it requires additional effort. Actually, it's easier for me
-						//to make it Required :)
 						Optional: true,
 						Computed: true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{boolDefault(false)},
@@ -328,6 +327,51 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 					},
 				}),
 			},
+			"request_routing_rule": {
+				Required: true,
+				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+					"name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"id": {
+						Type:     types.StringType,
+						Computed: true,
+					},
+					"rule_type": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"priority": {
+						Type:     types.Int64Type,
+						Computed: true,
+					},
+					"http_listener_name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"backend_address_pool_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"backend_http_settings_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"redirect_configuration_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"rewrite_rule_set_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"url_path_map_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+				}),
+			},
 		},
 	}, nil
 }
@@ -394,8 +438,116 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	gw.Properties.BackendAddressPools = append(
 		gw.Properties.BackendAddressPools, createBackendAddressPool(
 			plan.Backend_address_pool))
+	
+	/************* generate and add request Routing Rule **************/
+	//check http_listener_name (https)
+	if plan.Request_routing_rule.Http_listener_name.Value != plan.Https_listener.Name.Value {
+		// http_listener_name don't match with Https_listener.Name, issue exit error
+		resp.Diagnostics.AddError(
+			"Unable to create binding. The Https listener name ("+plan.Request_routing_rule.Http_listener_name.Value+
+			") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the Https listener name conf : "+
+			plan.Https_listener.Name.Value,"Please, change Https listener name then retry.",
+		)
+		return
+	}
+	//check mutual exclusivity
+	if plan.Request_routing_rule.Redirect_configuration_name.Value != "" {
+		//check if one or both are provided, then issue exit error
+		if plan.Request_routing_rule.Backend_address_pool_name.Value != "" ||
+		 	plan.Request_routing_rule.Backend_http_settings_name.Value != ""{
+			// mutual exclusivity error betwenn => exit
+			resp.Diagnostics.AddError(
+				"Unable to create binding. In the Request Routing Rule  ("+plan.Request_routing_rule.Name.Value+") configuration, "+
+				"redirect_configuration_name cannot be set if both backend_address_pool_name or backend_http_settings_name are set ",
+				"Please, change configuration then retry.",
+				)
+			return
+		}
+		//check redirect_configuration name
+		if plan.Request_routing_rule.Redirect_configuration_name.Value != plan.Redirect_configuration.Name.Value {
+			// redirect_configuration_name don't match with Redirect_configuration.Name, issue exit error
+			resp.Diagnostics.AddError(
+				"Unable to create binding. The redirect configuration name ("+plan.Request_routing_rule.Redirect_configuration_name.Value+
+				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the redirect configuration name conf : "+
+				plan.Redirect_configuration.Name.Value,"Please, change redirect configuration name then retry.",
+			)
+			return
+		}
+	}else{
+		//check if one or both are missing, then issue exit error
+		if plan.Request_routing_rule.Backend_address_pool_name.Value == "" ||
+			plan.Request_routing_rule.Backend_http_settings_name.Value == "" {
+			// mutual exclusivity error betwenn => exit			
+			resp.Diagnostics.AddError(
+				"Unable to create binding. In the Request Routing Rule  ("+plan.Request_routing_rule.Name.Value+") configuration, "+
+				"a paramameter is missing: [redirect_configuration_name] or [backend_address_pool_name and backend_http_settings_name]",
+				"Please, change configuration then retry.",
+				)
+			return
+		}
+		//it's ok, check next constraints
+		//check backend_address_pool_name 
+		if plan.Request_routing_rule.Backend_address_pool_name.Value != plan.Backend_address_pool.Name.Value {
+			resp.Diagnostics.AddError(
+				"Unable to create binding. The backend address pool name ("+plan.Request_routing_rule.Backend_address_pool_name.Value+
+				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the Backend_address_pool name conf : "+
+				plan.Backend_address_pool.Name.Value,"Please, change backend address pool name then retry.",
+			)
+			return
+		}
+		//check backend_http_settings_name 
+		if plan.Request_routing_rule.Backend_http_settings_name.Value != plan.Backend_http_settings.Name.Value {
+			resp.Diagnostics.AddError(
+				"Unable to create binding. The Backend http settings name ("+plan.Request_routing_rule.Backend_http_settings_name.Value+
+				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the Backend http settings name conf : "+
+				plan.Backend_http_settings.Name.Value,"Please, change Backend http settings name then retry.",
+			)
+			return
+		}
+	}
+	//check rewrite_rule_set_name
+	if plan.Request_routing_rule.Rewrite_rule_set_name.Value != ""{
+		if !checkRewriteRuleSetElement(gw,plan.Request_routing_rule.Rewrite_rule_set_name.Value){
+			resp.Diagnostics.AddError(
+				"Unable to create binding. The rewrite_rule_set name ("+plan.Request_routing_rule.Rewrite_rule_set_name.Value+
+				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't exist in the gateway.",
+				"Please, remove or change rewrite_rule_set name then retry.",
+			)
+			return
+		}
+	}
+	//check url_path_map_name
+	if plan.Request_routing_rule.Url_path_map_name.Value != ""{
+		if !checkURLPathMapElement(gw,plan.Request_routing_rule.Url_path_map_name.Value){
+			resp.Diagnostics.AddError(
+				"Unable to create binding. The url_path_map name ("+plan.Request_routing_rule.Url_path_map_name.Value+
+				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't exist in the gateway.",
+				"Please, remove or change url_path_map name then retry.",
+			)
+			return
+		}
+	}
+	priority := generatePriority(gw,"high")
+	requestRoutingRule_json := createRequestRoutingRule(&plan.Request_routing_rule,priority,
+		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	gw.Properties.RequestRoutingRules = append(gw.Properties.RequestRoutingRules,requestRoutingRule_json)
+	
 
 	/************* generate and add Backend HTTP Settings **************/
+	if plan.Backend_http_settings.Probe_name.Value != "" {
+		if plan.Backend_http_settings.Probe_name.Value != plan.Probe.Name.Value {
+			resp.Diagnostics.AddError(
+				"Unable to create binding. The probe name ("+plan.Backend_http_settings.Probe_name.Value+") declared in Backend_http_settings: "+ 
+				plan.Backend_http_settings.Name.Value+" doesn't match the probe name conf : "+plan.Probe.Name.Value,
+				"Please, change probe name then retry.",
+			)
+			return
+		}
+	}
+	backendHTTPSettings_json := createBackendHTTPSettings(plan.Backend_http_settings,r.p.AZURE_SUBSCRIPTION_ID,
+					resourceGroupName,applicationGatewayName)
+	gw.Properties.BackendHTTPSettingsCollection = append(gw.Properties.BackendHTTPSettingsCollection,backendHTTPSettings_json)
+	/*
 	backendHTTPSettings_json, error_probeName := createBackendHTTPSettings(plan.Backend_http_settings,plan.Probe.Name.Value,
 												r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 	if error_probeName== "fatal" {
@@ -405,8 +557,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			"Please, change probe name then retry.",
 		)
 		return
-	}
-	gw.Properties.BackendHTTPSettingsCollection = append(gw.Properties.BackendHTTPSettingsCollection,backendHTTPSettings_json)
+	}*/	
 	
 	/************* generate and add probe **************/
 	gw.Properties.Probes = append(gw.Properties.Probes,
@@ -549,6 +700,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	httpsListener_state 		:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
 	sslCertificate_state 		:= generateSslCertificateState(gw_response,plan.Ssl_certificate.Name.Value)
 	redirectConfiguration_state := generateRedirectConfigurationState(gw_response,plan.Redirect_configuration.Name.Value)
+	requestRoutingRule_state 	:= generateRequestRoutingRuleState(gw_response,plan.Request_routing_rule.Name.Value)
 
 	//i moved "Generate resource state struct" with http listner block before it depends on the later.
 	var result WebappBinding
@@ -565,6 +717,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			Https_listener			: &httpsListener_state,
 			Ssl_certificate			: sslCertificate_state,
 			Redirect_configuration	: redirectConfiguration_state,
+			Request_routing_rule	: requestRoutingRule_state,
 		}
 	}else{
 		result = WebappBinding{
@@ -578,6 +731,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			Https_listener			: &httpsListener_state,
 			Ssl_certificate			: sslCertificate_state,
 			Redirect_configuration	: redirectConfiguration_state,
+			Request_routing_rule	: requestRoutingRule_state,
 		}
 	}
 		
@@ -620,7 +774,20 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	resourceGroupName := state.Agw_rg.Value
 	applicationGatewayName := state.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
-
+	
+	// *********** Processing the request Routing Rule *********** //
+	//check if the request Routing Rule exists in  the gateway, otherwise, it was removed manually
+	var requestRoutingRule_state Request_routing_rule
+	requestRoutingRuleName := state.Request_routing_rule.Name.Value
+	//check if the backend http settings exists in the gateway, otherwise, it was removed manually
+	if checkRequestRoutingRuleElement(gw, requestRoutingRuleName) {
+		//generate BackendState
+		requestRoutingRule_state = generateRequestRoutingRuleState(gw, requestRoutingRuleName)
+	}else{
+		//generate an empty requestRoutingRule_state because it was removed manually
+		requestRoutingRule_state = Request_routing_rule{}
+	}
+	
 	// *********** Processing the backend address pool *********** //
 	var backendAddressPool_state Backend_address_pool
 	backendAddressPoolName := state.Backend_address_pool.Name.Value
@@ -671,7 +838,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	}
 
 	// *********** Processing the https Listener *********** //
-	//check if the Https listener  exists in in the gateway, otherwise, it was removed manually
+	//check if the Https listener  exists in  the gateway, otherwise, it was removed manually
 	var httpsListener_state Http_listener
 	httpsListenerName := state.Https_listener.Name.Value
 	if checkHTTPListenerElement(gw, httpsListenerName) {
@@ -681,7 +848,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	}
 
 	// *********** Processing the SSL Certificate *********** //
-	//check if the SSL Certificate  exists in in the gateway, otherwise, it was removed manually
+	//check if the SSL Certificate  exists in  the gateway, otherwise, it was removed manually
 	var sslCertificate_state Ssl_certificate
 	sslCertificateName := state.Ssl_certificate.Name.Value
 	if checkSslCertificateElement(gw, sslCertificateName) {
@@ -722,6 +889,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 				Https_listener			: &httpsListener_state,
 				Ssl_certificate			: sslCertificate_state,
 				Redirect_configuration	: redirectConfiguration_state,
+				//Request_routing_rule	: requestRoutingRule_state,
 			}
 		}else{
 			result = WebappBinding{
@@ -735,6 +903,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 				Https_listener			: &httpsListener_state,
 				Ssl_certificate			: sslCertificate_state,
 				Redirect_configuration	: redirectConfiguration_state,
+				//Request_routing_rule	: requestRoutingRule_state,
 			}
 		}
 	}else{
@@ -749,8 +918,10 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 			Https_listener			: &httpsListener_state,
 			Ssl_certificate			: sslCertificate_state,
 			Redirect_configuration	: redirectConfiguration_state,
+			//Request_routing_rule	: requestRoutingRule_state,
 		}
 	}
+	result.Request_routing_rule = requestRoutingRule_state
 		/*
 	// Generate resource state struct
 	var result = WebappBinding{
@@ -774,7 +945,6 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 // Update resource
 func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
 	fmt.Println("\n######################## Update Method ########################")
-	tflog.Info(ctx,"\n######################## Update Method ########################")
 	// Get plan values
 	var plan WebappBinding
 	diags := req.Plan.Get(ctx, &plan)
@@ -800,7 +970,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//Verify if the agw already contains the elements to be updated beacause:
 	//		- the older ones has be removed before updating. 
 	//		- we have also to prevent element name updating and manual deletion
-	
+
 	// *********** Processing backend address pool *********** //	
 	//preparing the new elements (json) from the plan
 	backendAddressPool_plan := plan.Backend_address_pool
@@ -826,21 +996,149 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		removeBackendAddressPoolElement(&gw, state.Backend_address_pool.Name.Value)
 	}
 
+	// *********** Processing request Routing Rule *********** //	
+	//check http_listener_name (https)
+	if plan.Request_routing_rule.Http_listener_name.Value != plan.Https_listener.Name.Value {
+		// http_listener_name don't match with Https_listener.Name, issue exit error
+		resp.Diagnostics.AddError(
+			"Unable to update binding. The Https listener name ("+plan.Request_routing_rule.Http_listener_name.Value+
+			") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the Https listener name conf : "+
+			plan.Https_listener.Name.Value,"Please, change Https listener name then retry.",
+		)
+		return
+	}
+	//check mutual exclusivity
+	if plan.Request_routing_rule.Redirect_configuration_name.Value != "" {
+		//check if one or both are provided, then issue exit error
+		if plan.Request_routing_rule.Backend_address_pool_name.Value != "" ||
+		 	plan.Request_routing_rule.Backend_http_settings_name.Value != ""{
+			// mutual exclusivity error betwenn => exit
+			resp.Diagnostics.AddError(
+				"Unable to update binding. In the Request Routing Rule  ("+plan.Request_routing_rule.Name.Value+") configuration, "+
+				"redirect_configuration_name cannot be set if both backend_address_pool_name or backend_http_settings_name are set ",
+				"Please, change configuration then retry.",
+				)
+			return
+		}
+		//check redirect_configuration name
+		if plan.Request_routing_rule.Redirect_configuration_name.Value != plan.Redirect_configuration.Name.Value {
+			// redirect_configuration_name don't match with Redirect_configuration.Name, issue exit error
+			resp.Diagnostics.AddError(
+				"Unable to update binding. The redirect configuration name ("+plan.Request_routing_rule.Redirect_configuration_name.Value+
+				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the redirect configuration name conf : "+
+				plan.Redirect_configuration.Name.Value,"Please, change redirect configuration name then retry.",
+			)
+			return
+		}
+	}else{
+		//check if one or both are missing, then issue exit error
+		if plan.Request_routing_rule.Backend_address_pool_name.Value == "" ||
+			plan.Request_routing_rule.Backend_http_settings_name.Value == "" {
+			// mutual exclusivity error betwenn => exit			
+			resp.Diagnostics.AddError(
+				"Unable to update binding. In the Request Routing Rule  ("+plan.Request_routing_rule.Name.Value+") configuration, "+
+				"a paramameter is missing: [redirect_configuration_name] or [backend_address_pool_name and backend_http_settings_name]",
+				"Please, change configuration then retry.",
+				)
+			return
+		}
+		//it's ok, check next constraints
+		//check backend_address_pool_name 
+		if plan.Request_routing_rule.Backend_address_pool_name.Value != plan.Backend_address_pool.Name.Value {
+			resp.Diagnostics.AddError(
+				"Unable to update binding. The backend address pool name ("+plan.Request_routing_rule.Backend_address_pool_name.Value+
+				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the Backend_address_pool name conf : "+
+				plan.Backend_address_pool.Name.Value,"Please, change backend address pool name then retry.",
+			)
+			return
+		}
+		//check backend_http_settings_name 
+		if plan.Request_routing_rule.Backend_http_settings_name.Value != plan.Backend_http_settings.Name.Value {
+			resp.Diagnostics.AddError(
+				"Unable to update binding. The Backend http settings name ("+plan.Request_routing_rule.Backend_http_settings_name.Value+
+				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't match the Backend http settings name conf : "+
+				plan.Backend_http_settings.Name.Value,"Please, change Backend http settings name then retry.",
+			)
+			return
+		}
+	}
+	//check rewrite_rule_set_name
+	if plan.Request_routing_rule.Rewrite_rule_set_name.Value != ""{
+		if !checkRewriteRuleSetElement(gw,plan.Request_routing_rule.Rewrite_rule_set_name.Value){
+			resp.Diagnostics.AddError(
+				"Unable to update binding. The rewrite_rule_set name ("+plan.Request_routing_rule.Rewrite_rule_set_name.Value+
+				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't exist in the gateway.",
+				"Please, remove or change rewrite_rule_set name then retry.",
+			)
+			return
+		}
+	}
+	//check url_path_map_name
+	if plan.Request_routing_rule.Url_path_map_name.Value != ""{
+		if !checkURLPathMapElement(gw,plan.Request_routing_rule.Url_path_map_name.Value){
+			resp.Diagnostics.AddError(
+				"Unable to update binding. The url_path_map name ("+plan.Request_routing_rule.Url_path_map_name.Value+
+				") declared in Request_routing_rule: "+ plan.Request_routing_rule.Name.Value+" doesn't exist in the gateway.",
+				"Please, remove or change url_path_map name then retry.",
+			)
+			return
+		}
+	}
+	//to compute priority, check if Request Routing Rule exist in the state, so we get the old priority
+	// else, that means the old Request Routing Rule was removed manually, we have to generate a new priority
+	var priority int
+	if int(state.Request_routing_rule.Priority.Value) != 0 {
+		priority = int(state.Request_routing_rule.Priority.Value)
+	}else{
+		priority = generatePriority(gw,"high")
+	}
+	requestRoutingRule_json := createRequestRoutingRule(&plan.Request_routing_rule,priority,
+		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	
+	//new Request routing rule is ok. now we have to remove the old one
+	requestRoutingRule_plan := plan.Request_routing_rule
+	if requestRoutingRule_plan.Name.Value == state.Request_routing_rule.Name.Value {
+		//so we remove the old one before adding the new one.
+		removeRequestRoutingRuleElement(&gw,requestRoutingRule_json.Name)
+	}else{
+		// it's most likely about Request routing rule update with a new name
+		// we have to check if the new Request routing rule name is already used
+		if checkRequestRoutingRuleElement(gw, requestRoutingRule_json.Name) {
+			//this is an error. issue an exit error.
+			resp.Diagnostics.AddError(
+				"Unable to update the app gateway. The new Request routing rule name : "+ requestRoutingRule_json.Name+" already exists.",
+				" Please, change the name then retry.",
+			)
+			return
+		}
+		//remove the old http Listener (old name) from the gateway
+		removeRequestRoutingRuleElement(&gw, state.Request_routing_rule.Name.Value)
+	}	
+	
 	// *********** Processing backend http settings *********** //	
-	tflog.Info(ctx,"\n*********** Processing backend http settings ***********")
+	//check the provided probe name 
+	if plan.Backend_http_settings.Probe_name.Value != "" {
+		if plan.Backend_http_settings.Probe_name.Value != plan.Probe.Name.Value {
+			resp.Diagnostics.AddError(
+				"Unable to update binding. The probe name ("+plan.Backend_http_settings.Probe_name.Value+") declared in Backend_http_settings: "+ 
+				plan.Backend_http_settings.Name.Value+" doesn't match the probe name conf : "+plan.Probe.Name.Value,
+				"Please, change probe name then retry.",
+			)
+			return
+		}
+	}
 	//preparing the new elements (json) from the plan
 	backendHTTPSettings_plan := plan.Backend_http_settings
-	backendHTTPSettings_json, error_probeName := createBackendHTTPSettings(backendHTTPSettings_plan,plan.Probe.Name.Value,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	backendHTTPSettings_json:= createBackendHTTPSettings(backendHTTPSettings_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 	
-	//check the provided probe name 
-	if error_probeName== "fatal" {
+	/*if error_probeName== "fatal" {
 		resp.Diagnostics.AddError(
 			"Unable to update binding. The probe name ("+backendHTTPSettings_plan.Probe_name.Value+") declared in Backend_http_settings: "+ 
 			backendHTTPSettings_plan.Name.Value+" doesn't match the probe name conf : "+plan.Probe.Name.Value,
 			"Please, change probe name then retry.",
 		)
 		return
-	}
+	}*/
 	//check if the backend HTTPSettings name in the plan and state are different, that means that
 	//it's about backend HTTPSettings update  with the same name
 	if backendHTTPSettings_plan.Name.Value == state.Backend_http_settings.Name.Value {
@@ -863,7 +1161,6 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	}
 
 	// *********** Processing the probe *********** //	
-	tflog.Info(ctx,"\n*********** Processing the probe ***********")
 	//preparing the new elements (json) from the plan
 	probe_plan := plan.Probe	
 	probe_json := createProbe(probe_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
@@ -889,12 +1186,9 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	}
 
 	// *********** Processing http Listener *********** //	
-	tflog.Info(ctx,"\n*********** Processing http Listener ***********")
 	//preparing the new elements (json) from the plan
-	tflog.Info(ctx,"plan.Http_listener before if :",  map[string]interface{}{"plan.Http_listener ": plan.Http_listener,})
-	fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  httpListener_plan =\n %+v ",plan.Http_listener)
+	//fmt.Printf("\nIIIIIIIIIIIIIIIIIIII  httpListener_plan =\n %+v ",plan.Http_listener)
 	if plan.Http_listener != nil {
-		tflog.Info(ctx,"in if :")
 		//No SSL certificate to check.
 		SslCertificateName:=""
 		httpListener_plan := plan.Http_listener
@@ -987,7 +1281,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			//this is an error. issue an exit error.
 			resp.Diagnostics.AddError(
 				"Unable to update the app gateway. The new http Listener name : "+ httpsListener_json.Name+" already exists.",
-				" Please, change the name.",
+				" Please, change the name then retry.",
 			)
 			return
 		}
@@ -996,7 +1290,6 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	}
 
 	// *********** Processing SSL Certificate *********** //	
-	tflog.Info(ctx,"\n*********** Processing SSL Certificate ***********")
 	//preparing the new elements (json) from the plan
 	sslCertificate_plan := plan.Ssl_certificate
 	sslCertificate_json, error_exclusivity,error_password := createSslCertificate(plan.Ssl_certificate,
@@ -1047,8 +1340,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	}
 
 	// *********** Processing Redirect Configuration *********** //	
-	tflog.Info(ctx,"\n*********** Processing Redirect Configuration ***********")
-	//preparing the new elements (json) from the plan
+	//preparing the new element (json) from the plan
 	redirectConfiguration_plan := plan.Redirect_configuration
 	redirectConfiguration_json, error_exclusivity,error_target := createRedirectConfiguration(redirectConfiguration_plan,plan.Https_listener.Name.Value,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 	// check the mutual exclusivity constraint
@@ -1105,6 +1397,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners, httpsListener_json)
 	gw.Properties.SslCertificates = append(gw.Properties.SslCertificates, sslCertificate_json)
 	gw.Properties.RedirectConfigurations = append(gw.Properties.RedirectConfigurations, redirectConfiguration_json)
+	gw.Properties.RequestRoutingRules = append(gw.Properties.RequestRoutingRules,requestRoutingRule_json)
+
 
 	//and update the gateway
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
@@ -1141,6 +1435,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	httpsListener_state 		:= generateHTTPListenerState(gw_response,httpsListener_json.Name)
 	sslCertificate_state 		:= generateSslCertificateState(gw_response,sslCertificate_json.Name)
 	redirectConfiguration_state := generateRedirectConfigurationState(gw_response,redirectConfiguration_json.Name)
+	requestRoutingRule_state 	:= generateRequestRoutingRuleState(gw_response,requestRoutingRule_json.Name)
 
 	/*************** Special for Http listener **********************/
 	// Generate resource state struct 
@@ -1160,6 +1455,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			Https_listener			: &httpsListener_state,
 			Ssl_certificate			: sslCertificate_state,
 			Redirect_configuration	: redirectConfiguration_state,
+			Request_routing_rule	: requestRoutingRule_state,
 		}
 	}else{
 		result = WebappBinding{
@@ -1173,6 +1469,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			Https_listener			: &httpsListener_state,
 			Ssl_certificate			: sslCertificate_state,
 			Redirect_configuration	: redirectConfiguration_state,
+			Request_routing_rule	: requestRoutingRule_state,
 		}
 	}
 	/***************************************************************/
@@ -1212,6 +1509,7 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	httpsListenerName 			:= state.Https_listener.Name.Value
 	sslCertificateName 			:= state.Ssl_certificate.Name.Value
 	redirectConfigurationName 	:= state.Redirect_configuration.Name.Value
+	requestRoutingRuleName 		:= state.Request_routing_rule.Name.Value
 
 	//Get the agw
 	resourceGroupName := state.Agw_rg.Value
@@ -1225,6 +1523,7 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	removeHTTPListenerElement(&gw,httpsListenerName)
 	removeSslCertificateElement(&gw,sslCertificateName)
 	removeRedirectConfigurationElement(&gw,redirectConfigurationName)
+	removeRequestRoutingRuleElement(&gw,requestRoutingRuleName)
 
 	/*************** Special for Http listener **********************/
 	//if hasField(state,"Http_listener"){
@@ -1253,7 +1552,6 @@ func (r resourceWebappBinding) ImportState(ctx context.Context, req tfsdk.Import
 	// Save the import identifier in the id attribute
 	//tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("id"), req, resp)
 }
-
 func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_plan *Http_listener) ([]string,bool){
 	//This function allows to check if an element name in the required new configuration (plan WebappBinding) already exist in the gw.
 	//if so, the provider has to stop executing and issue an exit error
@@ -1266,6 +1564,7 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_pla
 	httpsListener_plan 			:= plan.Https_listener
 	sslCertificate_plan			:= plan.Ssl_certificate
 	redirectConfiguration_plan	:= plan.Redirect_configuration
+	requestRoutingRule_plan		:= plan.Request_routing_rule
 
 	if checkBackendAddressPoolElement(gw, backendAddressPool_plan.Name.Value) {
 		exist = true 
@@ -1302,10 +1601,50 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_pla
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- Redirect configuration: "+redirectConfiguration_plan.Name.Value)
 	}
+	if checkRequestRoutingRuleElement(gw, requestRoutingRule_plan.Name.Value) {
+		exist = true 
+		existing_element_list = append(existing_element_list,"\n	- Request Routing Rule: "+requestRoutingRule_plan.Name.Value)
+	}
 	
 	return existing_element_list,exist
 }
-
+func checkRewriteRuleSetElement(gw ApplicationGateway, RewriteRuleSetName string) bool {
+	exist := false
+	for i := len(gw.Properties.RewriteRuleSets) - 1; i >= 0; i-- {
+		if gw.Properties.RewriteRuleSets[i].Name == RewriteRuleSetName {
+			exist = true
+		}
+	}
+	return exist
+}
+func checkURLPathMapElement(gw ApplicationGateway, URLPathMapName string) bool {
+	exist := false
+	for i := len(gw.Properties.URLPathMaps) - 1; i >= 0; i-- {
+		if gw.Properties.URLPathMaps[i].Name == URLPathMapName {
+			exist = true
+		}
+	}
+	return exist
+}
+func generatePriority(gw ApplicationGateway, level string) int {
+	priority := 0
+	rand.Seed(time.Now().UnixNano())
+	var priorities []int
+	for i := 0; i < len(gw.Properties.RequestRoutingRules); i++ {
+		priorities[i] = gw.Properties.RequestRoutingRules[i].Properties.Priority
+	}
+	good_priority :=false
+	for good_priority == false{
+		priority := rand.Intn(300-1) + 1
+		for i := 0; i < priorities[i]; i++ {
+			if priority == priorities[i] {
+				good_priority = true
+			}
+		}
+		good_priority = !good_priority
+	}
+	return priority
+}
 //Client operations
 func getGW(subscriptionId string, resourceGroupName string, applicationGatewayName string, token string) ApplicationGateway {
 	requestURI := "https://management.azure.com/subscriptions/" + subscriptionId + "/resourceGroups/" +

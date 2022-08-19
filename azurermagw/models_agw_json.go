@@ -170,38 +170,7 @@ type ApplicationGateway struct {
 		} `json:"privateLinkConfigurations"`
 		Probes []Probe_json `json:"probes"`
 		RedirectConfigurations []RedirectConfiguration `json:"redirectConfigurations,omitempty"`
-		RequestRoutingRules *[]struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
-			Properties struct {
-				ProvisioningState string `json:"provisioningState"`
-				RuleType          string `json:"ruleType"`
-				Priority          int    `json:"priority"`
-				HTTPListener      struct {
-					ID string `json:"id"`
-				} `json:"httpListener"`
-				BackendAddressPool *struct {
-					ID string `json:"id"`
-				} `json:"backendAddressPool"`
-				BackendHTTPSettings *struct {
-					ID string `json:"id"`
-				} `json:"backendHttpSettings"`
-				LoadDistributionPolicy *struct {
-					ID string `json:"id"`
-				} `json:"loadDistributionPolicy"`
-				RedirectConfiguration *struct {
-					ID string `json:"id"`
-				} `json:"redirectConfiguration"`
-				RewriteRuleSet *struct {
-					ID string `json:"id"`
-				} `json:"rewriteRuleSet"`
-				URLPathMap *struct {
-					ID string `json:"id"`
-				} `json:"urlPathMap"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"requestRoutingRules"`
+		RequestRoutingRules []RequestRoutingRule `json:"requestRoutingRules,omitempty"`
 		RewriteRuleSets []struct {
 			Name       string `json:"name"`
 			ID         string `json:"id"`
