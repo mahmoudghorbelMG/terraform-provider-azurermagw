@@ -527,7 +527,9 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			return
 		}
 	}*/
-	checkRequestRoutingRuleCreate(plan,gw,resp)
+	if checkRequestRoutingRuleCreate(plan,gw,resp){
+		return
+	}
 	priority := generatePriority(gw,"high")
 	requestRoutingRule_json := createRequestRoutingRule(&plan.Request_routing_rule,priority,
 		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
