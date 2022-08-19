@@ -441,7 +441,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	
 	/************* generate and add request Routing Rule **************/
 	//check http_listener_name (https)
-	if plan.Request_routing_rule.Http_listener_name.Value != plan.Https_listener.Name.Value {
+	/*if plan.Request_routing_rule.Http_listener_name.Value != plan.Https_listener.Name.Value {
 		// http_listener_name don't match with Https_listener.Name, issue exit error
 		resp.Diagnostics.AddError(
 			"Unable to create binding. The Https listener name ("+plan.Request_routing_rule.Http_listener_name.Value+
@@ -526,7 +526,8 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 			)
 			return
 		}
-	}
+	}*/
+	checkRequestRoutingRuleCreate(plan,gw,resp)
 	priority := generatePriority(gw,"high")
 	requestRoutingRule_json := createRequestRoutingRule(&plan.Request_routing_rule,priority,
 		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
