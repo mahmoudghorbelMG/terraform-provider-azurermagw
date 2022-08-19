@@ -554,9 +554,15 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	gw.Properties.SslCertificates = append(gw.Properties.SslCertificates,sslCertificate_json)
 
 	/************* generate and add Redirect Configuration **************/
+	if checkRedirectConfigurationCreate(plan, gw, resp) {
+		return
+	}
+	redirectConfiguration_json:= createRedirectConfiguration(plan.Redirect_configuration,
+		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	/*
 	redirectConfiguration_json, error_exclusivity,error_target := createRedirectConfiguration(plan.Redirect_configuration,plan.Https_listener.Name.Value,
 		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-
+	
 	if error_exclusivity== "fatal-both-exist" {
 		resp.Diagnostics.AddError(
 		"Unable to create binding. In the Redirect Configuration ("+redirectConfiguration_json.Name+"), 2 optional parameters mutually exclusive "+ 
@@ -580,7 +586,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		"Please, change HTTPS Listener name then retry.",
 		)
 		return
-	}
+	}*/
 	gw.Properties.RedirectConfigurations = append(gw.Properties.RedirectConfigurations,redirectConfiguration_json)
 
 
@@ -1102,34 +1108,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	sslCertificate_plan := plan.Ssl_certificate
 	sslCertificate_json := createSslCertificate(plan.Ssl_certificate,
 		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-	/*sslCertificate_json, error_exclusivity,error_password := createSslCertificate(plan.Ssl_certificate,
-		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 	
-	if error_exclusivity== "fatal-both-exist" {
-		resp.Diagnostics.AddError(
-		"Unable to update binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, 2 optional parameters mutually exclusive "+ 
-		"are declared: Data and Key_vault_secret_id. Only one has to be set. ",
-		"Please, change configuration then retry.",
-		)
-		return
-	}
-	if error_exclusivity== "fatal-both-miss" {
-		resp.Diagnostics.AddError(
-		"Unable to update binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, both optional parameters mutually exclusive "+ 
-		"are missing: Data and Key_vault_secret_id. At least and only one has to be set. ",
-		"Please, change configuration then retry.",
-		)
-		return
-	}
-	if error_password== "fatal" {
-		resp.Diagnostics.AddError(
-		"Unable to update binding. In the SSL Certificate  ("+sslCertificate_json.Name+") configuration, Data parameter (pfx file content) "+ 
-		"is provided without password. ",
-		"Please, add password then retry.",
-		)
-		return
-	}*/
-
 	//check if the SSL Certificate name in the plan and state are different, that means that
 	//it's about SSL Certificate update  with the same name
 	if sslCertificate_plan.Name.Value == state.Ssl_certificate.Name.Value {
@@ -1153,7 +1132,12 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 
 	// *********** Processing Redirect Configuration *********** //	
 	//preparing the new element (json) from the plan
+	if checkRedirectConfigurationUpdate(plan,gw,resp) {
+		return
+	}
 	redirectConfiguration_plan := plan.Redirect_configuration
+	redirectConfiguration_json := createRedirectConfiguration(redirectConfiguration_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+	/*
 	redirectConfiguration_json, error_exclusivity,error_target := createRedirectConfiguration(redirectConfiguration_plan,plan.Https_listener.Name.Value,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 	// check the mutual exclusivity constraint
 	if error_exclusivity== "fatal-both-exist" {
@@ -1180,7 +1164,7 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		"Please, change HTTPS Listener name then retry.",
 		)
 		return
-	}	
+	}	*/
 	//check if the Redirect Configuration name in the plan and state are different, that means that
 	//it's about Redirect Configuration update  with the same name
 	if redirectConfiguration_plan.Name.Value == state.Redirect_configuration.Name.Value {

@@ -2,6 +2,8 @@ package azurermagw
 
 import (
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -40,7 +42,7 @@ type Redirect_configuration struct {
 	
 }
 
-func createRedirectConfiguration(redirectConfiguration_plan Redirect_configuration,HTTPSListenerName string, AZURE_SUBSCRIPTION_ID string, rg_name string, agw_name string) (RedirectConfiguration, string, string){	
+func createRedirectConfiguration(redirectConfiguration_plan Redirect_configuration, AZURE_SUBSCRIPTION_ID string, rg_name string, agw_name string) (RedirectConfiguration){	
 	redirectConfiguration_json := RedirectConfiguration{
 		Name:       redirectConfiguration_plan.Name.Value,
 		//ID:         "",
@@ -69,38 +71,38 @@ func createRedirectConfiguration(redirectConfiguration_plan Redirect_configurati
 	}
 	target_listener_string := "/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+"/providers/Microsoft.Network/applicationGateways/"+agw_name+"/httpListeners/"
 	
-	var error_exclusivity string
-	var error_target string
+	//var error_exclusivity string
+	//var error_target string
 	//there is a constraint for we have to check: Target_listener_name and target_url are mutually exclusive. 
 	//only one of has to be set
 	if redirectConfiguration_plan.Target_listener_name.Value != "" {
-		if redirectConfiguration_plan.Target_url.Value != "" {
+		/*if redirectConfiguration_plan.Target_url.Value != "" {
 			//both are set
 			error_exclusivity = "fatal-both-exist"
 		}else{
 			//only Key_vault_secret_id is set
 			//check if its name match the HTTPS listener of the current config, else issue a warning
 			if redirectConfiguration_plan.Target_listener_name.Value == HTTPSListenerName {
-				redirectConfiguration_json.Properties.TargetListener = &struct{
+			*/	redirectConfiguration_json.Properties.TargetListener = &struct{
 					ID string "json:\"id,omitempty\""
 				}{
 					ID: target_listener_string + redirectConfiguration_plan.Target_listener_name.Value,
 				}
-			}else{
+			/*}else{
 				//Error exit
 				error_target = "fatal"
-			}			
+			}	*/		
 		}
-	}else{
+	/*}else{*/
 		if redirectConfiguration_plan.Target_url.Value != "" {
 			//only Target_url is set.
 			redirectConfiguration_json.Properties.TargetURL = redirectConfiguration_plan.Target_url.Value
-		}else{
+		}/*else{
 			//both are empty
 			error_exclusivity = "fatal-both-miss"
 		}
-	}
-	return redirectConfiguration_json,error_exclusivity,error_target
+	}*/
+	return redirectConfiguration_json
 }
 func generateRedirectConfigurationState(gw ApplicationGateway, RedirectConfigurationName string) Redirect_configuration {
 	//retrieve json element from gw
@@ -158,4 +160,62 @@ func removeRedirectConfigurationElement(gw *ApplicationGateway, RedirectConfigur
 			gw.Properties.RedirectConfigurations = append(gw.Properties.RedirectConfigurations[:i], gw.Properties.RedirectConfigurations[i+1:]...)
 		}
 	}
+}
+func checkRedirectConfigurationCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+	//fatal-both-exist
+	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
+		plan.Redirect_configuration.Target_url.Value != "" {
+		resp.Diagnostics.AddError(
+		"Unable to create binding. In the Redirect Configuration ("+plan.Redirect_configuration.Name.Value+"), 2 optional parameters mutually exclusive "+ 
+		"are declared: Target_listener_name and Target_url. Only one has to be set. ",
+		"Please, change configuration then retry.",)
+		return true
+	}
+	if plan.Redirect_configuration.Target_listener_name.Value == "" &&
+	plan.Redirect_configuration.Target_url.Value == "" {
+		resp.Diagnostics.AddError(
+		"Unable to create binding. In the Redirect Configuration  ("+plan.Redirect_configuration.Name.Value+"), both optional parameters mutually exclusive "+ 
+		"are missing: Target_listener_name and Target_url. At least and only one has to be set. ",
+		"Please, change configuration then retry.",)
+		return true
+	}	
+	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
+		plan.Redirect_configuration.Target_listener_name.Value != plan.Https_listener.Name.Value{
+		resp.Diagnostics.AddError(
+		"Unable to create binding. In the target HTTPS Listener ("+plan.Redirect_configuration.Target_listener_name.Value+") declared in Redirect Configuration : "+ 
+		plan.Redirect_configuration.Name.Value+" doesn't match the HTTPS Listener conf : "+plan.Https_listener.Name.Value,
+		"Please, change HTTPS Listener name then retry.",
+		)
+		return true
+	}
+	return false
+}
+func checkRedirectConfigurationUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+	//fatal-both-exist
+	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
+		plan.Redirect_configuration.Target_url.Value != "" {
+		resp.Diagnostics.AddError(
+		"Unable to update binding. In the Redirect Configuration ("+plan.Redirect_configuration.Name.Value+"), 2 optional parameters mutually exclusive "+ 
+		"are declared: Target_listener_name and Target_url. Only one has to be set. ",
+		"Please, change configuration then retry.",)
+		return true
+	}
+	if plan.Redirect_configuration.Target_listener_name.Value == "" &&
+	plan.Redirect_configuration.Target_url.Value == "" {
+		resp.Diagnostics.AddError(
+		"Unable to update binding. In the Redirect Configuration  ("+plan.Redirect_configuration.Name.Value+"), both optional parameters mutually exclusive "+ 
+		"are missing: Target_listener_name and Target_url. At least and only one has to be set. ",
+		"Please, change configuration then retry.",)
+		return true
+	}	
+	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
+		plan.Redirect_configuration.Target_listener_name.Value != plan.Https_listener.Name.Value{
+		resp.Diagnostics.AddError(
+		"Unable to update binding. In the target HTTPS Listener ("+plan.Redirect_configuration.Target_listener_name.Value+") declared in Redirect Configuration : "+ 
+		plan.Redirect_configuration.Name.Value+" doesn't match the HTTPS Listener conf : "+plan.Https_listener.Name.Value,
+		"Please, change HTTPS Listener name then retry.",
+		)
+		return true
+	}
+	return false
 }
