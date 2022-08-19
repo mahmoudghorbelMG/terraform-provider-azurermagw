@@ -532,7 +532,6 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		//Http_listener			: &httpListener_state,
 		Https_listener			: &httpsListener_state,
 		Ssl_certificate			: sslCertificate_state,
 		Redirect_configuration	: redirectConfiguration_state,
@@ -541,49 +540,11 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	if plan.Http_listener != nil {
 		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
 		result.Http_listener = &httpListener_state
-	/*	result = WebappBinding{
-			Name					: plan.Name,
-			Agw_name				: types.String{Value: gw_response.Name},
-			Agw_rg					: plan.Agw_rg,
-			Backend_address_pool	: backendAddressPool_state,
-			Backend_http_settings	: backendHTTPSettings_state,
-			Probe					: probe_state,
-			Http_listener			: &httpListener_state,
-			Https_listener			: &httpsListener_state,
-			Ssl_certificate			: sslCertificate_state,
-			Redirect_configuration	: redirectConfiguration_state,
-			Request_routing_rule	: requestRoutingRule_state,
-		}*/
 	}else{
 		result.Http_listener = nil
-	/*	result = WebappBinding{
-			Name					: plan.Name,
-			Agw_name				: types.String{Value: gw_response.Name},
-			Agw_rg					: plan.Agw_rg,
-			Backend_address_pool	: backendAddressPool_state,
-			Backend_http_settings	: backendHTTPSettings_state,
-			Probe					: probe_state,
-			Http_listener			: nil,//plan.Http_listener,
-			Https_listener			: &httpsListener_state,
-			Ssl_certificate			: sslCertificate_state,
-			Redirect_configuration	: redirectConfiguration_state,
-			Request_routing_rule	: requestRoutingRule_state,
-		}*/
 	}
-		
-/*
-	// Generate resource state struct
-	var result = WebappBinding{
-		Name					: plan.Name,
-		Agw_name				: types.String{Value: gw_response.Name},
-		Agw_rg					: plan.Agw_rg,
-		Backend_address_pool	: backendAddressPool_state,
-		Backend_http_settings	: backendHTTPSettings_state,
-		Probe					: probe_state,
-		Http_listener			: &httpListener_state,
-		Https_listener			: &httpsListener_state,
-	}*/
-	//store to the created objecy to the terraform state
+
+	//store to the created object to the terraform state
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -710,67 +671,30 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	//in order to check if it's in the gateway, otherwise, it was removed manually
 	//i moved "Generate resource state struct" with http listner block before it depends on the later.
 	var result WebappBinding
-	if state.Http_listener != nil{
-		httpListenerName := state.Http_listener.Name.Value
-		if checkHTTPListenerElement(gw, httpListenerName) {
-			httpListener_state 	:= generateHTTPListenerState(gw,httpListenerName)
-			result = WebappBinding{
-				Name					: types.String{Value: webappBindingName},
-				Agw_name				: state.Agw_name,
-				Agw_rg					: state.Agw_rg,
-				Backend_address_pool	: backendAddressPool_state,
-				Backend_http_settings	: backendHTTPSettings_state,
-				Probe					: probe_state,
-				Http_listener			: &httpListener_state,
-				Https_listener			: &httpsListener_state,
-				Ssl_certificate			: sslCertificate_state,
-				Redirect_configuration	: redirectConfiguration_state,
-				//Request_routing_rule	: requestRoutingRule_state,
-			}
-		}else{
-			result = WebappBinding{
-				Name					: types.String{Value: webappBindingName},
-				Agw_name				: state.Agw_name,
-				Agw_rg					: state.Agw_rg,
-				Backend_address_pool	: backendAddressPool_state,
-				Backend_http_settings	: backendHTTPSettings_state,
-				Probe					: probe_state,
-				Http_listener			: nil,//state.Http_listener,
-				Https_listener			: &httpsListener_state,
-				Ssl_certificate			: sslCertificate_state,
-				Redirect_configuration	: redirectConfiguration_state,
-				//Request_routing_rule	: requestRoutingRule_state,
-			}
-		}
-	}else{
-		result = WebappBinding{
-			Name					: types.String{Value: webappBindingName},
-			Agw_name				: state.Agw_name,
-			Agw_rg					: state.Agw_rg,
-			Backend_address_pool	: backendAddressPool_state,
-			Backend_http_settings	: backendHTTPSettings_state,
-			Probe					: probe_state,
-			Http_listener			: nil,//state.Http_listener,
-			Https_listener			: &httpsListener_state,
-			Ssl_certificate			: sslCertificate_state,
-			Redirect_configuration	: redirectConfiguration_state,
-			//Request_routing_rule	: requestRoutingRule_state,
-		}
-	}
-	result.Request_routing_rule = requestRoutingRule_state
-		/*
-	// Generate resource state struct
-	var result = WebappBinding{
+	result = WebappBinding{
 		Name					: types.String{Value: webappBindingName},
 		Agw_name				: state.Agw_name,
 		Agw_rg					: state.Agw_rg,
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listener			: &httpListener_state,
 		Https_listener			: &httpsListener_state,
-	}*/
-
+		Ssl_certificate			: sslCertificate_state,
+		Redirect_configuration	: redirectConfiguration_state,
+		Request_routing_rule	: requestRoutingRule_state,
+	}
+	if state.Http_listener != nil{
+		httpListenerName := state.Http_listener.Name.Value
+		if checkHTTPListenerElement(gw, httpListenerName) {
+			httpListener_state 	:= generateHTTPListenerState(gw,httpListenerName)			
+			result.Http_listener = &httpListener_state
+		}else{
+			result.Http_listener = nil
+		}
+	}else{
+		result.Http_listener = nil
+	}
+	
 	state = result
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -963,25 +887,24 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 			
 	// *********** Processing https Listener *********** //	
 	//preparing the new elements (json) from the plan
-	//SslCertificateName := plan.Ssl_certificate.Name.Value // (not yet implemented till now)
-	//SslCertificateName:="default-citeo-adelphe-cert"
 	if checkHTTPSListenerUpdate(plan, gw, resp) {
 		return
 	}
 	httpsListener_plan := plan.Https_listener
 	httpsListener_json := createHTTPListener(httpsListener_plan,
 		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-	//new http listener is ok. now we have to remove the old one
+	//new https listener is ok. now we have to remove the old one
 	if httpsListener_plan.Name.Value == state.Https_listener.Name.Value {
 		//so we remove the old one before adding the new one.
 		removeHTTPListenerElement(&gw, httpsListener_json.Name)
 	}else{
-		// it's most likely about http Listener update with a new name
-		// we have to check if the new http Listener name is already used
+		// it's most likely about https Listener update with a new name
+		// we have to check if the new https Listener name is already used
 		if checkHTTPListenerElement(gw, httpsListener_json.Name) {
 			//this is an error. issue an exit error.
 			resp.Diagnostics.AddError(
-				"Unable to update the app gateway. The new http Listener name : "+ httpsListener_json.Name+" already exists.",
+				"Unable to update the app gateway. The new https Listener name : "+ httpsListener_json.Name+" already exists."+
+				"Could be due to the name of the http listener you are under declaring",
 				" Please, change the name then retry.",
 			)
 			return
@@ -1101,48 +1024,25 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//i moved "Generate resource state struct" with http listner block before it depends on the later.
 	
 	var result WebappBinding
-	if plan.Http_listener != nil {
-		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
-		result = WebappBinding{
-			Name					: state.Name,
-			Agw_name				: types.String{Value: gw_response.Name},
-			Agw_rg					: state.Agw_rg,
-			Backend_address_pool	: backendAddressPool_state,
-			Backend_http_settings	: backendHTTPSettings_state,
-			Probe					: probe_state,
-			Http_listener			: &httpListener_state,
-			Https_listener			: &httpsListener_state,
-			Ssl_certificate			: sslCertificate_state,
-			Redirect_configuration	: redirectConfiguration_state,
-			Request_routing_rule	: requestRoutingRule_state,
-		}
-	}else{
-		result = WebappBinding{
-			Name					: state.Name,
-			Agw_name				: types.String{Value: gw_response.Name},
-			Agw_rg					: state.Agw_rg,
-			Backend_address_pool	: backendAddressPool_state,
-			Backend_http_settings	: backendHTTPSettings_state,
-			Probe					: probe_state,
-			Http_listener			: nil,//plan.Http_listener,
-			Https_listener			: &httpsListener_state,
-			Ssl_certificate			: sslCertificate_state,
-			Redirect_configuration	: redirectConfiguration_state,
-			Request_routing_rule	: requestRoutingRule_state,
-		}
-	}
-	/***************************************************************/
-	
-	/* var result = WebappBinding{
+	result = WebappBinding{
 		Name					: state.Name,
 		Agw_name				: types.String{Value: gw_response.Name},
 		Agw_rg					: state.Agw_rg,
 		Backend_address_pool	: backendAddressPool_state,
 		Backend_http_settings	: backendHTTPSettings_state,
 		Probe					: probe_state,
-		Http_listener			: &httpListener_state,
 		Https_listener			: &httpsListener_state,
-	}*/
+		Ssl_certificate			: sslCertificate_state,
+		Redirect_configuration	: redirectConfiguration_state,
+		Request_routing_rule	: requestRoutingRule_state,
+	}
+	if plan.Http_listener != nil {
+		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
+		result.Http_listener = &httpListener_state
+	}else{
+		result.Http_listener = nil
+	}
+	
 	//store to the created objecy to the terraform state
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
