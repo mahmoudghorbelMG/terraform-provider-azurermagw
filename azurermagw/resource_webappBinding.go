@@ -770,6 +770,8 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 			//generate an empty requestRoutingRuleHttp_state because it was removed manually
 			result.Request_routing_rule_http = nil
 		}
+	}else{
+		result.Request_routing_rule_http = nil
 	}
 
 	state = result
