@@ -327,7 +327,52 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 					},
 				}),
 			},
-			"request_routing_rule": {
+			"request_routing_rule_http": {
+				Optional: true,
+				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
+					"name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"id": {
+						Type:     types.StringType,
+						Computed: true,
+					},
+					"rule_type": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"priority": {
+						Type:     types.Int64Type,
+						Computed: true,
+					},
+					"http_listener_name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"backend_address_pool_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"backend_http_settings_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"redirect_configuration_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"rewrite_rule_set_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"url_path_map_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+				}),
+			},
+			"request_routing_rule_https": {
 				Required: true,
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
@@ -425,7 +470,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 	
 	//Check if the agw already contains an existing element that has the same name of a new element to add
-	exist_element, exist := checkElementName(gw, plan,plan.Http_listener)
+	exist_element, exist := checkElementName(gw, plan,plan.Http_listener,plan.Request_routing_rule_http)
 	if exist {
 		resp.Diagnostics.AddError(
 			"Unable to create binding. This (these) element(s) already exist(s) in the app gateway: \n"+ fmt.Sprint(exist_element),
@@ -440,15 +485,26 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		gw.Properties.BackendAddressPools, createBackendAddressPool(
 			plan.Backend_address_pool))
 	
-	/************* generate and add request Routing Rule **************/
-	if checkRequestRoutingRuleCreate(plan,gw,resp){
+	/************* generate and add request Routing Rule for HTTPS **************/
+	if checkRequestRoutingRuleHttpsCreate(plan,gw,resp){
 		return
 	}
 	priority := generatePriority(gw,"high")
-	requestRoutingRule_json := createRequestRoutingRule(&plan.Request_routing_rule,priority,
+	requestRoutingRuleHttps_json := createRequestRoutingRule(plan.Request_routing_rule_https,priority,
 		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
-	gw.Properties.RequestRoutingRules = append(gw.Properties.RequestRoutingRules,requestRoutingRule_json)
+	gw.Properties.RequestRoutingRules = append(gw.Properties.RequestRoutingRules,requestRoutingRuleHttps_json)
 	
+	/************* generate and add request Routing Rule for HTTP **************/
+	if plan.Request_routing_rule_http != nil {
+		if checkRequestRoutingRuleHttpCreate(plan,gw,resp){
+			return
+		}
+		priority = generatePriority(gw,"high")
+		requestRoutingRuleHttp_json := createRequestRoutingRule(plan.Request_routing_rule_http,priority,
+			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+		gw.Properties.RequestRoutingRules = append(gw.Properties.RequestRoutingRules,requestRoutingRuleHttp_json)
+	}
+
 	/************* generate and add Backend HTTP Settings **************/
 	if checkBackendHTTPSettingsCreate(plan,gw,resp){
 		return
@@ -465,7 +521,6 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	/************* generate and add Http listener **************/
 	// no ssl certificate to provide, so no need to check error_SslCertificateName
 	if plan.Http_listener != nil {
-		//SslCertificateName:=""
 		if checkHTTPListenerCreate(plan, gw, resp) {
 			return
 		}
@@ -515,33 +570,40 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 	//generate the States based on gw_response from API.
 	nb_Fqdns 		:= len(plan.Backend_address_pool.Fqdns)
 	nb_IpAddress	:= len(plan.Backend_address_pool.Ip_addresses)
-	backendAddressPool_state 	:= generateBackendAddressPoolState(gw_response,plan.Backend_address_pool.Name.Value,nb_Fqdns,nb_IpAddress)
-	backendHTTPSettings_state 	:= generateBackendHTTPSettingsState(gw_response,plan.Backend_http_settings.Name.Value)
-	probe_state 				:= generateProbeState(gw_response,plan.Probe.Name.Value)
-	httpsListener_state 		:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
-	sslCertificate_state 		:= generateSslCertificateState(gw_response,plan.Ssl_certificate.Name.Value)
-	redirectConfiguration_state := generateRedirectConfigurationState(gw_response,plan.Redirect_configuration.Name.Value)
-	requestRoutingRule_state 	:= generateRequestRoutingRuleState(gw_response,plan.Request_routing_rule.Name.Value)
+	backendAddressPool_state 		:= generateBackendAddressPoolState(gw_response,plan.Backend_address_pool.Name.Value,nb_Fqdns,nb_IpAddress)
+	backendHTTPSettings_state 		:= generateBackendHTTPSettingsState(gw_response,plan.Backend_http_settings.Name.Value)
+	probe_state 					:= generateProbeState(gw_response,plan.Probe.Name.Value)
+	httpsListener_state 			:= generateHTTPListenerState(gw_response,plan.Https_listener.Name.Value)
+	sslCertificate_state 			:= generateSslCertificateState(gw_response,plan.Ssl_certificate.Name.Value)
+	redirectConfiguration_state 	:= generateRedirectConfigurationState(gw_response,plan.Redirect_configuration.Name.Value)
+	requestRoutingRuleHttps_state	:= generateRequestRoutingRuleState(gw_response,plan.Request_routing_rule_https.Name.Value)
 
 	//i moved "Generate resource state struct" with http listner block before it depends on the later.
 	var result WebappBinding
 	result = WebappBinding{
-		Name					: plan.Name,
-		Agw_name				: types.String{Value: gw_response.Name},
-		Agw_rg					: plan.Agw_rg,
-		Backend_address_pool	: backendAddressPool_state,
-		Backend_http_settings	: backendHTTPSettings_state,
-		Probe					: probe_state,
-		Https_listener			: &httpsListener_state,
-		Ssl_certificate			: sslCertificate_state,
-		Redirect_configuration	: redirectConfiguration_state,
-		Request_routing_rule	: requestRoutingRule_state,
+		Name						: plan.Name,
+		Agw_name					: types.String{Value: gw_response.Name},
+		Agw_rg						: plan.Agw_rg,
+		Backend_address_pool		: backendAddressPool_state,
+		Backend_http_settings		: backendHTTPSettings_state,
+		Probe						: probe_state,
+		Https_listener				: &httpsListener_state,
+		Ssl_certificate				: sslCertificate_state,
+		Redirect_configuration		: redirectConfiguration_state,
+		Request_routing_rule_https	: &requestRoutingRuleHttps_state,
 	}
+	//add Http_listener and Request_routing_rule_http if they are not nil
 	if plan.Http_listener != nil {
 		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
 		result.Http_listener = &httpListener_state
 	}else{
 		result.Http_listener = nil
+	}
+	if plan.Request_routing_rule_http != nil {
+		request_routing_rule_http_state := generateRequestRoutingRuleState(gw_response, plan.Request_routing_rule_http.Name.Value)
+		result.Request_routing_rule_http = &request_routing_rule_http_state
+	}else{
+		result.Request_routing_rule_http = nil
 	}
 
 	//store to the created object to the terraform state
@@ -572,17 +634,17 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	applicationGatewayName := state.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 	
-	// *********** Processing the request Routing Rule *********** //
+	// *********** Processing the request Routing Rule for HTTPS *********** //
 	//check if the request Routing Rule exists in  the gateway, otherwise, it was removed manually
-	var requestRoutingRule_state Request_routing_rule
-	requestRoutingRuleName := state.Request_routing_rule.Name.Value
+	var requestRoutingRuleHttps_state Request_routing_rule
+	requestRoutingRuleHttpsName := state.Request_routing_rule_https.Name.Value
 	//check if the backend http settings exists in the gateway, otherwise, it was removed manually
-	if checkRequestRoutingRuleElement(gw, requestRoutingRuleName) {
+	if checkRequestRoutingRuleElement(gw, requestRoutingRuleHttpsName) {
 		//generate BackendState
-		requestRoutingRule_state = generateRequestRoutingRuleState(gw, requestRoutingRuleName)
+		requestRoutingRuleHttps_state = generateRequestRoutingRuleState(gw, requestRoutingRuleHttpsName)
 	}else{
-		//generate an empty requestRoutingRule_state because it was removed manually
-		requestRoutingRule_state = Request_routing_rule{}
+		//generate an empty requestRoutingRuleHttps_state because it was removed manually
+		requestRoutingRuleHttps_state = Request_routing_rule{}
 	}
 	
 	// *********** Processing the backend address pool *********** //
@@ -666,23 +728,24 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		redirectConfiguration_state = Redirect_configuration{}
 	}
 	
-	// *********** Processing the http Listener *********** //
-	//check if the Http listener  exists in the old state (because it's optional param) 
-	//in order to check if it's in the gateway, otherwise, it was removed manually
-	//i moved "Generate resource state struct" with http listner block before it depends on the later.
+	
 	var result WebappBinding
 	result = WebappBinding{
-		Name					: types.String{Value: webappBindingName},
-		Agw_name				: state.Agw_name,
-		Agw_rg					: state.Agw_rg,
-		Backend_address_pool	: backendAddressPool_state,
-		Backend_http_settings	: backendHTTPSettings_state,
-		Probe					: probe_state,
-		Https_listener			: &httpsListener_state,
-		Ssl_certificate			: sslCertificate_state,
-		Redirect_configuration	: redirectConfiguration_state,
-		Request_routing_rule	: requestRoutingRule_state,
+		Name						: types.String{Value: webappBindingName},
+		Agw_name					: state.Agw_name,
+		Agw_rg						: state.Agw_rg,
+		Backend_address_pool		: backendAddressPool_state,
+		Backend_http_settings		: backendHTTPSettings_state,
+		Probe						: probe_state,
+		Https_listener				: &httpsListener_state,
+		Ssl_certificate				: sslCertificate_state,
+		Redirect_configuration		: redirectConfiguration_state,
+		Request_routing_rule_https	: &requestRoutingRuleHttps_state,
 	}
+
+	// *********** Processing the http Listener *********** //
+	//check if the Http listener and request Routing Rule for HTTP exist in the old state (because they are optional param) 
+	//in order to check if it's in the gateway, otherwise, it was removed manually
 	if state.Http_listener != nil{
 		httpListenerName := state.Http_listener.Name.Value
 		if checkHTTPListenerElement(gw, httpListenerName) {
@@ -694,7 +757,21 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	}else{
 		result.Http_listener = nil
 	}
-	
+
+	// *********** Processing the request Routing Rule for HTTP *********** //
+	//check if the request Routing Rule exists in  the gateway, otherwise, it was removed manually
+	if state.Request_routing_rule_http != nil {
+		requestRoutingRuleHttpName := state.Request_routing_rule_http.Name.Value
+		if checkRequestRoutingRuleElement(gw, requestRoutingRuleHttpName) {
+			//generate State
+			requestRoutingRuleHttp_state := generateRequestRoutingRuleState(gw, requestRoutingRuleHttpName)
+			result.Request_routing_rule_http = &requestRoutingRuleHttp_state
+		}else{
+			//generate an empty requestRoutingRuleHttp_state because it was removed manually
+			result.Request_routing_rule_http = nil
+		}
+	}
+
 	state = result
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -755,40 +832,87 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		//remove the old backend (old name) from the gateway
 		removeBackendAddressPoolElement(&gw, state.Backend_address_pool.Name.Value)
 	}
+	
+	var priority int
+	// *********** Processing request Routing Rule (HTTP) *********** //	
+	if plan.Request_routing_rule_http != nil {	
+		if checkRequestRoutingRuleHttpUpdate(plan,gw,resp) {
+			return
+		}
+		//to compute priority, check if Request Routing Rule exist in the state, so we get the old priority
+		// else, that means the old Request Routing Rule was removed manually, we have to generate a new priority
+		//var priority int
+		if int(state.Request_routing_rule_http.Priority.Value) != 0 {
+			priority = int(state.Request_routing_rule_http.Priority.Value)
+		}else{
+			priority = generatePriority(gw,"high")
+		}
+		requestRoutingRuleHttp_json := createRequestRoutingRule(plan.Request_routing_rule_http,priority,
+			r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
+		
+		//new Request routing rule is ok. now we have to remove the old one
+		if state.Request_routing_rule_http != nil {		
+			requestRoutingRuleHttp_plan := plan.Request_routing_rule_http
+			if requestRoutingRuleHttp_plan.Name.Value == state.Request_routing_rule_http.Name.Value {
+				//so we remove the old one before adding the new one.
+				removeRequestRoutingRuleElement(&gw,requestRoutingRuleHttp_json.Name)
+			}else{
+				// it's most likely about Request routing rule update with a new name
+				// we have to check if the new Request routing rule name is already used
+				if checkRequestRoutingRuleElement(gw, requestRoutingRuleHttp_json.Name) {
+					//this is an error. issue an exit error.
+					resp.Diagnostics.AddError(
+						"Unable to update the app gateway. The new Request routing rule (HTTP) name : "+ requestRoutingRuleHttp_json.Name+" already exists.",
+						" Please, change the name then retry.",)
+					return
+				}
+				//remove the old  Request routing rule (old name) from the gateway
+				removeRequestRoutingRuleElement(&gw, state.Request_routing_rule_http.Name.Value)
+			}
+		}
+		//we have to add the Request Routing Rule (HTTP) here because it's optional
+		gw.Properties.RequestRoutingRules = append(gw.Properties.RequestRoutingRules, requestRoutingRuleHttp_json)
+	}else{//plan.Request_routing_rule_http = nil, no Request_routing_rule_http in the plan (ex: removed)
+		//check if there is an old one in the state in order to remove it
+		if state.Request_routing_rule_http != nil {
+			removeRequestRoutingRuleElement(&gw, state.Request_routing_rule_http.Name.Value)
+		}
+	}
 
-	// *********** Processing request Routing Rule *********** //	
-	if checkRequestRoutingRuleUpdate(plan,gw,resp) {
+	// *********** Processing request Routing Rule (HTTPS) *********** //	
+	if checkRequestRoutingRuleHttpsUpdate(plan,gw,resp) {
 		return
 	}
 	//to compute priority, check if Request Routing Rule exist in the state, so we get the old priority
 	// else, that means the old Request Routing Rule was removed manually, we have to generate a new priority
-	var priority int
-	if int(state.Request_routing_rule.Priority.Value) != 0 {
-		priority = int(state.Request_routing_rule.Priority.Value)
+	
+	if int(state.Request_routing_rule_https.Priority.Value) != 0 {
+		//the priority of new Request_routing_rule_http is already included in gw, so it's ok
+		priority = int(state.Request_routing_rule_https.Priority.Value)
 	}else{
 		priority = generatePriority(gw,"high")
 	}
-	requestRoutingRule_json := createRequestRoutingRule(&plan.Request_routing_rule,priority,
+	requestRoutingRuleHttps_json := createRequestRoutingRule(plan.Request_routing_rule_https,priority,
 		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)
 	
 	//new Request routing rule is ok. now we have to remove the old one
-	requestRoutingRule_plan := plan.Request_routing_rule
-	if requestRoutingRule_plan.Name.Value == state.Request_routing_rule.Name.Value {
+	requestRoutingRuleHttps_plan := plan.Request_routing_rule_https
+	if requestRoutingRuleHttps_plan.Name.Value == state.Request_routing_rule_https.Name.Value {
 		//so we remove the old one before adding the new one.
-		removeRequestRoutingRuleElement(&gw,requestRoutingRule_json.Name)
+		removeRequestRoutingRuleElement(&gw,requestRoutingRuleHttps_json.Name)
 	}else{
 		// it's most likely about Request routing rule update with a new name
 		// we have to check if the new Request routing rule name is already used
-		if checkRequestRoutingRuleElement(gw, requestRoutingRule_json.Name) {
+		if checkRequestRoutingRuleElement(gw, requestRoutingRuleHttps_json.Name) {
 			//this is an error. issue an exit error.
 			resp.Diagnostics.AddError(
-				"Unable to update the app gateway. The new Request routing rule name : "+ requestRoutingRule_json.Name+" already exists.",
+				"Unable to update the app gateway. The new Request routing rule (HTTPS) name : "+ requestRoutingRuleHttps_json.Name+" already exists.",
 				" Please, change the name then retry.",
 			)
 			return
 		}
-		//remove the old http Listener (old name) from the gateway
-		removeRequestRoutingRuleElement(&gw, state.Request_routing_rule.Name.Value)
+		//remove the old Request routing rule (old name) from the gateway
+		removeRequestRoutingRuleElement(&gw, state.Request_routing_rule_https.Name.Value)
 	}	
 	
 	// *********** Processing backend http settings *********** //	
@@ -848,8 +972,6 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	// *********** Processing http Listener *********** //	
 	//preparing the new elements (json) from the plan
 	if plan.Http_listener != nil {
-		//No SSL certificate to check.
-		//SslCertificateName:=""
 		if checkHTTPListenerUpdate(plan, gw, resp) {
 			return
 		}
@@ -972,14 +1094,14 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		removeRedirectConfigurationElement(&gw, state.Redirect_configuration.Name.Value)
 	}
 
-	//add the new elements (http Listener element is already added because it's optional). 
+	//add the new elements (http Listener and Request Routing Rule (HTTP) elements are already added because they are optionals). 
 	gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools, backendAddressPool_json)
 	gw.Properties.BackendHTTPSettingsCollection = append(gw.Properties.BackendHTTPSettingsCollection, backendHTTPSettings_json)
 	gw.Properties.Probes = append(gw.Properties.Probes, probe_json)
 	gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners, httpsListener_json)
 	gw.Properties.SslCertificates = append(gw.Properties.SslCertificates, sslCertificate_json)
 	gw.Properties.RedirectConfigurations = append(gw.Properties.RedirectConfigurations, redirectConfiguration_json)
-	gw.Properties.RequestRoutingRules = append(gw.Properties.RequestRoutingRules,requestRoutingRule_json)
+	gw.Properties.RequestRoutingRules = append(gw.Properties.RequestRoutingRules,requestRoutingRuleHttps_json)
 
 
 	//and update the gateway
@@ -1011,13 +1133,13 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	nb_IpAddress := nb_BackendAddresses - nb_Fqdns
 	/*****************************************************************/
 	
-	backendAddressPool_state	:= generateBackendAddressPoolState(gw_response, backendAddressPool_json.Name,nb_Fqdns,nb_IpAddress)
-	backendHTTPSettings_state	:= generateBackendHTTPSettingsState(gw_response,backendHTTPSettings_json.Name)
-	probe_state					:= generateProbeState(gw_response,probe_json.Name)
-	httpsListener_state 		:= generateHTTPListenerState(gw_response,httpsListener_json.Name)
-	sslCertificate_state 		:= generateSslCertificateState(gw_response,sslCertificate_json.Name)
-	redirectConfiguration_state := generateRedirectConfigurationState(gw_response,redirectConfiguration_json.Name)
-	requestRoutingRule_state 	:= generateRequestRoutingRuleState(gw_response,requestRoutingRule_json.Name)
+	backendAddressPool_state		:= generateBackendAddressPoolState(gw_response, backendAddressPool_json.Name,nb_Fqdns,nb_IpAddress)
+	backendHTTPSettings_state		:= generateBackendHTTPSettingsState(gw_response,backendHTTPSettings_json.Name)
+	probe_state						:= generateProbeState(gw_response,probe_json.Name)
+	httpsListener_state 			:= generateHTTPListenerState(gw_response,httpsListener_json.Name)
+	sslCertificate_state 			:= generateSslCertificateState(gw_response,sslCertificate_json.Name)
+	redirectConfiguration_state 	:= generateRedirectConfigurationState(gw_response,redirectConfiguration_json.Name)
+	requestRoutingRuleHttps_state 	:= generateRequestRoutingRuleState(gw_response,requestRoutingRuleHttps_json.Name)
 
 	/*************** Special for Http listener **********************/
 	// Generate resource state struct 
@@ -1025,22 +1147,28 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	
 	var result WebappBinding
 	result = WebappBinding{
-		Name					: state.Name,
-		Agw_name				: types.String{Value: gw_response.Name},
-		Agw_rg					: state.Agw_rg,
-		Backend_address_pool	: backendAddressPool_state,
-		Backend_http_settings	: backendHTTPSettings_state,
-		Probe					: probe_state,
-		Https_listener			: &httpsListener_state,
-		Ssl_certificate			: sslCertificate_state,
-		Redirect_configuration	: redirectConfiguration_state,
-		Request_routing_rule	: requestRoutingRule_state,
+		Name						: state.Name,
+		Agw_name					: types.String{Value: gw_response.Name},
+		Agw_rg						: state.Agw_rg,
+		Backend_address_pool		: backendAddressPool_state,
+		Backend_http_settings		: backendHTTPSettings_state,
+		Probe						: probe_state,
+		Https_listener				: &httpsListener_state,
+		Ssl_certificate				: sslCertificate_state,
+		Redirect_configuration		: redirectConfiguration_state,
+		Request_routing_rule_https	: &requestRoutingRuleHttps_state,
 	}
 	if plan.Http_listener != nil {
 		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
 		result.Http_listener = &httpListener_state
 	}else{
 		result.Http_listener = nil
+	}
+	if plan.Request_routing_rule_http != nil {
+		requestRoutingRuleHttp_state 	:= generateRequestRoutingRuleState(gw_response,plan.Request_routing_rule_http.Name.Value)
+		result.Request_routing_rule_http = &requestRoutingRuleHttp_state
+	}else{
+		result.Request_routing_rule_http = nil
 	}
 	
 	//store to the created objecy to the terraform state
@@ -1068,7 +1196,7 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	httpsListenerName 			:= state.Https_listener.Name.Value
 	sslCertificateName 			:= state.Ssl_certificate.Name.Value
 	redirectConfigurationName 	:= state.Redirect_configuration.Name.Value
-	requestRoutingRuleName 		:= state.Request_routing_rule.Name.Value
+	requestRoutingRuleHttpsName := state.Request_routing_rule_https.Name.Value
 
 	//Get the agw
 	resourceGroupName := state.Agw_rg.Value
@@ -1082,14 +1210,17 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 	removeHTTPListenerElement(&gw,httpsListenerName)
 	removeSslCertificateElement(&gw,sslCertificateName)
 	removeRedirectConfigurationElement(&gw,redirectConfigurationName)
-	removeRequestRoutingRuleElement(&gw,requestRoutingRuleName)
+	removeRequestRoutingRuleElement(&gw,requestRoutingRuleHttpsName)
 
 	/*************** Special for Http listener **********************/
-	//if hasField(state,"Http_listener"){
 	if state.Http_listener != nil {
 		removeHTTPListenerElement(&gw,state.Http_listener.Name.Value)
-	}	
-		
+	}		
+	/*************** Special for Http listener **********************/
+	if state.Request_routing_rule_http != nil {
+		removeRequestRoutingRuleElement(&gw,state.Request_routing_rule_http.Name.Value)
+	}
+	
 	//and update the gateway
 	_, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 	//verify if the API response is 200 (that means, normaly, elements were deleted to the gateway), otherwise exit error
@@ -1111,7 +1242,7 @@ func (r resourceWebappBinding) ImportState(ctx context.Context, req tfsdk.Import
 	// Save the import identifier in the id attribute
 	//tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("id"), req, resp)
 }
-func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_plan *Http_listener) ([]string,bool){
+func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_plan *Http_listener,requestRoutingRuleHttp_plan *Request_routing_rule) ([]string,bool){
 	//This function allows to check if an element name in the required new configuration (plan WebappBinding) already exist in the gw.
 	//if so, the provider has to stop executing and issue an exit error
 	exist := false
@@ -1123,7 +1254,7 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_pla
 	httpsListener_plan 			:= plan.Https_listener
 	sslCertificate_plan			:= plan.Ssl_certificate
 	redirectConfiguration_plan	:= plan.Redirect_configuration
-	requestRoutingRule_plan		:= plan.Request_routing_rule
+	requestRoutingRuleHttps_plan:= plan.Request_routing_rule_https
 
 	if checkBackendAddressPoolElement(gw, backendAddressPool_plan.Name.Value) {
 		exist = true 
@@ -1142,7 +1273,7 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_pla
 		existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpsListener_plan.Name.Value)
 	}
 	if httpListener_plan != nil {
-		httpListener_plan 			:= httpListener_plan
+		//httpListener_plan 			:= httpListener_plan
 		if checkHTTPListenerElement(gw, httpListener_plan.Name.Value) {
 			exist = true 
 			existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpListener_plan.Name.Value)
@@ -1160,30 +1291,21 @@ func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_pla
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- Redirect configuration: "+redirectConfiguration_plan.Name.Value)
 	}
-	if checkRequestRoutingRuleElement(gw, requestRoutingRule_plan.Name.Value) {
+	if checkRequestRoutingRuleElement(gw, requestRoutingRuleHttps_plan.Name.Value) {
 		exist = true 
-		existing_element_list = append(existing_element_list,"\n	- Request Routing Rule: "+requestRoutingRule_plan.Name.Value)
+		existing_element_list = append(existing_element_list,"\n	- Request Routing Rule for HTTPS: "+requestRoutingRuleHttps_plan.Name.Value)
 	}
-	
+	if requestRoutingRuleHttp_plan != nil {
+		if checkRequestRoutingRuleElement(gw, requestRoutingRuleHttp_plan.Name.Value) {
+			exist = true 
+			existing_element_list = append(existing_element_list,"\n	- Request Routing Rule for HTTP: "+requestRoutingRuleHttp_plan.Name.Value)
+		}
+		if requestRoutingRuleHttp_plan.Name.Value == requestRoutingRuleHttps_plan.Name.Value {
+			exist = true 
+			existing_element_list = append(existing_element_list,"\n	- Request Routing Rule for HTTP and HTTPS (new): "+requestRoutingRuleHttp_plan.Name.Value)
+		}
+	}
 	return existing_element_list,exist
-}
-func checkRewriteRuleSetElement(gw ApplicationGateway, RewriteRuleSetName string) bool {
-	exist := false
-	for i := len(gw.Properties.RewriteRuleSets) - 1; i >= 0; i-- {
-		if gw.Properties.RewriteRuleSets[i].Name == RewriteRuleSetName {
-			exist = true
-		}
-	}
-	return exist
-}
-func checkURLPathMapElement(gw ApplicationGateway, URLPathMapName string) bool {
-	exist := false
-	for i := len(gw.Properties.URLPathMaps) - 1; i >= 0; i-- {
-		if gw.Properties.URLPathMaps[i].Name == URLPathMapName {
-			exist = true
-		}
-	}
-	return exist
 }
 func generatePriority(gw ApplicationGateway, level string) int {
 	priority := 0
