@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -343,7 +344,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 						Required: true,
 					},
 					"priority": {
-						Type:     types.Int64Type,
+						Type:     types.StringType,
 						Computed: true,
 					},
 					"http_listener_name": {
@@ -388,7 +389,7 @@ func (r resourceWebappBindingType) GetSchema(_ context.Context) (tfsdk.Schema, d
 						Required: true,
 					},
 					"priority": {
-						Type:     types.Int64Type,
+						Type:     types.StringType,
 						Computed: true,
 					},
 					"http_listener_name": {
@@ -770,7 +771,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 			result.Request_routing_rule_http = nil
 		}
 	}else{
-		result.Request_routing_rule_http = &Request_routing_rule{}//nil
+		result.Request_routing_rule_http = nil // &Request_routing_rule{}//nil
 	}
 	fmt.Println("\n######################## after Routing Rule for HTTP ########################\n", result)
 	
@@ -844,8 +845,8 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		//to compute priority, check if Request Routing Rule exist in the state, so we get the old priority
 		// else, that means the old Request Routing Rule was removed manually, we have to generate a new priority
 		//var priority int
-		if int(state.Request_routing_rule_http.Priority.Value) != 0 {
-			priority = int(state.Request_routing_rule_http.Priority.Value)
+		if state.Request_routing_rule_http.Priority.Value != "0" {
+			priority,_ = strconv.Atoi(state.Request_routing_rule_http.Priority.Value)
 		}else{
 			priority = generatePriority(gw,"high")
 		}
@@ -888,9 +889,9 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	//to compute priority, check if Request Routing Rule exist in the state, so we get the old priority
 	// else, that means the old Request Routing Rule was removed manually, we have to generate a new priority
 	
-	if int(state.Request_routing_rule_https.Priority.Value) != 0 {
+	if state.Request_routing_rule_https.Priority.Value != "0" {
 		//the priority of new Request_routing_rule_http is already included in gw, so it's ok
-		priority = int(state.Request_routing_rule_https.Priority.Value)
+		priority,_ = strconv.Atoi(state.Request_routing_rule_https.Priority.Value)
 	}else{
 		priority = generatePriority(gw,"high")
 	}

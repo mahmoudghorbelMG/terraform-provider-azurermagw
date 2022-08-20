@@ -1,6 +1,7 @@
 package azurermagw
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -46,7 +47,7 @@ type Request_routing_rule struct {
 	Id           						types.String	`tfsdk:"id"`
 	Rule_type							types.String	`tfsdk:"rule_type"`					
 	Http_listener_name           		types.String	`tfsdk:"http_listener_name"`
-	Priority 							types.Int64		`tfsdk:"priority"`
+	Priority 							types.String	`tfsdk:"priority"`
 	//Cannot be set if redirect_configuration_name is not set
 	Backend_address_pool_name			types.String	`tfsdk:"backend_address_pool_name"`
 	Backend_http_settings_name			types.String	`tfsdk:"backend_http_settings_name"`								
@@ -123,7 +124,7 @@ func generateRequestRoutingRuleState(gw ApplicationGateway, RequestRoutingRuleNa
 		Id:                          types.String{Value: requestRoutingRule_json.ID},
 		Rule_type:                   types.String{Value: requestRoutingRule_json.Properties.RuleType},
 		Http_listener_name:          types.String{},
-		Priority:                    types.Int64{Value: int64(requestRoutingRule_json.Properties.Priority)},
+		Priority:                    types.String{Value: strconv.Itoa(requestRoutingRule_json.Properties.Priority)},
 		Backend_address_pool_name:   types.String{},
 		Backend_http_settings_name:  types.String{},
 		Redirect_configuration_name: types.String{},
