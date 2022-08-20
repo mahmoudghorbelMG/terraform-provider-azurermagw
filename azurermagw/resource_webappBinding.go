@@ -845,8 +845,12 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 		//to compute priority, check if Request Routing Rule exist in the state, so we get the old priority
 		// else, that means the old Request Routing Rule was removed manually, we have to generate a new priority
 		//var priority int
-		if state.Request_routing_rule_http.Priority.Value != "0" {
-			priority,_ = strconv.Atoi(state.Request_routing_rule_http.Priority.Value)
+		if state.Request_routing_rule_http != nil {
+			if state.Request_routing_rule_http.Priority.Value != "0" {
+				priority,_ = strconv.Atoi(state.Request_routing_rule_http.Priority.Value)
+			}else{
+				priority = generatePriority(gw,"high")
+			}
 		}else{
 			priority = generatePriority(gw,"high")
 		}
