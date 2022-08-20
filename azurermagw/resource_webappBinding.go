@@ -726,8 +726,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	}else{
 		//generate an empty redirectConfiguration_state because it was removed manually
 		redirectConfiguration_state = Redirect_configuration{}
-	}
-	
+	}	
 	
 	var result WebappBinding
 	result = WebappBinding{
@@ -742,7 +741,8 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 		Redirect_configuration		: redirectConfiguration_state,
 		Request_routing_rule_https	: &requestRoutingRuleHttps_state,
 	}
-
+	fmt.Println("\n######################## after result ########################")
+	
 	// *********** Processing the http Listener *********** //
 	//check if the Http listener and request Routing Rule for HTTP exist in the old state (because they are optional param) 
 	//in order to check if it's in the gateway, otherwise, it was removed manually
@@ -757,7 +757,8 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	}else{
 		result.Http_listener = nil
 	}
-
+	fmt.Println("\n######################## after Processing the http Listener ########################")
+	
 	// *********** Processing the request Routing Rule for HTTP *********** //
 	//check if the request Routing Rule exists in  the gateway, otherwise, it was removed manually
 	if state.Request_routing_rule_http != nil {
@@ -773,7 +774,8 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	}else{
 		result.Request_routing_rule_http = nil
 	}
-
+	fmt.Println("\n######################## after Routing Rule for HTTP ########################")
+	
 	state = result
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
