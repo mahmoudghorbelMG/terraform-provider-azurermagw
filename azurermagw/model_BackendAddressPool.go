@@ -131,5 +131,5 @@ func removeBackendAddressPoolElement(gw *ApplicationGateway, backendAddressPoolN
 			gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools[:i], gw.Properties.BackendAddressPools[i+1:]...)
 			//removed = true
 		}
-	}	//fmt.Println("#############################removed =", removed)
+	}	
 }

@@ -39,10 +39,8 @@ func (m boolDefaultModifier) Modify(ctx context.Context, req tfsdk.ModifyAttribu
     }
 
     if (!str.Null) {
-		//fmt.Printf("\nQQQQQQQQQQQQQQQQQQQQQQQ  entering if affinity_cookie_name is not nul=\n %+v ",str)	
-        return
+		return
     }
-	//fmt.Printf("\nMMMMMMMMMMMMMMMMMMMM  entering if affinity_cookie_name is nul=\n %+v ",types.Bool{Value: m.Default})	
-        
+	    
     resp.AttributePlan = types.Bool{Value: m.Default}
 }

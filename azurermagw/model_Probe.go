@@ -26,9 +26,7 @@ type Probe_json struct {
 			StatusCodes []string `json:"statusCodes,omitempty"`
 		} `json:"match"`
 		Host                                string `json:"host,omitempty"`
-		BackendHTTPSettings *[]struct {
-			ID string `json:"id,omitempty"`
-		} `json:"backendHttpSettings"`
+		BackendHTTPSettings *[]struct {ID string `json:"id,omitempty"`} `json:"backendHttpSettings"`
 	} `json:"properties"`
 	Type string `json:"type,omitempty"`
 } 

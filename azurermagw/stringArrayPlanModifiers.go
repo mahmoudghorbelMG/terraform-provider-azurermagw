@@ -39,11 +39,9 @@ func (m stringArrayDefaultModifier) Modify(ctx context.Context, req tfsdk.Modify
     }
 
     if (len(str)!= 0) {
-		//fmt.Printf("\nQQQQQQQQQQQQQQQQQQQQQQQ  entering if affinity_cookie_name is not nul=\n %+v ",str)	
-        return
+		return
     }
-	//fmt.Printf("\nMMMMMMMMMMMMMMMMMMMM  entering if affinity_cookie_name is nul=\n %+v ",types.String{Value: m.Default})	
-    var array []types.String
+	var array []types.String
     for i := 0; i < len(m.Default); i++ {
         array[i] = types.String{Value: m.Default[i]}
     }

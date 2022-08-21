@@ -31,23 +31,7 @@ type provider struct {
 // GetSchema
 func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
-		Attributes: map[string]tfsdk.Attribute{ /*
-				"host": {
-					Type:     types.StringType,
-					Optional: true,
-					Computed: true,
-				},
-				"username": {
-					Type:     types.StringType,
-					Optional: true,
-					Computed: true,
-				},
-				"password": {
-					Type:      types.StringType,
-					Optional:  true,
-					Computed:  true,
-					Sensitive: true,
-				},*/
+		Attributes: map[string]tfsdk.Attribute{ 
 			"azure_client_id": {
 				Type:     types.StringType,
 				Optional: true,
@@ -74,10 +58,7 @@ func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics)
 }
 
 // Provider schema struct
-type providerData struct { /*
-		Username 				types.String `tfsdk:"username"`
-		Host     				types.String `tfsdk:"host"`
-		Password 				types.String `tfsdk:"password"`*/
+type providerData struct { 
 	AZURE_CLIENT_ID       types.String `tfsdk:"azure_client_id"`
 	AZURE_CLIENT_SECRET   types.String `tfsdk:"azure_client_secret"`
 	AZURE_TENANT_ID       types.String `tfsdk:"azure_tenant_id"`
@@ -203,18 +184,6 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 	p.AZURE_SUBSCRIPTION_ID = AZURE_SUBSCRIPTION_ID
 	//resp.Diagnostics.AddWarning("################TOKEN############### : ",p.token.Access_token)
 
-	/*
-		// Create a new HashiCups client and set it to the provider client
-		c, err := hashicups.NewClient(&host, &username, &password)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Unable to create client",
-				"Unable to create hashicups client:\n\n"+err.Error(),
-			)
-			return
-		}
-
-		p.client = c*/
 	p.configured = true
 }
 

@@ -1,8 +1,6 @@
 package azurermagw
 
 import (
-	//"fmt"
-	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -18,29 +16,19 @@ type HTTPListener struct {
 			ID string `json:"id,omitempty"`
 		} `json:"firewallPolicy"`
 		ProvisioningState       string `json:"provisioningState,omitempty"`
-		FrontendIPConfiguration *struct {
-			ID string `json:"id,omitempty"`
-		} `json:"frontendIPConfiguration"`
-		FrontendPort *struct {
-			ID string `json:"id,omitempty"`
-		} `json:"frontendPort,omitempty"`
+		FrontendIPConfiguration *struct {ID string `json:"id,omitempty"`} `json:"frontendIPConfiguration"`
+		FrontendPort *struct {ID string `json:"id,omitempty"`} `json:"frontendPort,omitempty"`
 		Protocol                    string   `json:"protocol,omitempty"`
 		HostName                    string   `json:"hostName,omitempty"`
 		HostNames                   []string `json:"hostNames,omitempty"`
 		RequireServerNameIndication bool     `json:"requireServerNameIndication,omitempty"`
-		SslCertificate              *struct {
-			ID string `json:"id,omitempty"`
-		} `json:"sslCertificate"`
-		SslProfile *struct {
-			ID string `json:"id,omitempty"`
-		} `json:"sslProfile"`
+		SslCertificate *struct {ID string `json:"id,omitempty"`} `json:"sslCertificate"`
+		SslProfile *struct {ID string `json:"id,omitempty"`	} `json:"sslProfile"`
 		CustomErrorConfigurations *[]struct {
 			CustomErrorPageURL string `json:"customErrorPageUrl,omitempty"`
 			StatusCode         string `json:"statusCode,omitempty"`
 		} `json:"customErrorConfigurations"`
-		RequestRoutingRules *[]struct {
-			ID string `json:"id,omitempty"`
-		} `json:"requestRoutingRules,omitempty"`
+		RequestRoutingRules *[]struct {	ID string `json:"id,omitempty"`} `json:"requestRoutingRules,omitempty"`
 	} `json:"properties"`
 	Type string `json:"type,omitempty"`
 } 
@@ -203,7 +191,6 @@ func generateHTTPListenerState(gw ApplicationGateway, HTTPListenerName string) H
 		splitted_list := strings.Split(httpListener_json.Properties.FrontendIPConfiguration.ID,"/")
 		httpListener_state.Frontend_ip_configuration_name = types.String{Value: splitted_list[len(splitted_list)-1]}
 	}else{
-		fmt.Printf("\nWWWWWWWWWWWWWWWWWW  warning: FrontendIPConfiguration =\n %+v. It shouldn't be null",httpListener_json.Properties.FrontendIPConfiguration)
 		httpListener_state.Frontend_ip_configuration_name = types.String{Null: true}
 	}
 
@@ -213,7 +200,6 @@ func generateHTTPListenerState(gw ApplicationGateway, HTTPListenerName string) H
 		splitted_list := strings.Split(httpListener_json.Properties.FrontendPort.ID,"/")
 		httpListener_state.Frontend_port_name = types.String{Value: splitted_list[len(splitted_list)-1]}
 	}else{
-		fmt.Printf("\nWWWWWWWWWWWWWWWWWW  warning: FrontendPort =\n %+v. It shouldn't be null",httpListener_json.Properties.FrontendPort)
 		httpListener_state.Frontend_port_name = types.String{Null: true}
 	}
 
@@ -294,17 +280,6 @@ func checkHTTPListenerElement(gw ApplicationGateway, HTTPListenerName string) bo
 	}
 	return exist
 }
-/*
-func checkHTTPListenerElement_special(httpListeners_plan []Http_listener, HTTPListenerName string) int {
-	//the var exist will count the occurence number of HTTPListenerName in the array httpListeners_plan
-	exist := 0
-	for i := len(httpListeners_plan) - 1; i >= 0; i-- {
-		if httpListeners_plan[i].Name.Value == HTTPListenerName {
-			exist++
-		}
-	}
-	return exist
-}*/
 func removeHTTPListenerElement(gw *ApplicationGateway, HTTPListenerName string) {
 	for i := len(gw.Properties.HTTPListeners) - 1; i >= 0; i-- {
 		if gw.Properties.HTTPListeners[i].Name == HTTPListenerName {
