@@ -772,7 +772,6 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	}else{
 		result.Request_routing_rule_http = nil // &Request_routing_rule{}//nil
 	}
-	fmt.Println("\n######################## after Routing Rule for HTTP ########################\n", result)
 	
 	state = result
 	diags = resp.State.Set(ctx, &state)
