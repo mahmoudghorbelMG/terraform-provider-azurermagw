@@ -59,16 +59,16 @@ func createBackendAddressPool(backend_plan Backend_address_pool) BackendAddressP
 	for i := 0; i < len(backend_plan.Ip_addresses); i++ {
 		backend_json.Properties.BackendAddresses[i+len(backend_plan.Fqdns)].IPAddress = backend_plan.Ip_addresses[i].Value
 	}
-	// add the backend to the agw and update the agw
+	
 	return backend_json
 }
+// we have to give the nb_Fqdns and nb_IpAddress in order to make this function reusable in create, read and update method
 func generateBackendAddressPoolState(gw ApplicationGateway, backendAddressPoolName string,nb_Fqdns int,nb_IpAddress int) Backend_address_pool {
-	// we have to give the nb_Fqdns and nb_IpAddress in order to make this function reusable in create, read and update method
+	//retrieve json element from gw	
 	index := getBackendAddressPoolElementKey(gw, backendAddressPoolName)
 	backend_json := gw.Properties.BackendAddressPools[index]
-	// log the added backend address pool
-	//tflog.Trace(ctx, "created BackendAddressPool", "BackendAddressPool ID", backend_json.ID)
 
+	
 	// Map response body to resource schema attribute
 	backend_state := Backend_address_pool{
 		Name:         types.String{Value: backend_json.Name},
@@ -77,7 +77,7 @@ func generateBackendAddressPoolState(gw ApplicationGateway, backendAddressPoolNa
 		Ip_addresses: []types.String{},
 	}
 	
-	//fmt.Println("------------------ The number nb_Fqdns is:", nb_Fqdns)
+	
 	if nb_Fqdns != 0 {
 		backend_state.Fqdns = make([]types.String, nb_Fqdns)
 	} else {
@@ -102,13 +102,6 @@ func generateBackendAddressPoolState(gw ApplicationGateway, backendAddressPoolNa
 			index_nb_IpAddress++
 		}
 	}
-/*
-	for j := 0; j < nb_Fqdns; j++ {
-		backend_state.Fqdns[j] = types.String{Value: backend_json.Properties.BackendAddresses[j].Fqdn}
-	}
-	for j := 0; j < nb_IpAddress; j++ {
-		backend_state.Ip_addresses[j] = types.String{Value: backend_json.Properties.BackendAddresses[j+nb_Fqdns].IPAddress}
-	}*/
 
 	return backend_state
 }
@@ -123,11 +116,8 @@ func getBackendAddressPoolElementKey(gw ApplicationGateway, backendAddressPoolNa
 }
 func checkBackendAddressPoolElement(gw ApplicationGateway, backendAddressPoolName string) bool {
 	exist := false
-	//fmt.Println("OOOOOOOO  looking for =", backendAddressPoolName)
 	for i := len(gw.Properties.BackendAddressPools) - 1; i >= 0; i-- {
-		//fmt.Println("wwwwwwwwww  =", gw.Properties.BackendAddressPools[i].Name)
 		if gw.Properties.BackendAddressPools[i].Name == backendAddressPoolName {
-			//gw.Properties.BackendAddressPools =append(gw.Properties.BackendAddressPools[:i], gw.Properties.BackendAddressPools[i+1:]...)
 			exist = true
 		}
 	}
@@ -141,5 +131,5 @@ func removeBackendAddressPoolElement(gw *ApplicationGateway, backendAddressPoolN
 			gw.Properties.BackendAddressPools = append(gw.Properties.BackendAddressPools[:i], gw.Properties.BackendAddressPools[i+1:]...)
 			//removed = true
 		}
-	}	//fmt.Println("#############################removed =", removed)
+	}	
 }

@@ -35,42 +35,9 @@ type ApplicationGateway struct {
 			MaxCapacity int `json:"maxCapacity"`
 			MinCapacity int `json:"minCapacity"`
 		} `json:"autoscaleConfiguration"`
-		BackendAddressPools []BackendAddressPool `json:"backendAddressPools,omitempty"` 
-		BackendHTTPSettingsCollection []struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
-			Properties struct {
-				ProvisioningState              string      `json:"provisioningState"`
-				Port                           int         `json:"port"`
-				Protocol                       string      `json:"protocol"`
-				CookieBasedAffinity            string      `json:"cookieBasedAffinity"`
-				PickHostNameFromBackendAddress bool        `json:"pickHostNameFromBackendAddress"`
-				AffinityCookieName             string      `json:"affinityCookieName"`
-				AuthenticationCertificates     *[]struct { ////ajouté
-					ID string `json:"id"`
-				} `json:"authenticationCertificates"`
-				ConnectionDraining *struct { ////ajouté
-					DrainTimeoutInSec int  `json:"drainTimeoutInSec"`
-					Enabled           bool `json:"enabled"`
-				} `json:"connectionDraining"`
-				HostName       string `json:"hostName,omitempty"` ////ajouté
-				Path           string `json:"path"`
-				RequestTimeout int    `json:"requestTimeout"`
-				Probe          *struct {
-					ID string `json:"id"`
-				} `json:"probe"`
-				ProbeEnabled        bool `json:"probeEnabled,omitempty"` ////ajouté
-				RequestRoutingRules *[]struct {
-					ID string `json:"id"`
-				} `json:"requestRoutingRules"`
-				TrustedRootCertificates *[]struct { ////ajouté
-					ID string `json:"id"`
-				} `json:"trustedRootCertificates"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"backendHttpSettingsCollection"`
-		BackendSettingsCollection []struct {
+		BackendAddressPools 			[]BackendAddressPool `json:"backendAddressPools,omitempty"` 
+		BackendHTTPSettingsCollection 	[]BackendHTTPSettings `json:"backendHttpSettingsCollection,omitempty"`
+		BackendSettingsCollection 		[]struct {
 			ID         string `json:"id"`
 			Name       string `json:"name"`
 			Properties struct {
@@ -146,41 +113,7 @@ type ApplicationGateway struct {
 			EnableRequestBuffering  bool `json:"enableRequestBuffering"`
 			EnableResponseBuffering bool `json:"enableResponseBuffering"`
 		} `json:"globalConfiguration"`
-		HTTPListeners []struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
-			Properties struct {
-				FirewallPolicy *struct {
-					ID string `json:"id"`
-				} `json:"firewallPolicy"`
-				ProvisioningState       string `json:"provisioningState"`
-				FrontendIPConfiguration struct {
-					ID string `json:"id"`
-				} `json:"frontendIPConfiguration"`
-				FrontendPort struct {
-					ID string `json:"id"`
-				} `json:"frontendPort"`
-				Protocol                    string   `json:"protocol"`
-				HostName                    string   `json:"hostName"`
-				HostNames                   []string `json:"hostNames"`
-				RequireServerNameIndication bool     `json:"requireServerNameIndication"`
-				SslCertificate              *struct {
-					ID string `json:"id"`
-				} `json:"sslCertificate"`
-				SslProfile *struct {
-					ID string `json:"id"`
-				} `json:"sslProfile"`
-				CustomErrorConfigurations []struct {
-					CustomErrorPageURL string `json:"customErrorPageUrl"`
-					StatusCode         string `json:"statusCode"`
-				} `json:"customErrorConfigurations"`
-				RequestRoutingRules *[]struct {
-					ID string `json:"id"`
-				} `json:"requestRoutingRules"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"httpListeners"`
+		HTTPListeners [] HTTPListener `json:"httpListeners,omitempty"`
 		Listeners []struct {
 			ID         string `json:"id"`
 			Name       string `json:"name"`
@@ -235,84 +168,9 @@ type ApplicationGateway struct {
 				} `json:"ipConfigurations"`
 			} `json:"properties"`
 		} `json:"privateLinkConfigurations"`
-		Probes []struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
-			Properties struct {
-				ProvisioningState                   string `json:"provisioningState"`
-				Protocol                            string `json:"protocol"`
-				Host                                string `json:"host"`
-				Path                                string `json:"path"`
-				Interval                            int    `json:"interval"`
-				Timeout                             int    `json:"timeout"`
-				UnhealthyThreshold                  int    `json:"unhealthyThreshold"`
-				PickHostNameFromBackendHTTPSettings bool   `json:"pickHostNameFromBackendHttpSettings"`
-				MinServers                          int    `json:"minServers"`
-				Match                               struct {
-					Body        string   `json:"body"`
-					StatusCodes []string `json:"statusCodes"`
-				} `json:"match"`
-				BackendHTTPSettings []struct {
-					ID string `json:"id"`
-				} `json:"backendHttpSettings"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"probes"`
-		RedirectConfigurations []struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
-			Properties struct {
-				ProvisioningState string `json:"provisioningState"`
-				RedirectType      string `json:"redirectType"`
-				TargetListener    struct {
-					ID string `json:"id"`
-				} `json:"targetListener"`
-				TargetURL           string `json:"targetUrl,omitempty"`
-				IncludePath         bool   `json:"includePath"`
-				IncludeQueryString  bool   `json:"includeQueryString"`
-				RequestRoutingRules *[]struct {
-					ID string `json:"id"`
-				} `json:"requestRoutingRules"`
-				URLPathMaps *[]struct {
-					ID string `json:"id"`
-				} `json:"urlPathMaps"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"redirectConfigurations"`
-		RequestRoutingRules *[]struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
-			Properties struct {
-				ProvisioningState string `json:"provisioningState"`
-				RuleType          string `json:"ruleType"`
-				Priority          int    `json:"priority"`
-				HTTPListener      struct {
-					ID string `json:"id"`
-				} `json:"httpListener"`
-				BackendAddressPool *struct {
-					ID string `json:"id"`
-				} `json:"backendAddressPool"`
-				BackendHTTPSettings *struct {
-					ID string `json:"id"`
-				} `json:"backendHttpSettings"`
-				LoadDistributionPolicy *struct {
-					ID string `json:"id"`
-				} `json:"loadDistributionPolicy"`
-				RedirectConfiguration *struct {
-					ID string `json:"id"`
-				} `json:"redirectConfiguration"`
-				RewriteRuleSet *struct {
-					ID string `json:"id"`
-				} `json:"rewriteRuleSet"`
-				URLPathMap *struct {
-					ID string `json:"id"`
-				} `json:"urlPathMap"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"requestRoutingRules"`
+		Probes []Probe_json `json:"probes"`
+		RedirectConfigurations []RedirectConfiguration `json:"redirectConfigurations,omitempty"`
+		RequestRoutingRules []RequestRoutingRule `json:"requestRoutingRules,omitempty"`
 		RewriteRuleSets []struct {
 			Name       string `json:"name"`
 			ID         string `json:"id"`
@@ -366,21 +224,7 @@ type ApplicationGateway struct {
 			Tier     string `json:"tier"`
 			Capacity int    `json:"capacity"`
 		} `json:"sku"`
-		SslCertificates []struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
-			Properties struct {
-				ProvisioningState string `json:"provisioningState"`
-				PublicCertData    string `json:"publicCertData,omitempty"`
-				KeyVaultSecretID  string `json:"keyVaultSecretId,omitempty"`
-				Password          string `json:"password,omitempty"`
-				HTTPListeners     []struct {
-					ID string `json:"id"`
-				} `json:"httpListeners"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"sslCertificates"`
+		SslCertificates []SslCertificate `json:"sslCertificates"`
 		SslPolicy struct {
 			CipherSuites         []string `json:"cipherSuites,omitempty"`
 			DisabledSslProtocols []string `json:"disabledSslProtocols,omitempty"`
