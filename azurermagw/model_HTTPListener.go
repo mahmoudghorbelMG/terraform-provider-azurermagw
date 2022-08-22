@@ -94,21 +94,18 @@ func createHTTPListener(httpListener_plan *Http_listener, AZURE_SUBSCRIPTION_ID 
 	}
 	
 	//frontendIPConfiguration is required, so no test to do
-	//"id": "/subscriptions/b3ae2f08-8ccb-4640-949e-b4c0d2acfde6/resourceGroups/shared-app-gateway/providers/Microsoft.Network/applicationGateways/app-gateway/frontendIPConfigurations/app-gateway-fe-ip-config"
-    frontendIPConfigurationID :="/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+
+	frontendIPConfigurationID :="/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+
 				"/providers/Microsoft.Network/applicationGateways/"+agw_name+"/frontendIPConfigurations/"+
 				httpListener_plan.Frontend_ip_configuration_name.Value
 	httpListener_json.Properties.FrontendIPConfiguration = &struct{ID string "json:\"id,omitempty\""}{ID: frontendIPConfigurationID,}
 
 	//frontendPort is required, so no test to do
-	//"id": "/subscriptions/b3ae2f08-8ccb-4640-949e-b4c0d2acfde6/resourceGroups/shared-app-gateway/providers/Microsoft.Network/applicationGateways/app-gateway/frontendPorts/app-gateway-fe-port-443"
-    frontendPortID :="/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+
+	frontendPortID :="/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+
 	"/providers/Microsoft.Network/applicationGateways/"+agw_name+"/frontendPorts/"+httpListener_plan.Frontend_port_name.Value
 	httpListener_json.Properties.FrontendPort = &struct{ID string "json:\"id,omitempty\""}{ID: frontendPortID,}
 
 	//ssl certificate id is optional, but when provided, it has to be conform with the certificate name in the binding
-	//"id": "/subscriptions/b3ae2f08-8ccb-4640-949e-b4c0d2acfde6/resourceGroups/shared-app-gateway/providers/Microsoft.Network/applicationGateways/app-gateway/sslCertificates/default-citeo-pat-cert"
-    sslCertificateID := "/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+
+	sslCertificateID := "/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+
 	"/providers/Microsoft.Network/applicationGateways/"+agw_name+"/sslCertificates/"
 	// if there is a Ssl_certificate_name, then put it, else, nil
 	//var error_SslCertificateName string

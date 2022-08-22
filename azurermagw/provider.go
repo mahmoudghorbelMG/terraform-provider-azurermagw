@@ -23,7 +23,6 @@ func New() tfsdk.Provider {
 
 type provider struct {
 	configured bool
-	//client     		*hashicups.Client
 	token                 *Token
 	AZURE_SUBSCRIPTION_ID string
 }
