@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	//"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	//"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -606,6 +607,7 @@ func (r resourceWebappBinding) Create(ctx context.Context, req tfsdk.CreateResou
 		result.Request_routing_rule_http = nil
 	}
 
+	//resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("Backend_address_pool"), &backendAddressPool_state)...)
 	//store to the created object to the terraform state
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
@@ -1152,9 +1154,9 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	
 	var result WebappBinding
 	result = WebappBinding{
-		Name						: state.Name,
+		Name						: plan.Name,
 		Agw_name					: types.String{Value: gw_response.Name},
-		Agw_rg						: state.Agw_rg,
+		Agw_rg						: plan.Agw_rg,
 		Backend_address_pool		: backendAddressPool_state,
 		Backend_http_settings		: backendHTTPSettings_state,
 		Probe						: probe_state,
