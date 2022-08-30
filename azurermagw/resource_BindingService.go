@@ -1162,7 +1162,7 @@ func (r resourceBindingService) ImportState(ctx context.Context, req tfsdk.Impor
 	uniqueId := RandStringBytes(10)
 	
 	names_map := map[string]string{
-		"bindingServiceName"				: "binding_"+uniqueId, //generate random unique name for the imported resource
+		"bindingServiceName"			: "binding_"+uniqueId, //generate random unique name for the imported resource
 		"applicationGatewayName"		: idParts[0],
 		"resourceGroupName"				: idParts[1],
 		"backendAddressPoolName"		: idParts[2],
