@@ -131,7 +131,7 @@ func removeSslCertificateElement(gw *ApplicationGateway, SslCertificateName stri
 		}
 	}
 }
-func checkSslCertificateCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+func checkSslCertificateCreate(plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
 	//there is 2 constraints we have to check for SSLCertificate 
 	//   1) Data and Key_vault_secret_id are optional but one of them has to be provided
 	//   2) If Data is provided, Password is required
@@ -164,7 +164,7 @@ func checkSslCertificateCreate(plan WebappBinding, gw ApplicationGateway, resp *
 	}
 	return false
 }
-func checkSslCertificateUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+func checkSslCertificateUpdate(plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
 	//there is 2 constraints we have to check for SSLCertificate 
 	//   1) Data and Key_vault_secret_id are optional but one of them has to be provided
 	//   2) If Data is provided, Password is required

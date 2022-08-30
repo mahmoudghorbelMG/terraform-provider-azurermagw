@@ -161,7 +161,7 @@ func removeRedirectConfigurationElement(gw *ApplicationGateway, RedirectConfigur
 		}
 	}
 }
-func checkRedirectConfigurationCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+func checkRedirectConfigurationCreate(plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
 	//fatal-both-exist
 	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
 		plan.Redirect_configuration.Target_url.Value != "" {
@@ -190,7 +190,7 @@ func checkRedirectConfigurationCreate(plan WebappBinding, gw ApplicationGateway,
 	}
 	return false
 }
-func checkRedirectConfigurationUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+func checkRedirectConfigurationUpdate(plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
 	//fatal-both-exist
 	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
 		plan.Redirect_configuration.Target_url.Value != "" {

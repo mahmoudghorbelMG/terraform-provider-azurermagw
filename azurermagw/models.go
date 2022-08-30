@@ -4,8 +4,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// WebappBinding
-type WebappBinding struct {
+// BindingService
+type BindingService struct {
 	Name                 		types.String         	`tfsdk:"name"`
 	Agw_name             		types.String         	`tfsdk:"agw_name"`
 	Agw_rg               		types.String         	`tfsdk:"agw_rg"`

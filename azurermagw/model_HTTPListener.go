@@ -284,7 +284,7 @@ func removeHTTPListenerElement(gw *ApplicationGateway, HTTPListenerName string) 
 		}
 	}
 }
-func checkHTTPListenerCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+func checkHTTPListenerCreate(plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
 	if plan.Http_listener.Ssl_certificate_name.Value != "" {
 		//no need for SslCertificate
 		resp.Diagnostics.AddError(
@@ -311,7 +311,7 @@ func checkHTTPListenerCreate(plan WebappBinding, gw ApplicationGateway, resp *tf
 	}
 	return false
 }
-func checkHTTPListenerUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+func checkHTTPListenerUpdate(plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
 	if plan.Http_listener.Ssl_certificate_name.Value != "" {
 		//no need for SslCertificate
 		resp.Diagnostics.AddError(
@@ -338,7 +338,7 @@ func checkHTTPListenerUpdate(plan WebappBinding, gw ApplicationGateway, resp *tf
 	}
 	return false
 }
-func checkHTTPSListenerCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+func checkHTTPSListenerCreate(plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
 	if plan.Https_listener.Ssl_certificate_name.Value != "" &&
 		plan.Https_listener.Ssl_certificate_name.Value != plan.Ssl_certificate.Name.Value{
 		//wrong SslCertificate Name
@@ -366,7 +366,7 @@ func checkHTTPSListenerCreate(plan WebappBinding, gw ApplicationGateway, resp *t
 	}
 	return false
 }
-func checkHTTPSListenerUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+func checkHTTPSListenerUpdate(plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
 	if plan.Https_listener.Ssl_certificate_name.Value != "" &&
 		plan.Https_listener.Ssl_certificate_name.Value != plan.Ssl_certificate.Name.Value{
 		//wrong SslCertificate Name

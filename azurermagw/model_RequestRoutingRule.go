@@ -192,7 +192,7 @@ func removeRequestRoutingRuleElement(gw *ApplicationGateway, RequestRoutingRuleN
 		}
 	}
 }
-func checkRequestRoutingRuleHttpsCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+func checkRequestRoutingRuleHttpsCreate(plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
 	//check http_listener_name (https)
 	if plan.Request_routing_rule_https.Http_listener_name.Value != plan.Https_listener.Name.Value {
 		// http_listener_name don't match with Https_listener.Name, issue exit error
@@ -282,7 +282,7 @@ func checkRequestRoutingRuleHttpsCreate(plan WebappBinding, gw ApplicationGatewa
 	}
 	return false
 }
-func checkRequestRoutingRuleHttpsUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+func checkRequestRoutingRuleHttpsUpdate(plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
 	//check http_listener_name (https)
 	if plan.Request_routing_rule_https.Http_listener_name.Value != plan.Https_listener.Name.Value {
 		// http_listener_name don't match with Https_listener.Name, issue exit error
@@ -390,7 +390,7 @@ func checkURLPathMapElement(gw ApplicationGateway, URLPathMapName string) bool {
 	}
 	return exist
 }
-func checkRequestRoutingRuleHttpCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+func checkRequestRoutingRuleHttpCreate(plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
 	//check http_listener_name (http) if it's not null
 	if plan.Http_listener != nil {
 		if plan.Request_routing_rule_http.Http_listener_name.Value != plan.Http_listener.Name.Value {
@@ -519,7 +519,7 @@ func checkRequestRoutingRuleHttpCreate(plan WebappBinding, gw ApplicationGateway
 
 	return false
 }
-func checkRequestRoutingRuleHttpUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+func checkRequestRoutingRuleHttpUpdate(plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
 	//check http_listener_name (http)
 	if plan.Http_listener != nil {
 		if plan.Request_routing_rule_http.Http_listener_name.Value != plan.Http_listener.Name.Value {

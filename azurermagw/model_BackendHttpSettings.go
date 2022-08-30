@@ -168,7 +168,7 @@ func removeBackendHTTPSettingsElement(gw *ApplicationGateway, BackendHTTPSetting
 		}
 	}
 }
-func checkBackendHTTPSettingsCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+func checkBackendHTTPSettingsCreate(plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
 	if plan.Backend_http_settings.Probe_name.Value != "" {
 		if plan.Backend_http_settings.Probe_name.Value != plan.Probe.Name.Value {
 			resp.Diagnostics.AddError(
@@ -181,7 +181,7 @@ func checkBackendHTTPSettingsCreate(plan WebappBinding, gw ApplicationGateway, r
 	}
 	return false
 }
-func checkBackendHTTPSettingsUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+func checkBackendHTTPSettingsUpdate(plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
 	//check the provided probe name 
 	if plan.Backend_http_settings.Probe_name.Value != "" {
 		if plan.Backend_http_settings.Probe_name.Value != plan.Probe.Name.Value {
