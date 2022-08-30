@@ -13,10 +13,10 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	//"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	//"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -627,19 +627,39 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	names_map := map[string]string{
+		"webappBindingName"				: state.Name.Value,
+		"applicationGatewayName"		: state.Agw_name.Value,
+		"resourceGroupName"				: state.Agw_rg.Value,
+		"backendAddressPoolName"		: state.Backend_address_pool.Name.Value,
+		"backendHTTPSettingsName"		: state.Backend_http_settings.Name.Value,
+		"probeName"						: state.Probe.Name.Value,
+		"sslCertificateName"			: state.Ssl_certificate.Name.Value,
+		"httpsListenerName"				: state.Https_listener.Name.Value,
+		"requestRoutingRuleHttpsName"	: state.Request_routing_rule_https.Name.Value,
+		"redirectConfigurationName"		: state.Redirect_configuration.Name.Value,		
+	}
+	if state.Http_listener != nil{
+		names_map["httpListenerName"] = state.Http_listener.Name.Value
+	}
+	if state.Request_routing_rule_http != nil {
+		names_map["requestRoutingRuleHttpName"] = state.Request_routing_rule_http.Name.Value
+	}
 
+	state = getWebappBindingState(r.p.AZURE_SUBSCRIPTION_ID,names_map,r.p.token.Access_token)
+	/*
 	// Get gw from API and then update what is in state from what the API returns
-	webappBindingName := state.Name.Value
+	webappBindingName := names_map["webappBindingName"] //state.Name.Value
 
 	//Get the agw
-	resourceGroupName := state.Agw_rg.Value
-	applicationGatewayName := state.Agw_name.Value
+	resourceGroupName := names_map["resourceGroupName"] //state.Agw_rg.Value
+	applicationGatewayName := names_map["applicationGatewayName"] //state.Agw_name.Value
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 	
 	// *********** Processing the request Routing Rule for HTTPS *********** //
 	//check if the request Routing Rule exists in  the gateway, otherwise, it was removed manually
 	var requestRoutingRuleHttps_state Request_routing_rule
-	requestRoutingRuleHttpsName := state.Request_routing_rule_https.Name.Value
+	requestRoutingRuleHttpsName := names_map["requestRoutingRuleHttpsName"] //state.Request_routing_rule_https.Name.Value
 	//check if the backend http settings exists in the gateway, otherwise, it was removed manually
 	if checkRequestRoutingRuleElement(gw, requestRoutingRuleHttpsName) {
 		//generate BackendState
@@ -651,7 +671,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	
 	// *********** Processing the backend address pool *********** //
 	var backendAddressPool_state Backend_address_pool
-	backendAddressPoolName := state.Backend_address_pool.Name.Value
+	backendAddressPoolName := names_map["backendAddressPoolName"] //state.Backend_address_pool.Name.Value
 	//check if the backend address pool exist in the gateway, otherwise, it was removed manually
 	if checkBackendAddressPoolElement(gw, backendAddressPoolName) {
 		// in the Read method, the number of fqdns and Ip in a Backendpool should be calculated from the json object and not the plan or state,
@@ -676,7 +696,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	
 	// *********** Processing the backend http settings *********** //
 	var backendHTTPSettings_state Backend_http_settings
-	backendHTTPSettingsName := state.Backend_http_settings.Name.Value
+	backendHTTPSettingsName := names_map["backendHTTPSettingsName"] //state.Backend_http_settings.Name.Value
 	//check if the backend http settings exists in the gateway, otherwise, it was removed manually
 	if checkBackendHTTPSettingsElement(gw, backendHTTPSettingsName) {
 		//generate BackendState
@@ -688,7 +708,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	
 	// *********** Processing the probe *********** //
 	var probe_state Probe_tf
-	probeName := state.Probe.Name.Value
+	probeName := names_map["probeName"] //state.Probe.Name.Value
 	//check if the probe exists in the gateway, otherwise, it was removed manually
 	if checkProbeElement(gw, probeName) {
 		//generate probe state
@@ -701,7 +721,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	// *********** Processing the https Listener *********** //
 	//check if the Https listener  exists in  the gateway, otherwise, it was removed manually
 	var httpsListener_state Http_listener
-	httpsListenerName := state.Https_listener.Name.Value
+	httpsListenerName := names_map["httpsListenerName"] //state.Https_listener.Name.Value
 	if checkHTTPListenerElement(gw, httpsListenerName) {
 		httpsListener_state = generateHTTPListenerState(gw,httpsListenerName)
 	}else{
@@ -711,7 +731,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	// *********** Processing the SSL Certificate *********** //
 	//check if the SSL Certificate  exists in  the gateway, otherwise, it was removed manually
 	var sslCertificate_state Ssl_certificate
-	sslCertificateName := state.Ssl_certificate.Name.Value
+	sslCertificateName := names_map["sslCertificateName"] //state.Ssl_certificate.Name.Value
 	if checkSslCertificateElement(gw, sslCertificateName) {
 		sslCertificate_state = generateSslCertificateState(gw,sslCertificateName)
 	}else{
@@ -720,7 +740,7 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 
 	// *********** Processing the Redirect Configuration *********** //
 	var redirectConfiguration_state Redirect_configuration
-	redirectConfigurationName := state.Redirect_configuration.Name.Value
+	redirectConfigurationName := names_map["redirectConfigurationName"] //state.Redirect_configuration.Name.Value
 	//check if the Redirect Configuration exists in the gateway, otherwise, it was removed manually
 	if checkRedirectConfigurationElement(gw, redirectConfigurationName) {
 		//generate BackendState
@@ -747,8 +767,9 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	// *********** Processing the http Listener *********** //
 	//check if the Http listener and request Routing Rule for HTTP exist in the old state (because they are optional param) 
 	//in order to check if it's in the gateway, otherwise, it was removed manually
-	if state.Http_listener != nil{
-		httpListenerName := state.Http_listener.Name.Value
+	//if state.Http_listener != nil{
+		//httpListenerName := state.Http_listener.Name.Value
+	if httpListenerName, exist := names_map["httpListenerName"]; exist {
 		if checkHTTPListenerElement(gw, httpListenerName) {
 			httpListener_state 	:= generateHTTPListenerState(gw,httpListenerName)			
 			result.Http_listener = &httpListener_state
@@ -761,8 +782,9 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	
 	// *********** Processing the request Routing Rule for HTTP *********** //
 	//check if the request Routing Rule exists in  the gateway, otherwise, it was removed manually
-	if state.Request_routing_rule_http != nil {
-		requestRoutingRuleHttpName := state.Request_routing_rule_http.Name.Value
+	//if state.Request_routing_rule_http != nil {
+		//requestRoutingRuleHttpName := state.Request_routing_rule_http.Name.Value
+	if requestRoutingRuleHttpName, exist := names_map["requestRoutingRuleHttpName"]; exist {	
 		if checkRequestRoutingRuleElement(gw, requestRoutingRuleHttpName) {
 			//generate State
 			requestRoutingRuleHttp_state := generateRequestRoutingRuleState(gw, requestRoutingRuleHttpName)
@@ -774,14 +796,16 @@ func (r resourceWebappBinding) Read(ctx context.Context, req tfsdk.ReadResourceR
 	}else{
 		result.Request_routing_rule_http = nil // &Request_routing_rule{}//nil
 	}
-	
 	state = result
+	*/
+		
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 }
+
 // Update resource
 func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
 	fmt.Println("\n######################## Update Method ########################")
@@ -800,7 +824,19 @@ func (r resourceWebappBinding) Update(ctx context.Context, req tfsdk.UpdateResou
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	
+
+	//check if there is an update of the gw name or resource group, otherwise, issue exit error. 
+	//Propose to remove (destroy) the binding from the initial gw and create a new one in the new gw
+	if (plan.Agw_rg.Value != state.Agw_rg.Value) || (plan.Agw_name.Value != state.Agw_name.Value) {
+		//this is an error. issue an exit error.
+		resp.Diagnostics.AddError(
+			"You are willing to update the binding app gateway name or resource group name. This is not supported currently. "+ 
+			"We recommand you to make a destroy of the existing binding before creating a new one with the suitable app gateway name and resource group.",
+			"Please, change configuration then retry.",
+		)
+		return
+	}
+
 	//Get the agw in order to update it with new values from plan
 	resourceGroupName := plan.Agw_rg.Value
 	applicationGatewayName := plan.Agw_name.Value
@@ -1246,8 +1282,216 @@ func (r resourceWebappBinding) Delete(ctx context.Context, req tfsdk.DeleteResou
 
 // Import resource
 func (r resourceWebappBinding) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	// Save the import identifier in the id attribute
+	//the ID given in the import command should match exactly the following format:
+	// <gw_name,gw-resourcegroup,backend_address_pool_name,backend_http_settings_name,probe_name,ssl_certificate,
+	//https_listener_name,request_routing_rule_https_name,redirect_configuration_name,
+	//http_listener_name(optional),request_routing_rule_http_name(optional, required if http_listener_name is set)>
+	
+	idParts := strings.Split(req.ID, ",")
+	//check if the given ID contains the right number of params (9 or 11)
+	if (len(idParts) != 11 && len(idParts) != 9) {
+        resp.Diagnostics.AddError(
+            "Unexpected Import Identifier. The identifier should be composed of 9 or 11 params matching exactly the following format"+
+			"<gw_name,gw-resourcegroup,backend_address_pool_name,backend_http_settings_name,probe_name,ssl_certificate,"+
+			"https_listener_name,request_routing_rule_https_name,redirect_configuration_name,"+
+			"http_listener_name(optional),request_routing_rule_http_name(optional, required if http_listener_name is set)>",
+            "Please, check the import identifier then retry",
+        )
+        return
+    }
+
+	//check if there is an empty param
+	for i := 0; i < len(idParts); i++ {
+		if idParts[i] == "" {
+			resp.Diagnostics.AddError(
+				"Unexpected Import Identifier. A given param is empty",
+				"Please, check the import identifier then retry",
+			)
+			return
+		}
+	}
+	uniqueId := RandStringBytes(10)
+	
+	names_map := map[string]string{
+		"webappBindingName"				: "binding_"+uniqueId, //generate random unique name for the imported resource
+		"applicationGatewayName"		: idParts[0],
+		"resourceGroupName"				: idParts[1],
+		"backendAddressPoolName"		: idParts[2],
+		"backendHTTPSettingsName"		: idParts[3],
+		"probeName"						: idParts[4],
+		"sslCertificateName"			: idParts[5],
+		"httpsListenerName"				: idParts[6],
+		"requestRoutingRuleHttpsName"	: idParts[7],
+		"redirectConfigurationName"		: idParts[8],		
+	}
+	if len(idParts) == 11{
+		names_map["httpListenerName"] = idParts[9]
+		names_map["requestRoutingRuleHttpName"] = idParts[10]
+	}
+
+	state := getWebappBindingState(r.p.AZURE_SUBSCRIPTION_ID,names_map,r.p.token.Access_token)
+	diags := resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	//resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 	//tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("id"), req, resp)
+}
+
+func getWebappBindingState(AZURE_SUBSCRIPTION_ID string, names_map map[string]string, Access_token string) WebappBinding {
+	
+	// Get gw from API and then update what is in state from what the API returns
+	webappBindingName := names_map["webappBindingName"] //state.Name.Value
+
+	//Get the agw
+	resourceGroupName := names_map["resourceGroupName"] //state.Agw_rg.Value
+	applicationGatewayName := names_map["applicationGatewayName"] //state.Agw_name.Value
+	gw := getGW(AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, Access_token)
+	
+	// *********** Processing the request Routing Rule for HTTPS *********** //
+	//check if the request Routing Rule exists in  the gateway, otherwise, it was removed manually
+	var requestRoutingRuleHttps_state Request_routing_rule
+	requestRoutingRuleHttpsName := names_map["requestRoutingRuleHttpsName"] //state.Request_routing_rule_https.Name.Value
+	//check if the backend http settings exists in the gateway, otherwise, it was removed manually
+	if checkRequestRoutingRuleElement(gw, requestRoutingRuleHttpsName) {
+		//generate BackendState
+		requestRoutingRuleHttps_state = generateRequestRoutingRuleState(gw, requestRoutingRuleHttpsName)
+	}else{
+		//generate an empty requestRoutingRuleHttps_state because it was removed manually
+		requestRoutingRuleHttps_state = Request_routing_rule{}
+	}
+	
+	// *********** Processing the backend address pool *********** //
+	var backendAddressPool_state Backend_address_pool
+	backendAddressPoolName := names_map["backendAddressPoolName"] //state.Backend_address_pool.Name.Value
+	//check if the backend address pool exist in the gateway, otherwise, it was removed manually
+	if checkBackendAddressPoolElement(gw, backendAddressPoolName) {
+		// in the Read method, the number of fqdns and Ip in a Backendpool should be calculated from the json object and not the plan or state,
+		// because the purpose of the read is to see if there is a difference between the real element and the satate stored localy.
+		index := getBackendAddressPoolElementKey(gw, backendAddressPoolName)
+		backendAddressPool_json := gw.Properties.BackendAddressPools[index]
+		nb_BackendAddresses := len(backendAddressPool_json.Properties.BackendAddresses)
+		nb_Fqdns := 0
+		for i := 0; i < nb_BackendAddresses; i++ {
+			if 	(backendAddressPool_json.Properties.BackendAddresses[i].Fqdn != "") && 
+				(&backendAddressPool_json.Properties.BackendAddresses[i].Fqdn != nil) {
+				nb_Fqdns++
+			}
+		}
+		nb_IpAddress := nb_BackendAddresses - nb_Fqdns
+		//generate BackendState
+		backendAddressPool_state = generateBackendAddressPoolState(gw, backendAddressPoolName,nb_Fqdns,nb_IpAddress)
+	}else{
+		//generate an empty backendAddressPool_state because it was removed manually
+		backendAddressPool_state = Backend_address_pool{}
+	}
+	
+	// *********** Processing the backend http settings *********** //
+	var backendHTTPSettings_state Backend_http_settings
+	backendHTTPSettingsName := names_map["backendHTTPSettingsName"] //state.Backend_http_settings.Name.Value
+	//check if the backend http settings exists in the gateway, otherwise, it was removed manually
+	if checkBackendHTTPSettingsElement(gw, backendHTTPSettingsName) {
+		//generate BackendState
+		backendHTTPSettings_state = generateBackendHTTPSettingsState(gw, backendHTTPSettingsName)
+	}else{
+		//generate an empty backendHTTPSettings_state because it was removed manually
+		backendHTTPSettings_state = Backend_http_settings{}
+	}
+	
+	// *********** Processing the probe *********** //
+	var probe_state Probe_tf
+	probeName := names_map["probeName"] //state.Probe.Name.Value
+	//check if the probe exists in the gateway, otherwise, it was removed manually
+	if checkProbeElement(gw, probeName) {
+		//generate probe state
+		probe_state = generateProbeState(gw, probeName)
+	}else{
+		//generate an empty probe_state because it was removed manually
+		probe_state = Probe_tf{}
+	}
+
+	// *********** Processing the https Listener *********** //
+	//check if the Https listener  exists in  the gateway, otherwise, it was removed manually
+	var httpsListener_state Http_listener
+	httpsListenerName := names_map["httpsListenerName"] //state.Https_listener.Name.Value
+	if checkHTTPListenerElement(gw, httpsListenerName) {
+		httpsListener_state = generateHTTPListenerState(gw,httpsListenerName)
+	}else{
+		httpsListener_state = Http_listener{}
+	}
+
+	// *********** Processing the SSL Certificate *********** //
+	//check if the SSL Certificate  exists in  the gateway, otherwise, it was removed manually
+	var sslCertificate_state Ssl_certificate
+	sslCertificateName := names_map["sslCertificateName"] //state.Ssl_certificate.Name.Value
+	if checkSslCertificateElement(gw, sslCertificateName) {
+		sslCertificate_state = generateSslCertificateState(gw,sslCertificateName)
+	}else{
+		sslCertificate_state = Ssl_certificate{}
+	}
+
+	// *********** Processing the Redirect Configuration *********** //
+	var redirectConfiguration_state Redirect_configuration
+	redirectConfigurationName := names_map["redirectConfigurationName"] //state.Redirect_configuration.Name.Value
+	//check if the Redirect Configuration exists in the gateway, otherwise, it was removed manually
+	if checkRedirectConfigurationElement(gw, redirectConfigurationName) {
+		//generate BackendState
+		redirectConfiguration_state = generateRedirectConfigurationState(gw, redirectConfigurationName)
+	}else{
+		//generate an empty redirectConfiguration_state because it was removed manually
+		redirectConfiguration_state = Redirect_configuration{}
+	}	
+	
+	var result WebappBinding
+	result = WebappBinding{
+		Name						: types.String{Value: webappBindingName},
+		Agw_name					: types.String{Value: names_map["applicationGatewayName"]},
+		Agw_rg						: types.String{Value: names_map["resourceGroupName"]},
+		Backend_address_pool		: backendAddressPool_state,
+		Backend_http_settings		: backendHTTPSettings_state,
+		Probe						: probe_state,
+		Https_listener				: &httpsListener_state,
+		Ssl_certificate				: sslCertificate_state,
+		Redirect_configuration		: redirectConfiguration_state,
+		Request_routing_rule_https	: &requestRoutingRuleHttps_state,
+	}
+	
+	// *********** Processing the http Listener *********** //
+	//check if the Http listener and request Routing Rule for HTTP exist in the old state (because they are optional param) 
+	//in order to check if it's in the gateway, otherwise, it was removed manually
+	//if state.Http_listener != nil{
+		//httpListenerName := state.Http_listener.Name.Value
+	if httpListenerName, exist := names_map["httpListenerName"]; exist {
+		if checkHTTPListenerElement(gw, httpListenerName) {
+			httpListener_state 	:= generateHTTPListenerState(gw,httpListenerName)			
+			result.Http_listener = &httpListener_state
+		}else{
+			result.Http_listener = nil
+		}
+	}else{
+		result.Http_listener = nil
+	}
+	
+	// *********** Processing the request Routing Rule for HTTP *********** //
+	//check if the request Routing Rule exists in  the gateway, otherwise, it was removed manually
+	//if state.Request_routing_rule_http != nil {
+		//requestRoutingRuleHttpName := state.Request_routing_rule_http.Name.Value
+	if requestRoutingRuleHttpName, exist := names_map["requestRoutingRuleHttpName"]; exist {	
+		if checkRequestRoutingRuleElement(gw, requestRoutingRuleHttpName) {
+			//generate State
+			requestRoutingRuleHttp_state := generateRequestRoutingRuleState(gw, requestRoutingRuleHttpName)
+			result.Request_routing_rule_http = &requestRoutingRuleHttp_state
+		}else{
+			//generate an empty requestRoutingRuleHttp_state because it was removed manually
+			result.Request_routing_rule_http = nil
+		}
+	}else{
+		result.Request_routing_rule_http = nil // &Request_routing_rule{}//nil
+	}
+
+	return result
 }
 func checkElementName(gw ApplicationGateway, plan WebappBinding,httpListener_plan *Http_listener,requestRoutingRuleHttp_plan *Request_routing_rule) ([]string,bool){
 	//This function allows to check if an element name in the required new configuration (plan WebappBinding) already exist in the gw.
@@ -1446,4 +1690,12 @@ func hasField(v interface{}, name string) bool {
 	  return false
 	}
 	return rv.FieldByName(name).IsValid()
+}
+func RandStringBytes(n int) string {
+    const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, n)
+    for i := range b {
+        b[i] = letterBytes[rand.Intn(len(letterBytes))]
+    }
+    return string(b)
 }
