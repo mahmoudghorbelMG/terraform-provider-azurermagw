@@ -13,7 +13,6 @@ import (
 	"os"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -418,6 +417,56 @@ func (r resourceBindingServiceType) GetSchema(_ context.Context) (tfsdk.Schema, 
 					},
 				}),
 			},
+			"http_listener1": {
+				Required: true,
+				/*************************/
+				/*Type: types.ListType{
+					ElemType: types.StringType,
+				},*/
+				/*************************/
+				Attributes: tfsdk.MapNestedAttributes(map[string]tfsdk.Attribute{
+					"name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"id": {
+						Type:     types.StringType,
+						Computed: true,
+					},
+					"frontend_ip_configuration_name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"frontend_port_name": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"require_sni": {
+						Type:     types.BoolType,
+						Optional: true,
+						Computed: true,
+						PlanModifiers: tfsdk.AttributePlanModifiers{boolDefault(false)},
+					},
+					"protocol": {
+						Type:     types.StringType,
+						Required: true,
+					},
+					"host_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+					"host_names": {
+						Type: types.ListType{
+							ElemType: types.StringType,
+						},
+						Optional: true,
+					},
+					"ssl_certificate_name": {
+						Type:     types.StringType,
+						Optional: true,
+					},
+				},tfsdk.MapNestedAttributesOptions{}),
+			},
 		},
 	}, nil
 }
@@ -537,6 +586,15 @@ func (r resourceBindingService) Create(ctx context.Context, req tfsdk.CreateReso
 	httpsListener_json := createHTTPListener(plan.Https_listener,
 		r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)	
 	gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpsListener_json)	
+
+	/************* generate and add Http listener Map **************/
+	for _, value := range plan.Http_listener1 { 
+		if checkHTTPListener1Create(value, gw, resp) {
+			return
+		}
+		httpListener_json := createHTTPListener(&value,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)	
+		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpListener_json)
+	}	
 	
 	/************* generate and add ssl Certificate **************/
 	if checkSslCertificateCreate(plan, gw, resp) {
@@ -579,6 +637,11 @@ func (r resourceBindingService) Create(ctx context.Context, req tfsdk.CreateReso
 	redirectConfiguration_state 	:= generateRedirectConfigurationState(gw_response,plan.Redirect_configuration.Name.Value)
 	requestRoutingRuleHttps_state	:= generateRequestRoutingRuleState(gw_response,plan.Request_routing_rule_https.Name.Value)
 
+	var httpListener1_state  map [string]Http_listener
+	for key, value := range plan.Http_listener1 { 
+		httpListener1_state[key] = generateHTTPListenerState(gw_response,value.Name.Value)
+	}
+
 	//i moved "Generate resource state struct" with http listner block before it depends on the later.
 	var result BindingService
 	result = BindingService{
@@ -592,6 +655,7 @@ func (r resourceBindingService) Create(ctx context.Context, req tfsdk.CreateReso
 		Ssl_certificate				: sslCertificate_state,
 		Redirect_configuration		: redirectConfiguration_state,
 		Request_routing_rule_https	: &requestRoutingRuleHttps_state,
+		Http_listener1				: httpListener1_state,
 	}
 	//add Http_listener and Request_routing_rule_http if they are not nil
 	if plan.Http_listener != nil {
@@ -646,8 +710,8 @@ func (r resourceBindingService) Read(ctx context.Context, req tfsdk.ReadResource
 		names_map["requestRoutingRuleHttpName"] = state.Request_routing_rule_http.Name.Value
 	}
 
-	state = getBindingServiceState(r.p.AZURE_SUBSCRIPTION_ID,names_map,r.p.token.Access_token)
-			
+	state = getBindingServiceState(r.p.AZURE_SUBSCRIPTION_ID, names_map, state.Http_listener1, r.p.token.Access_token)
+
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -927,6 +991,37 @@ func (r resourceBindingService) Update(ctx context.Context, req tfsdk.UpdateReso
 		removeHTTPListenerElement(&gw, state.Https_listener.Name.Value)
 	}
 
+	// *********** Processing http Listener Map *********** //	
+	//preparing the new elements (json) from the plan
+	for key, value := range plan.Http_listener1 { 
+		if checkHTTPListener1Update(value, gw, resp) {
+			return
+		}
+		httpListener_json := createHTTPListener(&value,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)	
+
+		//new https listener is ok. now we have to remove the old one
+		if value.Name.Value == state.Http_listener1[key].Name.Value {
+			//so we remove the old one before adding the new one.
+			removeHTTPListenerElement(&gw, httpListener_json.Name)
+		}else{
+			// it's most likely about http Listener update with a new name
+			// we have to check if the new http Listener name is already used
+			if checkHTTPListenerElement(gw, httpListener_json.Name) {
+				//this is an error. issue an exit error.
+				resp.Diagnostics.AddError(
+					"Unable to update the app gateway. The new http Listener name : "+ httpListener_json.Name+" already exists."+
+					"Could be due to the name of the http listener you are under declaring",
+					" Please, change the name then retry.",
+				)
+				return
+			}
+			//remove the old http Listener (old name) from the gateway
+			removeHTTPListenerElement(&gw, state.Http_listener1[key].Name.Value)
+		}
+		//add the new one to the gw
+		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpListener_json)
+	}	
+
 	// *********** Processing SSL Certificate *********** //	
 	//preparing the new elements (json) from the plan
 	if checkSslCertificateUpdate(plan, gw, resp){
@@ -1033,6 +1128,11 @@ func (r resourceBindingService) Update(ctx context.Context, req tfsdk.UpdateReso
 	redirectConfiguration_state 	:= generateRedirectConfigurationState(gw_response,redirectConfiguration_json.Name)
 	requestRoutingRuleHttps_state 	:= generateRequestRoutingRuleState(gw_response,requestRoutingRuleHttps_json.Name)
 
+	var httpListener1_state  map [string]Http_listener
+	for key, value := range plan.Http_listener1 { 
+		httpListener1_state[key] = generateHTTPListenerState(gw_response,value.Name.Value)
+	}
+
 	/*************** Special for Http listener **********************/
 	// Generate resource state struct 
 	//i moved "Generate resource state struct" with http listner block before it depends on the later.
@@ -1049,6 +1149,7 @@ func (r resourceBindingService) Update(ctx context.Context, req tfsdk.UpdateReso
 		Ssl_certificate				: sslCertificate_state,
 		Redirect_configuration		: redirectConfiguration_state,
 		Request_routing_rule_https	: &requestRoutingRuleHttps_state,
+		Http_listener1				: httpListener1_state,
 	}
 	if plan.Http_listener != nil {
 		httpListener_state 	:= generateHTTPListenerState(gw_response,plan.Http_listener.Name.Value)
@@ -1103,6 +1204,11 @@ func (r resourceBindingService) Delete(ctx context.Context, req tfsdk.DeleteReso
 	removeSslCertificateElement(&gw,sslCertificateName)
 	removeRedirectConfigurationElement(&gw,redirectConfigurationName)
 	removeRequestRoutingRuleElement(&gw,requestRoutingRuleHttpsName)
+	
+	//var httpListener1_state  map [string]Http_listener
+	for _, value := range state.Http_listener1 { 
+		removeHTTPListenerElement(&gw,value.Name.Value)		
+	}
 
 	/*************** Special for Http listener **********************/
 	if state.Http_listener != nil {
@@ -1135,7 +1241,7 @@ func (r resourceBindingService) ImportState(ctx context.Context, req tfsdk.Impor
 	// <gw_name,gw-resourcegroup,backend_address_pool_name,backend_http_settings_name,probe_name,ssl_certificate,
 	//https_listener_name,request_routing_rule_https_name,redirect_configuration_name,
 	//http_listener_name(optional),request_routing_rule_http_name(optional, required if http_listener_name is set)>
-	
+	/*
 	idParts := strings.Split(req.ID, ",")
 	//check if the given ID contains the right number of params (9 or 11)
 	if (len(idParts) != 11 && len(idParts) != 9) {
@@ -1183,10 +1289,10 @@ func (r resourceBindingService) ImportState(ctx context.Context, req tfsdk.Impor
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
-	}
+	}*/
 }
 
-func getBindingServiceState(AZURE_SUBSCRIPTION_ID string, names_map map[string]string, Access_token string) BindingService {
+func getBindingServiceState(AZURE_SUBSCRIPTION_ID string, names_map map[string]string, http_listener1 map[string]Http_listener, Access_token string) BindingService {
 	
 	// Get gw from API and then update what is in state from what the API returns
 	bindingServiceName := names_map["bindingServiceName"] //state.Name.Value
@@ -1200,7 +1306,7 @@ func getBindingServiceState(AZURE_SUBSCRIPTION_ID string, names_map map[string]s
 	//check if the request Routing Rule exists in  the gateway, otherwise, it was removed manually
 	var requestRoutingRuleHttps_state Request_routing_rule
 	requestRoutingRuleHttpsName := names_map["requestRoutingRuleHttpsName"] //state.Request_routing_rule_https.Name.Value
-	//check if the backend http settings exists in the gateway, otherwise, it was removed manually
+	//check if the request Routing Rule for HTTPS exists in the gateway, otherwise, it was removed manually
 	if checkRequestRoutingRuleElement(gw, requestRoutingRuleHttpsName) {
 		//generate BackendState
 		requestRoutingRuleHttps_state = generateRequestRoutingRuleState(gw, requestRoutingRuleHttpsName)
@@ -1337,6 +1443,21 @@ func getBindingServiceState(AZURE_SUBSCRIPTION_ID string, names_map map[string]s
 		result.Request_routing_rule_http = nil // &Request_routing_rule{}//nil
 	}
 
+	// *********** Processing the http Listener Map *********** //
+	//check if the Https listener  exists in  the gateway, otherwise, it was removed manually
+	
+	var httpListener1_state  map [string]Http_listener
+	for key, value := range http_listener1 { 
+		var httpListener_state Http_listener
+		if checkHTTPListenerElement(gw, value.Name.Value) {
+			httpListener_state = generateHTTPListenerState(gw,value.Name.Value)
+		}else{
+			httpListener_state = Http_listener{}
+		}
+		httpListener1_state[key] = httpListener_state
+	}
+	result.Http_listener1 = httpListener1_state
+	/********************************************************/
 	return result
 }
 func checkElementName(gw ApplicationGateway, plan BindingService,httpListener_plan *Http_listener,requestRoutingRuleHttp_plan *Request_routing_rule) ([]string,bool){

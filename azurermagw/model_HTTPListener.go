@@ -394,3 +394,111 @@ func checkHTTPSListenerUpdate(plan BindingService, gw ApplicationGateway, resp *
 	}
 	return false
 }
+func checkHTTPListener1Create(http_listener Http_listener, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+	if http_listener.Ssl_certificate_name.Value != "" && strings.EqualFold(http_listener.Protocol.Value,"http") {
+		//no need for SslCertificate
+		resp.Diagnostics.AddError(
+		"Unable to create binding. A SslCertificate name ("+http_listener.Ssl_certificate_name.Value+") is declared in Http_listener: "+ 
+		http_listener.Name.Value+". There is no need for SslCertificate name in this case. ",
+		"Please, change Http listener configuration then retry.",)
+		return true
+	}
+	if http_listener.Host_name.Value != "" && len(http_listener.Host_names) != 0 {
+		//hostname and hostnames are mutually exclusive. only one should be set
+		resp.Diagnostics.AddError(
+			"Unable to create binding. In HTTPS Listener "+ http_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
+			"Only one should be set",
+			"Please, change HTTP Listener configuration then retry.",)
+		return true
+	}
+	if http_listener.Host_name.Value == "" && len(http_listener.Host_names) == 0 {
+		//hostname and hostnames are mutually exclusive. at least and only one should be set
+		resp.Diagnostics.AddError(
+			"Unable to create binding. In HTTP Listener "+ http_listener.Name.Value+", both Hostname and Hostnames are missing. "+
+			"At least and only one should be set",
+			"Please, change HTTP Listener configuration then retry.",)
+		return true
+	}
+	return false
+}
+func checkHTTPListener1Update(http_listener Http_listener, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+	if http_listener.Ssl_certificate_name.Value != "" && strings.EqualFold(http_listener.Protocol.Value,"http") {
+		//no need for SslCertificate
+		resp.Diagnostics.AddError(
+		"Unable to update binding. A SslCertificate name ("+http_listener.Ssl_certificate_name.Value+") is declared in Http_listener: "+ 
+		http_listener.Name.Value+". There is no need for SslCertificate name in this case. ",
+		"Please, change Http listener configuration then retry.",)
+		return true
+	}
+	if http_listener.Host_name.Value != "" && len(http_listener.Host_names) != 0 {
+		//hostname and hostnames are mutually exclusive. only one should be set
+		resp.Diagnostics.AddError(
+			"Unable to update binding. In HTTPS Listener "+ http_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
+			"Only one should be set",
+			"Please, change HTTP Listener configuration then retry.",)
+		return true
+	}
+	if http_listener.Host_name.Value == "" && len(http_listener.Host_names) == 0 {
+		//hostname and hostnames are mutually exclusive. at least and only one should be set
+		resp.Diagnostics.AddError(
+			"Unable to update binding. In HTTP Listener "+ http_listener.Name.Value+", both Hostname and Hostnames are missing. "+
+			"At least and only one should be set",
+			"Please, change HTTP Listener configuration then retry.",)
+		return true
+	}
+	return false
+}
+func checkHTTPSListener1Create(https_listener Http_listener, plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+	if https_listener.Ssl_certificate_name.Value == "" {
+		// need for SslCertificate
+		resp.Diagnostics.AddError(
+		"Unable to create binding. A SslCertificate name is required in Http_listener: "+ 
+		https_listener.Name.Value+" because it's about an HTTPS listener. ",
+		"Please, change Http listener configuration then retry.",)
+		return true
+	}
+	if https_listener.Host_name.Value != "" && len(https_listener.Host_names) != 0 {
+		//hostname and hostnames are mutually exclusive. only one should be set
+		resp.Diagnostics.AddError(
+			"Unable to create binding. In HTTPS Listener "+ https_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
+			"Only one should be set",
+			"Please, change HTTPS Listener configuration then retry.",)
+		return true
+	}
+	if https_listener.Host_name.Value == "" && len(https_listener.Host_names) == 0 {
+		//hostname and hostnames are mutually exclusive. at least and only one should be set
+		resp.Diagnostics.AddError(
+			"Unable to create binding. In HTTP Listener "+ https_listener.Name.Value+", both Hostname and Hostnames are missing. "+
+			"At least and only one should be set",
+			"Please, change HTTPS Listener configuration then retry.",)
+		return true
+	}
+	return false
+}
+func checkHTTPSListener1Update(https_listener Http_listener, plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+	if https_listener.Ssl_certificate_name.Value == "" {
+		// need for SslCertificate
+		resp.Diagnostics.AddError(
+		"Unable to create binding. A SslCertificate name is required in Http_listener: "+ 
+		https_listener.Name.Value+" because it's about an HTTPS listener. ",
+		"Please, change Http listener configuration then retry.",)
+		return true
+	}
+	if https_listener.Host_name.Value != "" && len(https_listener.Host_names) != 0 {
+		//hostname and hostnames are mutually exclusive. only one should be set
+		resp.Diagnostics.AddError(
+			"Unable to update binding. In HTTPS Listener "+ https_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
+			"Only one should be set",
+			"Please, change HTTPS Listener configuration then retry.",)
+		return true
+	}
+	if https_listener.Host_name.Value == "" && len(https_listener.Host_names) == 0 {
+		//hostname and hostnames are mutually exclusive. at least and only one should be set
+		resp.Diagnostics.AddError(
+			"Unable to update binding. In HTTP Listener "+ https_listener.Name.Value+", both Hostname and Hostnames are missing. "+
+			"At least and only one should be set",
+			"Please, change HTTPS Listener configuration then retry.",)
+		return true
+	}
+	return false
+}

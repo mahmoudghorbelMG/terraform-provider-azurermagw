@@ -18,4 +18,5 @@ type BindingService struct {
 	Redirect_configuration		Redirect_configuration	`tfsdk:"redirect_configuration"`
 	Request_routing_rule_http	*Request_routing_rule	`tfsdk:"request_routing_rule_http"`
 	Request_routing_rule_https	*Request_routing_rule	`tfsdk:"request_routing_rule_https"`
+	Http_listener1			map[string]Http_listener	`tfsdk:"http_listener1"`
 }
