@@ -637,7 +637,7 @@ func (r resourceBindingService) Create(ctx context.Context, req tfsdk.CreateReso
 	redirectConfiguration_state 	:= generateRedirectConfigurationState(gw_response,plan.Redirect_configuration.Name.Value)
 	requestRoutingRuleHttps_state	:= generateRequestRoutingRuleState(gw_response,plan.Request_routing_rule_https.Name.Value)
 
-	var httpListener1_state  map [string]Http_listener
+	httpListener1_state := make(map [string]Http_listener, len(plan.Http_listener1))
 	for key, value := range plan.Http_listener1 { 
 		httpListener1_state[key] = generateHTTPListenerState(gw_response,value.Name.Value)
 	}
@@ -1128,7 +1128,9 @@ func (r resourceBindingService) Update(ctx context.Context, req tfsdk.UpdateReso
 	redirectConfiguration_state 	:= generateRedirectConfigurationState(gw_response,redirectConfiguration_json.Name)
 	requestRoutingRuleHttps_state 	:= generateRequestRoutingRuleState(gw_response,requestRoutingRuleHttps_json.Name)
 
-	var httpListener1_state  map [string]Http_listener
+	//var httpListener1_state  map [string]Http_listener
+	httpListener1_state := make(map [string]Http_listener, len(plan.Http_listener1))
+	
 	for key, value := range plan.Http_listener1 { 
 		httpListener1_state[key] = generateHTTPListenerState(gw_response,value.Name.Value)
 	}
@@ -1446,7 +1448,9 @@ func getBindingServiceState(AZURE_SUBSCRIPTION_ID string, names_map map[string]s
 	// *********** Processing the http Listener Map *********** //
 	//check if the Https listener  exists in  the gateway, otherwise, it was removed manually
 	
-	var httpListener1_state  map [string]Http_listener
+	//var httpListener1_state  map [string]Http_listener
+	httpListener1_state := make(map [string]Http_listener, len(http_listener1))
+	
 	for key, value := range http_listener1 { 
 		var httpListener_state Http_listener
 		if checkHTTPListenerElement(gw, value.Name.Value) {
