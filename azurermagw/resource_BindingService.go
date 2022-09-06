@@ -993,34 +993,46 @@ func (r resourceBindingService) Update(ctx context.Context, req tfsdk.UpdateReso
 
 	// *********** Processing http Listener Map *********** //	
 	//preparing the new elements (json) from the plan
-	for key, value := range plan.Http_listener1 { 
-		if checkHTTPListener1Update(value, gw, resp) {
+	for key, value_plan := range plan.Http_listener1 { 
+		if checkHTTPListener1Update(value_plan, gw, resp) {
 			return
 		}
-		httpListener_json := createHTTPListener(&value,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)	
+		httpListener_json := createHTTPListener(&value_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)	
 
 		//new https listener is ok. now we have to remove the old one
-		if value.Name.Value == state.Http_listener1[key].Name.Value {
-			//so we remove the old one before adding the new one.
-			removeHTTPListenerElement(&gw, httpListener_json.Name)
-		}else{
-			// it's most likely about http Listener update with a new name
-			// we have to check if the new http Listener name is already used
-			if checkHTTPListenerElement(gw, httpListener_json.Name) {
-				//this is an error. issue an exit error.
-				resp.Diagnostics.AddError(
-					"Unable to update the app gateway. The new http Listener name : "+ httpListener_json.Name+" already exists."+
-					"Could be due to the name of the http listener you are under declaring",
-					" Please, change the name then retry.",
-				)
-				return
+		value_state, exist := state.Http_listener1[key]
+		// if the http_listener that exist in the plan exist also in the state
+		if exist {
+			if value_plan.Name.Value == value_state.Name.Value {
+				//so we remove the old one before adding the new one.
+				removeHTTPListenerElement(&gw, httpListener_json.Name)
+			}else{
+				// it's most likely about http Listener update with a new name, or it no longer exist
+				// we have to check if the new http Listener name is already used
+				if checkHTTPListenerElement(gw, httpListener_json.Name) {
+					//this is an error. issue an exit error.
+					resp.Diagnostics.AddError(
+						"Unable to update the app gateway. The new http Listener name : "+ httpListener_json.Name+" already exists."+
+						"Could be due to the name of the http listener you are under declaring",
+						" Please, change the name then retry.",
+					)
+					return
+				}
+				//remove the old http Listener (old name) from the gateway
+				removeHTTPListenerElement(&gw, value_state.Name.Value)
 			}
-			//remove the old http Listener (old name) from the gateway
-			removeHTTPListenerElement(&gw, state.Http_listener1[key].Name.Value)
-		}
+		}		
 		//add the new one to the gw
 		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpListener_json)
-	}	
+	}
+	//check if there are some http_listeners that exist in the state but no longer exist in the plan
+	//they have to be removed from the gateway
+	for key, value_state := range state.Http_listener1 {
+		_, exist := plan.Http_listener1[key]
+		if !exist {
+			removeHTTPListenerElement(&gw, value_state.Name.Value)
+		}
+	}
 
 	// *********** Processing SSL Certificate *********** //	
 	//preparing the new elements (json) from the plan
