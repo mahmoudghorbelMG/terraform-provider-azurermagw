@@ -76,32 +76,16 @@ func createRedirectConfiguration(redirectConfiguration_plan Redirect_configurati
 	//there is a constraint for we have to check: Target_listener_name and target_url are mutually exclusive. 
 	//only one of has to be set
 	if redirectConfiguration_plan.Target_listener_name.Value != "" {
-		/*if redirectConfiguration_plan.Target_url.Value != "" {
-			//both are set
-			error_exclusivity = "fatal-both-exist"
-		}else{
-			//only Key_vault_secret_id is set
-			//check if its name match the HTTPS listener of the current config, else issue a warning
-			if redirectConfiguration_plan.Target_listener_name.Value == HTTPSListenerName {
-			*/	redirectConfiguration_json.Properties.TargetListener = &struct{
-					ID string "json:\"id,omitempty\""
-				}{
-					ID: target_listener_string + redirectConfiguration_plan.Target_listener_name.Value,
-				}
-			/*}else{
-				//Error exit
-				error_target = "fatal"
-			}	*/		
-		}
-	/*}else{*/
-		if redirectConfiguration_plan.Target_url.Value != "" {
-			//only Target_url is set.
-			redirectConfiguration_json.Properties.TargetURL = redirectConfiguration_plan.Target_url.Value
-		}/*else{
-			//both are empty
-			error_exclusivity = "fatal-both-miss"
-		}
-	}*/
+		redirectConfiguration_json.Properties.TargetListener = &struct{
+				ID string "json:\"id,omitempty\""
+			}{
+				ID: target_listener_string + redirectConfiguration_plan.Target_listener_name.Value,
+			}		
+	}	
+	if redirectConfiguration_plan.Target_url.Value != "" {
+		//only Target_url is set.
+		redirectConfiguration_json.Properties.TargetURL = redirectConfiguration_plan.Target_url.Value
+	}
 	return redirectConfiguration_json
 }
 func generateRedirectConfigurationState(gw ApplicationGateway, RedirectConfigurationName string) Redirect_configuration {
@@ -171,6 +155,7 @@ func checkRedirectConfigurationCreate(plan BindingService, gw ApplicationGateway
 		"Please, change configuration then retry.",)
 		return true
 	}
+	//fatal both don't exist
 	if plan.Redirect_configuration.Target_listener_name.Value == "" &&
 	plan.Redirect_configuration.Target_url.Value == "" {
 		resp.Diagnostics.AddError(
@@ -179,6 +164,7 @@ func checkRedirectConfigurationCreate(plan BindingService, gw ApplicationGateway
 		"Please, change configuration then retry.",)
 		return true
 	}	
+	//should be replaced by checking if the given Target_listener_name exist in http_listener map or in the gw
 	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
 		plan.Redirect_configuration.Target_listener_name.Value != plan.Https_listener.Name.Value{
 		resp.Diagnostics.AddError(
@@ -200,6 +186,7 @@ func checkRedirectConfigurationUpdate(plan BindingService, gw ApplicationGateway
 		"Please, change configuration then retry.",)
 		return true
 	}
+	//fatal both don't exist
 	if plan.Redirect_configuration.Target_listener_name.Value == "" &&
 	plan.Redirect_configuration.Target_url.Value == "" {
 		resp.Diagnostics.AddError(
@@ -207,7 +194,8 @@ func checkRedirectConfigurationUpdate(plan BindingService, gw ApplicationGateway
 		"are missing: Target_listener_name and Target_url. At least and only one has to be set. ",
 		"Please, change configuration then retry.",)
 		return true
-	}	
+	}
+	//should be replaced by checking if the given Target_listener_name exist in http_listener map or in the gw	
 	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
 		plan.Redirect_configuration.Target_listener_name.Value != plan.Https_listener.Name.Value{
 		resp.Diagnostics.AddError(

@@ -194,6 +194,7 @@ func removeRequestRoutingRuleElement(gw *ApplicationGateway, RequestRoutingRuleN
 }
 func checkRequestRoutingRuleHttpsCreate(plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
 	//check http_listener_name (https)
+	//should be replaced by checking if the given Http_listener_name exist in http_listener map or in the gw
 	if plan.Request_routing_rule_https.Http_listener_name.Value != plan.Https_listener.Name.Value {
 		// http_listener_name don't match with Https_listener.Name, issue exit error
 		resp.Diagnostics.AddError(
@@ -284,6 +285,7 @@ func checkRequestRoutingRuleHttpsCreate(plan BindingService, gw ApplicationGatew
 }
 func checkRequestRoutingRuleHttpsUpdate(plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
 	//check http_listener_name (https)
+	//should be replaced by checking if the given Http_listener_name exist in http_listener map or in the gw
 	if plan.Request_routing_rule_https.Http_listener_name.Value != plan.Https_listener.Name.Value {
 		// http_listener_name don't match with Https_listener.Name, issue exit error
 		resp.Diagnostics.AddError(

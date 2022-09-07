@@ -101,16 +101,11 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings, AZURE_SUBSCRI
 	//var error string
 	if backend_plan.Probe_name.Value != "" {
 		//we have to check here if the probe name matches probe name in terraform conf in plan.
-		//if backend_plan.Probe_name.Value == probeName {
-			backend_json.Properties.Probe = &struct{
-				ID string "json:\"id,omitempty\""
-			}{
-				ID: probe_string + backend_plan.Probe_name.Value,
-			}
-		/*}else{
-			//Error exit
-			error = "fatal"
-		}		*/
+		backend_json.Properties.Probe = &struct{
+			ID string "json:\"id,omitempty\""
+		}{
+			ID: probe_string + backend_plan.Probe_name.Value,
+		}		
 	}	
 	
 	return backend_json

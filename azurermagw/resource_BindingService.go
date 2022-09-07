@@ -470,22 +470,6 @@ func (r resourceBindingServiceType) GetSchema(_ context.Context) (tfsdk.Schema, 
 		},
 	}, nil
 }
-// set default values
-func intDefault(defaultValue int64) intDefaultModifier{
-	return intDefaultModifier{
-        Default: defaultValue,
-    }
-}
-func stringDefault(defaultValue string) stringDefaultModifier {
-	return stringDefaultModifier{
-        Default: defaultValue,
-    }
-}
-func boolDefault(defaultValue bool) boolDefaultModifier {
-	return boolDefaultModifier{
-        Default: defaultValue,
-    }
-}
 
 // New resource instance
 func (r resourceBindingServiceType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
@@ -589,7 +573,7 @@ func (r resourceBindingService) Create(ctx context.Context, req tfsdk.CreateReso
 
 	/************* generate and add Http listener Map **************/
 	for _, httpListener_plan := range plan.Http_listener1 { 
-		if checkHTTPListener1Create(httpListener_plan, gw, resp) {
+		if checkHTTPListener1Create(httpListener_plan, plan, gw, resp) {
 			return
 		}
 		httpListener_json := createHTTPListener(&httpListener_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)	
@@ -994,7 +978,7 @@ func (r resourceBindingService) Update(ctx context.Context, req tfsdk.UpdateReso
 	// *********** Processing http Listener Map *********** //	
 	//preparing the new elements (json) from the plan
 	for key, httpListener_plan := range plan.Http_listener1 { 
-		if checkHTTPListener1Update(httpListener_plan, gw, resp) {
+		if checkHTTPListener1Update(httpListener_plan, plan, gw, resp) {
 			return
 		}
 		httpListener_json := createHTTPListener(&httpListener_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)	
@@ -1308,6 +1292,24 @@ func (r resourceBindingService) ImportState(ctx context.Context, req tfsdk.Impor
 	}*/
 }
 
+// set default values
+func intDefault(defaultValue int64) intDefaultModifier{
+	return intDefaultModifier{
+        Default: defaultValue,
+    }
+}
+func stringDefault(defaultValue string) stringDefaultModifier {
+	return stringDefaultModifier{
+        Default: defaultValue,
+    }
+}
+func boolDefault(defaultValue bool) boolDefaultModifier {
+	return boolDefaultModifier{
+        Default: defaultValue,
+    }
+}
+
+// specific processing for binding service
 func getBindingServiceState(AZURE_SUBSCRIPTION_ID string, names_map map[string]string, http_listener1 map[string]Http_listener, Access_token string) BindingService {
 	
 	// Get gw from API and then update what is in state from what the API returns
@@ -1545,7 +1547,7 @@ func checkElementName(gw ApplicationGateway, plan BindingService) ([]string,bool
 	for key, httpListener_plan := range plan.Http_listener1 { 
 		if checkHTTPListenerElement(gw, httpListener_plan.Name.Value) {
 			exist = true 
-			existing_element_list = append(existing_element_list,"\n	- HTTPListener ("+key+"): "+httpsListener_plan.Name.Value)
+			existing_element_list = append(existing_element_list,"\n	- HTTPListener ("+key+"): "+httpListener_plan.Name.Value)
 		}
 	}
 	//check if the http_listener map contains a repetitive http_listener names
@@ -1553,11 +1555,11 @@ func checkElementName(gw ApplicationGateway, plan BindingService) ([]string,bool
 		for key1, httpListener_plan1 := range plan.Http_listener1 {
 			if (httpListener_plan.Name.Value == httpListener_plan1.Name.Value) && (key != key1) {
 				exist = true 
-				existing_element_list = append(existing_element_list,"\n	- HTTPListener ("+key+" and "+key1+"): "+httpsListener_plan.Name.Value)
+				existing_element_list = append(existing_element_list,"\n	- HTTPListener ("+key+" and "+key1+"): "+httpListener_plan.Name.Value)
 			}
 		}
 	}
-
+	existing_element_list = append(existing_element_list,"\n")
 	return existing_element_list,exist
 }
 func generatePriority(gw ApplicationGateway, level string) int {
@@ -1579,6 +1581,7 @@ func generatePriority(gw ApplicationGateway, level string) int {
 	}
 	return priority
 }
+
 //Client operations
 func getGW(subscriptionId string, resourceGroupName string, applicationGatewayName string, token string) ApplicationGateway {
 	requestURI := "https://management.azure.com/subscriptions/" + subscriptionId + "/resourceGroups/" +
