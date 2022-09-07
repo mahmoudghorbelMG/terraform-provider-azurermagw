@@ -520,7 +520,7 @@ func (r resourceBindingService) Create(ctx context.Context, req tfsdk.CreateReso
 	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
 	
 	//Check if the agw already contains an existing element that has the same name of a new element to add
-	exist_element, exist := checkElementName(gw, plan,plan.Http_listener,plan.Request_routing_rule_http)
+	exist_element, exist := checkElementName(gw, plan)
 	if exist {
 		resp.Diagnostics.AddError(
 			"Unable to create binding. This (these) element(s) already exist(s) in the app gateway: \n"+ fmt.Sprint(exist_element),
@@ -1478,7 +1478,7 @@ func getBindingServiceState(AZURE_SUBSCRIPTION_ID string, names_map map[string]s
 	/********************************************************/
 	return result
 }
-func checkElementName(gw ApplicationGateway, plan BindingService,httpListener_plan *Http_listener,requestRoutingRuleHttp_plan *Request_routing_rule) ([]string,bool){
+func checkElementName(gw ApplicationGateway, plan BindingService) ([]string,bool){
 	//This function allows to check if an element name in the required new configuration (plan BindingService) already exist in the gw.
 	//if so, the provider has to stop executing and issue an exit error
 	exist := false
@@ -1508,8 +1508,8 @@ func checkElementName(gw ApplicationGateway, plan BindingService,httpListener_pl
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpsListener_plan.Name.Value)
 	}
-	if httpListener_plan != nil {
-		//httpListener_plan 			:= httpListener_plan
+	if plan.Http_listener != nil {
+		httpListener_plan 			:= plan.Http_listener
 		if checkHTTPListenerElement(gw, httpListener_plan.Name.Value) {
 			exist = true 
 			existing_element_list = append(existing_element_list,"\n	- HTTPListener: "+httpListener_plan.Name.Value)
@@ -1531,7 +1531,8 @@ func checkElementName(gw ApplicationGateway, plan BindingService,httpListener_pl
 		exist = true 
 		existing_element_list = append(existing_element_list,"\n	- Request Routing Rule for HTTPS: "+requestRoutingRuleHttps_plan.Name.Value)
 	}
-	if requestRoutingRuleHttp_plan != nil {
+	if plan.Request_routing_rule_http != nil {
+		requestRoutingRuleHttp_plan := plan.Request_routing_rule_http
 		if checkRequestRoutingRuleElement(gw, requestRoutingRuleHttp_plan.Name.Value) {
 			exist = true 
 			existing_element_list = append(existing_element_list,"\n	- Request Routing Rule for HTTP: "+requestRoutingRuleHttp_plan.Name.Value)
@@ -1541,6 +1542,22 @@ func checkElementName(gw ApplicationGateway, plan BindingService,httpListener_pl
 			existing_element_list = append(existing_element_list,"\n	- Request Routing Rule for HTTP and HTTPS (new): "+requestRoutingRuleHttp_plan.Name.Value)
 		}
 	}
+	for key, httpListener_plan := range plan.Http_listener1 { 
+		if checkHTTPListenerElement(gw, httpListener_plan.Name.Value) {
+			exist = true 
+			existing_element_list = append(existing_element_list,"\n	- HTTPListener ("+key+"): "+httpsListener_plan.Name.Value)
+		}
+	}
+	//check if the http_listener map contains a repetitive http_listener names
+	for key, httpListener_plan := range plan.Http_listener1 { 
+		for key1, httpListener_plan1 := range plan.Http_listener1 {
+			if (httpListener_plan.Name.Value == httpListener_plan1.Name.Value) && (key != key1) {
+				exist = true 
+				existing_element_list = append(existing_element_list,"\n	- HTTPListener ("+key+" and "+key1+"): "+httpsListener_plan.Name.Value)
+			}
+		}
+	}
+
 	return existing_element_list,exist
 }
 func generatePriority(gw ApplicationGateway, level string) int {
