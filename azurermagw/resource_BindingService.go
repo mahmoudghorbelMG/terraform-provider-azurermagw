@@ -282,11 +282,16 @@ func (r resourceBindingServiceType) GetSchema(_ context.Context) (tfsdk.Schema, 
 					"data": {
 						Type:     types.StringType,
 						Optional: true,
+						Sensitive: true,
 					},
 					"password": {
 						Type:     types.StringType,
 						Optional: true,
 						Sensitive: true,
+					},
+					"public_cert_data": {
+						Type:     types.StringType,
+						Computed: true,
 					},
 				}),
 			},
