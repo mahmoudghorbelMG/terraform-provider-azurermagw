@@ -92,7 +92,7 @@ func generateSslCertificateState(gw ApplicationGateway, SslCertificateName strin
 		sslCertificate_state.Key_vault_secret_id.Null = true
 		//sslCertificate_state.Data = types.String{Value: sslCertificate_json.Properties.PublicCertData}
 		sslCertificate_state.Password = types.String{Value: ""} //sslCertificate_json.Properties.Password
-		sslCertificate_state.Public_cert_data = types.String{Value: sslCertificate_json.Properties.PublicCertData}
+		sslCertificate_state.Public_cert_data = types.String{Value: sslCertificate_json.Properties.Data}
 	}
 	
 	return sslCertificate_state
