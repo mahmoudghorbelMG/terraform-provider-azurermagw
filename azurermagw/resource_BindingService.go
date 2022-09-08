@@ -605,6 +605,7 @@ func (r resourceBindingService) Create(ctx context.Context, req tfsdk.CreateReso
 	//call the API to update the gw
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
 	
+	printToFile(error_json,"updateGW_create.json")
 	//verify if the API response is 200 (that means, normaly, elements were added to the gateway), otherwise exit error
 	if code != 200 {
 		// Error  - backend address pool wasn't added to the app gateway
@@ -1096,7 +1097,7 @@ func (r resourceBindingService) Update(ctx context.Context, req tfsdk.UpdateReso
 
 	//and update the gateway
 	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
-
+	printToFile(error_json,"updateGW_update.json")
 	//verify if the API response is 200 (that means, normaly, elements were added to the gateway), otherwise exit error
 	if code != 200 {
 		// Error  - when adding new elements to the app gateway
