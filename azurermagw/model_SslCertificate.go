@@ -62,7 +62,7 @@ func createSslCertificate(sslCertificate_plan Ssl_certificate,AZURE_SUBSCRIPTION
 		//only data is provided. check the password	
 		// data must be base64 encoded (from azurerm provider)
 		// output.ApplicationGatewaySslCertificatePropertiesFormat.Data = utils.String(utils.Base64EncodeIfNot(data))
-		sslCertificate_json.Properties.PublicCertData = sslCertificate_plan.Data.Value //base64EncodeIfNot(sslCertificate_plan.Data.Value)
+		sslCertificate_json.Properties.PublicCertData = base64EncodeIfNot(sslCertificate_plan.Data.Value)
 		sslCertificate_json.Properties.Password = sslCertificate_plan.Password.Value 
 	}
 	return sslCertificate_json
