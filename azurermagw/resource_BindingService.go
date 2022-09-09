@@ -376,7 +376,15 @@ func (r resourceBindingService) Create(ctx context.Context, req tfsdk.CreateReso
 			"Please, change its (their) name(s) then retry.",
 		)
 		return
-	}
+	}/*
+	exist_element, exist = checkPlanElementName(plan)
+	if exist {
+		resp.Diagnostics.AddError(
+			"Unable to create binding. This (these) element(s) have the same key in the configuration: \n"+ fmt.Sprint(exist_element),
+			"Please, change its (their) key(s) then retry.",
+		)
+		return
+	}*/
 	
 	//create, map and add the new elements (json) object from the plan to the agw object
 	/************* generate and add BackendAddressPool **************/
@@ -642,37 +650,42 @@ func (r resourceBindingService) Update(ctx context.Context, req tfsdk.UpdateReso
 	
 	// *********** Processing http Listener Map *********** //	
 	//preparing the new elements (json) from the plan
-	for key, httpListener_plan := range plan.Http_listeners { 
+	for key, httpListener_plan := range plan.Http_listeners {
 		if checkHTTPListenerUpdate(httpListener_plan, plan, gw, resp) {
 			return
 		}
-		httpListener_json := createHTTPListener(&httpListener_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)	
-
-		//new https listener is ok. now we have to remove the old one
+		// we have to remove the old http listener before creating the new one
 		httpListener_state, exist := state.Http_listeners[key]
 		// if the http_listener that exist in the plan exist also in the state
-		  
 		if exist && (httpListener_plan.Name.Value == httpListener_state.Name.Value) {
-			//so we remove the old one before adding the new one.
-			removeHTTPListenerElement(&gw, httpListener_json.Name)
+			//so remove the old one before adding the new one.
+			removeHTTPListenerElement(&gw, httpListener_plan.Name.Value)
 		}else{
-			// it's most likely about http Listener update with a new name, or it no longer exist
-			// we have to check if the new http Listener name is already used
-			if checkHTTPListenerElement(gw, httpListener_json.Name) {
-				//this is an error. issue an exit error.
-				resp.Diagnostics.AddError(
-					"Unable to update the app gateway. The new http Listener name : "+ httpListener_json.Name+" already exists. "+
-					"It can be due to the name of the http listener you are under declaring",
-					" Please, change the name then retry.",
-				)
-				return
-			}
-			//remove the old http Listener (old name) from the gateway
+			// it's most likely about http Listener update:
+			//	1) with a new name, 
+			//	2) or with a new key 
+			//	3) or it no longer exist
+			
+			//remove the old http Listener (old http listener name under the same key) from the gateway
 			if exist {
 				removeHTTPListenerElement(&gw, httpListener_state.Name.Value)
 			}
+			//check if the httpListener_plan name already exist in the old state but under different key, in order to remove it
+			if checkHTTPListenerNameInMap(httpListener_plan.Name.Value, state.Http_listeners) {
+				removeHTTPListenerElement(&gw, httpListener_plan.Name.Value)
+			}
+			// now check if the new http Listener name is already used in the gateway, no need to check it in the http listener map, 
+			// because it will be done incrementally whenever a new http listener is added to the gw.
+			if checkHTTPListenerElement(gw, httpListener_plan.Name.Value) {
+				//this is an error. issue an exit error.
+				resp.Diagnostics.AddError(
+					"Unable to update the app gateway. The new http Listener name : "+ httpListener_plan.Name.Value+" already exists. "+
+					"It can be due to the name of the http listener you are under declaring",
+					" Please, change the name then retry.",				)
+				return
+			}
 		}
-				
+		httpListener_json := createHTTPListener(&httpListener_plan,r.p.AZURE_SUBSCRIPTION_ID,resourceGroupName,applicationGatewayName)	
 		//add the new one to the gw
 		gw.Properties.HTTPListeners = append(gw.Properties.HTTPListeners,httpListener_json)
 	}
@@ -1105,7 +1118,6 @@ func getBindingServiceState(AZURE_SUBSCRIPTION_ID string, names_map map[string]s
 	// *********** Processing the http Listener Map *********** //
 	//check if the Https listener  exists in  the gateway, otherwise, it was removed manually
 	
-	//var httpListeners_state  map [string]Http_listener
 	httpListeners_state := make(map [string]Http_listener, len(http_listeners))
 	
 	for key, value := range http_listeners { 
@@ -1190,6 +1202,28 @@ func checkElementName(gw ApplicationGateway, plan BindingService) ([]string,bool
 		}
 	}
 	//check if the requestRoutingRule map contains a repetitive requestRoutingRule names
+	for key, requestRoutingRule_plan := range plan.Request_routing_rules { 
+		for key1, requestRoutingRule_plan1 := range plan.Request_routing_rules {
+			if (requestRoutingRule_plan.Name.Value == requestRoutingRule_plan1.Name.Value) && (key != key1) {
+				exist = true 
+				existing_element_list = append(existing_element_list,"\n	- Request Routing Rule ("+key+" and "+key1+"): "+requestRoutingRule_plan.Name.Value)
+			}
+		}
+	}
+	existing_element_list = append(existing_element_list,"\n")
+	return existing_element_list,exist
+}
+func checkPlanElementName(plan BindingService) ([]string,bool){
+	exist := false
+	var existing_element_list [] string
+	for key, httpListener_plan := range plan.Http_listeners { 
+		for key1, httpListener_plan1 := range plan.Http_listeners {
+			if (httpListener_plan.Name.Value != httpListener_plan1.Name.Value) && (key != key1) {
+				exist = true 
+				existing_element_list = append(existing_element_list,"\n	- HTTPListener ("+key+" and "+key1+"): "+httpListener_plan.Name.Value)
+			}
+		}
+	}
 	for key, requestRoutingRule_plan := range plan.Request_routing_rules { 
 		for key1, requestRoutingRule_plan1 := range plan.Request_routing_rules {
 			if (requestRoutingRule_plan.Name.Value == requestRoutingRule_plan1.Name.Value) && (key != key1) {
