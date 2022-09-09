@@ -269,6 +269,7 @@ func removeHTTPListenerElement(gw *ApplicationGateway, HTTPListenerName string) 
 		}
 	}
 }
+/*
 func checkHTTPListenerCreate(plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
 	if plan.Http_listener.Ssl_certificate_name.Value != "" {
 		//no need for SslCertificate
@@ -378,8 +379,8 @@ func checkHTTPSListenerUpdate(plan BindingService, gw ApplicationGateway, resp *
 		return true
 	}
 	return false
-}
-func checkHTTPListener1Create(http_listener Http_listener, plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+}*/
+func checkHTTPListenerCreate(http_listener Http_listener, plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
 	if http_listener.Ssl_certificate_name.Value != "" && strings.EqualFold(http_listener.Protocol.Value,"http") {
 		//no need for SslCertificate
 		resp.Diagnostics.AddError(
@@ -424,7 +425,7 @@ func checkHTTPListener1Create(http_listener Http_listener, plan BindingService, 
 	}
 	return false
 }
-func checkHTTPListener1Update(http_listener Http_listener, plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+func checkHTTPListenerUpdate(http_listener Http_listener, plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
 	if http_listener.Ssl_certificate_name.Value != "" && strings.EqualFold(http_listener.Protocol.Value,"http") {
 		//no need for SslCertificate
 		resp.Diagnostics.AddError(
@@ -466,6 +467,14 @@ func checkHTTPListener1Update(http_listener Http_listener, plan BindingService, 
 			"At least and only one should be set",
 			"Please, change HTTP Listener configuration then retry.",)
 		return true
+	}
+	return false
+}
+func checkHTTPListenerNameInMap(HTTPListenerName string, http_listeners map[string]Http_listener) bool{
+	for _, value := range http_listeners {
+		if HTTPListenerName == value.Name.Value {
+			return true
+		}
 	}
 	return false
 }

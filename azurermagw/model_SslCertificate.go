@@ -65,7 +65,8 @@ func createSslCertificate(sslCertificate_plan Ssl_certificate,AZURE_SUBSCRIPTION
 		//only data is provided. check the password	
 		// data must be base64 encoded (from azurerm provider)
 		// output.ApplicationGatewaySslCertificatePropertiesFormat.Data = utils.String(utils.Base64EncodeIfNot(data))
-		sslCertificate_json.Properties.Data = base64EncodeIfNot(sslCertificate_plan.Data.Value)
+		//sslCertificate_json.Properties.PublicCertData = base64EncodeIfNot(sslCertificate_plan.Data.Value) only for GET
+		sslCertificate_json.Properties.Data = base64EncodeIfNot(sslCertificate_plan.Data.Value) //only for PUT
 		sslCertificate_json.Properties.Password = sslCertificate_plan.Password.Value 
 	}
 	return sslCertificate_json
@@ -92,7 +93,9 @@ func generateSslCertificateState(gw ApplicationGateway, SslCertificateName strin
 		sslCertificate_state.Key_vault_secret_id.Null = true
 		//sslCertificate_state.Data = types.String{Value: sslCertificate_json.Properties.PublicCertData}
 		sslCertificate_state.Password = types.String{Value: ""} //sslCertificate_json.Properties.Password
-		sslCertificate_state.Public_cert_data = types.String{Value: sslCertificate_json.Properties.Data}
+		sslCertificate_state.Public_cert_data = types.String{Value: sslCertificate_json.Properties.PublicCertData}
+		//the problem here is that the value of PublicCertData extracted from the gw_response resulted after calling updateGw() 
+		// is null because the API is under executing the request (which take some seconds)
 	}
 	
 	return sslCertificate_state

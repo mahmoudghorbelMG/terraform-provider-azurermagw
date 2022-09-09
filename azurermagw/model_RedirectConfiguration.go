@@ -164,16 +164,17 @@ func checkRedirectConfigurationCreate(plan BindingService, gw ApplicationGateway
 		"Please, change configuration then retry.",)
 		return true
 	}	
-	//should be replaced by checking if the given Target_listener_name exist in http_listener map or in the gw
+	// check if the given Target_listener_name exist in http_listeners map or in the gw
 	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
-		plan.Redirect_configuration.Target_listener_name.Value != plan.Https_listener.Name.Value{
+		!checkHTTPListenerNameInMap(plan.Redirect_configuration.Target_listener_name.Value, plan.Http_listeners) &&
+		!checkHTTPListenerElement(gw, plan.Redirect_configuration.Target_listener_name.Value){
 		resp.Diagnostics.AddError(
 		"Unable to create binding. In the target HTTPS Listener ("+plan.Redirect_configuration.Target_listener_name.Value+") declared in Redirect Configuration : "+ 
-		plan.Redirect_configuration.Name.Value+" doesn't match the HTTPS Listener conf : "+plan.Https_listener.Name.Value,
-		"Please, change HTTPS Listener name then retry.",
+		plan.Redirect_configuration.Name.Value+" doesn't match any existing (in the gw) nor declared (in the tf) HTTP Listener. ",
+		"Please, change HTTP Listener name then retry.",
 		)
 		return true
-	}
+	} 
 	return false
 }
 func checkRedirectConfigurationUpdate(plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
@@ -195,15 +196,16 @@ func checkRedirectConfigurationUpdate(plan BindingService, gw ApplicationGateway
 		"Please, change configuration then retry.",)
 		return true
 	}
-	//should be replaced by checking if the given Target_listener_name exist in http_listener map or in the gw	
+	// check if the given Target_listener_name exist in http_listeners map or in the gw
 	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
-		plan.Redirect_configuration.Target_listener_name.Value != plan.Https_listener.Name.Value{
+		!checkHTTPListenerNameInMap(plan.Redirect_configuration.Target_listener_name.Value, plan.Http_listeners) &&
+		!checkHTTPListenerElement(gw, plan.Redirect_configuration.Target_listener_name.Value){
 		resp.Diagnostics.AddError(
-		"Unable to update binding. In the target HTTPS Listener ("+plan.Redirect_configuration.Target_listener_name.Value+") declared in Redirect Configuration : "+ 
-		plan.Redirect_configuration.Name.Value+" doesn't match the HTTPS Listener conf : "+plan.Https_listener.Name.Value,
-		"Please, change HTTPS Listener name then retry.",
+		"Unable to create binding. In the target HTTPS Listener ("+plan.Redirect_configuration.Target_listener_name.Value+") declared in Redirect Configuration : "+ 
+		plan.Redirect_configuration.Name.Value+" doesn't match any existing (in the gw) nor declared (in the tf) HTTP Listener. ",
+		"Please, change HTTP Listener name then retry.",
 		)
 		return true
-	}
+	} 
 	return false
 }
