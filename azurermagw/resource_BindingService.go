@@ -691,12 +691,12 @@ func (r resourceBindingService) Update(ctx context.Context, req tfsdk.UpdateReso
 	}
 	//check if there are some http_listeners that exist in the state but no longer exist in the plan
 	//they have to be removed from the gateway
-	for key, httpListener_state := range state.Http_listeners {
+	/*for key, httpListener_state := range state.Http_listeners {
 		_, exist := plan.Http_listeners[key]
 		if !exist {
 			removeHTTPListenerElement(&gw, httpListener_state.Name.Value)
 		}
-	}
+	}*/
 
 	var priority int 	
 	// *********** Processing request Routing Rule Map *********** //	
