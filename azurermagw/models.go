@@ -19,5 +19,5 @@ type BindingService struct {
 	//Request_routing_rule_http	*Request_routing_rule			`tfsdk:"request_routing_rule_http"`
 	//Request_routing_rule_https	*Request_routing_rule			`tfsdk:"request_routing_rule_https"`
 	Http_listeners				map[string]Http_listener		`tfsdk:"http_listeners"`
-	Request_routing_rules 		map[string]Request_routing_rule `tfsdk:"Request_routing_rules"`
+	Request_routing_rules 		map[string]Request_routing_rule `tfsdk:"request_routing_rules"`
 }
