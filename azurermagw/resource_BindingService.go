@@ -717,42 +717,48 @@ func (r resourceBindingService) Update(ctx context.Context, req tfsdk.UpdateReso
 		}else{
 			priority = generatePriority(gw,"high")
 		}
-
-		requestRoutingRule_json := createRequestRoutingRule(&requestRoutingRule_plan, priority, 
-			r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName)	
-
+		
 		//new request Routing Rule is ok. now we have to remove the old one
 		//requestRoutingRule_state, exist := state.Request_routing_rules[key]
 		// if the request Routing Rule that exist in the plan exist also in the state		  
 		if exist && (requestRoutingRule_plan.Name.Value == requestRoutingRule_state.Name.Value) {
 			//so we remove the old one before adding the new one.
-			removeRequestRoutingRuleElement(&gw, requestRoutingRule_json.Name)
+			removeRequestRoutingRuleElement(&gw, requestRoutingRule_plan.Name.Value)
 		}else{
-			// it's most likely about request Routing Rule update with a new name, or it no longer exist
-			// we have to check if the new request Routing Rule name is already used
-			if checkRequestRoutingRuleElement(gw, requestRoutingRule_json.Name) {
-				//this is an error. issue an exit error.
-				resp.Diagnostics.AddError(
-					"Unable to update the app gateway. The new request Routing Rule name : "+ requestRoutingRule_json.Name+" already exists. "+
-					"It can be due to the name of the request Routing Rule you are under declaring",
-					" Please, change the name then retry.",
-				)
-				return
-			}
+			// it's most likely about request Routing Rule update:
+			//	1) with a new name, 
+			//	2) or with a new key 
+			//	3) or it no longer exist
+
 			//remove the old request Routing Rule (old name) from the gateway
 			if exist {
 				removeRequestRoutingRuleElement(&gw, requestRoutingRule_state.Name.Value)
 			}
+			//check if the requestRoutingRule_plan name already exist in the old state but under different key, in order to remove it
+			if checkRequestRoutingRuleNameInMap(requestRoutingRule_plan.Name.Value, state.Request_routing_rules) {
+				removeRequestRoutingRuleElement(&gw, requestRoutingRule_plan.Name.Value)
+			}
+			// we have to check if the new request Routing Rule name is already used in the gateway, no need to check it in the requestRoutingRule map, 
+			// because it will be done incrementally whenever a new requestRoutingRule is added to the gw.
+			if checkRequestRoutingRuleElement(gw, requestRoutingRule_plan.Name.Value) {
+				//this is an error. issue an exit error.
+				resp.Diagnostics.AddError(
+					"Unable to update the app gateway. The new request Routing Rule name : "+ requestRoutingRule_plan.Name.Value+" already exists. "+
+					"It can be due to the name of the request Routing Rule you are under declaring",
+					" Please, change the name then retry.",
+				)
+				return
+			}			
 		}
-				
+		requestRoutingRule_json := createRequestRoutingRule(&requestRoutingRule_plan, priority, 
+			r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName)		
 		//add the new one to the gw
 		gw.Properties.RequestRoutingRules = append(gw.Properties.RequestRoutingRules,requestRoutingRule_json)
 	}
 	//check if there are some request Routing Rules that exist in the state but no longer exist in the plan
 	//they have to be removed from the gateway
-	for key, requestRoutingRule_state := range state.Request_routing_rules {
-		_, exist := plan.Request_routing_rules[key]
-		if !exist {
+	for _, requestRoutingRule_state := range state.Request_routing_rules {
+		if checkRequestRoutingRuleNameInMap(requestRoutingRule_state.Name.Value, plan.Request_routing_rules) {
 			removeRequestRoutingRuleElement(&gw, requestRoutingRule_state.Name.Value)
 		}
 	}

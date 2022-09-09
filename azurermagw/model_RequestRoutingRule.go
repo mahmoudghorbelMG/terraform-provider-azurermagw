@@ -394,3 +394,11 @@ func checkRequestRoutingRuleUpdate(key string, plan BindingService, gw Applicati
 	}
 	return false
 }
+func checkRequestRoutingRuleNameInMap(RequestRoutingRuleName string, request_routing_rules map[string]Request_routing_rule) bool {
+	for _, value := range request_routing_rules {
+		if RequestRoutingRuleName == value.Name.Value {
+			return true
+		}
+	}
+	return false
+}
