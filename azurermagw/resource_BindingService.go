@@ -758,7 +758,7 @@ func (r resourceBindingService) Update(ctx context.Context, req tfsdk.UpdateReso
 	//check if there are some request Routing Rules that exist in the state but no longer exist in the plan
 	//they have to be removed from the gateway
 	for _, requestRoutingRule_state := range state.Request_routing_rules {
-		if checkRequestRoutingRuleNameInMap(requestRoutingRule_state.Name.Value, plan.Request_routing_rules) {
+		if !checkRequestRoutingRuleNameInMap(requestRoutingRule_state.Name.Value, plan.Request_routing_rules) {
 			removeRequestRoutingRuleElement(&gw, requestRoutingRule_state.Name.Value)
 		}
 	}
