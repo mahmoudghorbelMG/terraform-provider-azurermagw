@@ -34,6 +34,8 @@ func (r resourceBindingServiceType) GetSchema(_ context.Context) (tfsdk.Schema, 
 			"name": { // Containe the name of the Binding resource
 				Type:     types.StringType,
 				Required: true,
+				Description: "This is a description message",
+				MarkdownDescription: "This is a MarkdownDescription message",
 			},
 			"application_gateway_name": {
 				Type:     types.StringType,

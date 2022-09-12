@@ -17,21 +17,16 @@ description: |-
 
 ### Required
 
-- `agw_name` (String)
-- `agw_rg` (String)
+- `application_gateway_name` (String)
+- `application_gateway_resource_group_name` (String)
 - `backend_address_pool` (Attributes) (see [below for nested schema](#nestedatt--backend_address_pool))
 - `backend_http_settings` (Attributes) (see [below for nested schema](#nestedatt--backend_http_settings))
-- `https_listener` (Attributes) (see [below for nested schema](#nestedatt--https_listener))
-- `name` (String)
+- `http_listeners` (Attributes Map) (see [below for nested schema](#nestedatt--http_listeners))
+- `name` (String) This is a MarkdownDescription message
 - `probe` (Attributes) (see [below for nested schema](#nestedatt--probe))
 - `redirect_configuration` (Attributes) (see [below for nested schema](#nestedatt--redirect_configuration))
-- `request_routing_rule_https` (Attributes) (see [below for nested schema](#nestedatt--request_routing_rule_https))
+- `request_routing_rules` (Attributes Map) (see [below for nested schema](#nestedatt--request_routing_rules))
 - `ssl_certificate` (Attributes) (see [below for nested schema](#nestedatt--ssl_certificate))
-
-### Optional
-
-- `http_listener` (Attributes) (see [below for nested schema](#nestedatt--http_listener))
-- `request_routing_rule_http` (Attributes) (see [below for nested schema](#nestedatt--request_routing_rule_http))
 
 <a id="nestedatt--backend_address_pool"></a>
 ### Nested Schema for `backend_address_pool`
@@ -72,8 +67,8 @@ Read-Only:
 - `id` (String)
 
 
-<a id="nestedatt--https_listener"></a>
-### Nested Schema for `https_listener`
+<a id="nestedatt--http_listeners"></a>
+### Nested Schema for `http_listeners`
 
 Required:
 
@@ -146,8 +141,8 @@ Read-Only:
 - `id` (String)
 
 
-<a id="nestedatt--request_routing_rule_https"></a>
-### Nested Schema for `request_routing_rule_https`
+<a id="nestedatt--request_routing_rules"></a>
+### Nested Schema for `request_routing_rules`
 
 Required:
 
@@ -178,57 +173,12 @@ Required:
 
 Optional:
 
-- `data` (String)
+- `data` (String, Sensitive)
 - `key_vault_secret_id` (String)
 - `password` (String, Sensitive)
 
 Read-Only:
 
 - `id` (String)
-
-
-<a id="nestedatt--http_listener"></a>
-### Nested Schema for `http_listener`
-
-Required:
-
-- `frontend_ip_configuration_name` (String)
-- `frontend_port_name` (String)
-- `name` (String)
-- `protocol` (String)
-
-Optional:
-
-- `host_name` (String)
-- `host_names` (List of String)
-- `require_sni` (Boolean)
-- `ssl_certificate_name` (String)
-
-Read-Only:
-
-- `id` (String)
-
-
-<a id="nestedatt--request_routing_rule_http"></a>
-### Nested Schema for `request_routing_rule_http`
-
-Required:
-
-- `http_listener_name` (String)
-- `name` (String)
-- `rule_type` (String)
-
-Optional:
-
-- `backend_address_pool_name` (String)
-- `backend_http_settings_name` (String)
-- `redirect_configuration_name` (String)
-- `rewrite_rule_set_name` (String)
-- `url_path_map_name` (String)
-
-Read-Only:
-
-- `id` (String)
-- `priority` (String)
 
 
