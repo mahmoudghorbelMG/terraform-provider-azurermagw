@@ -8,9 +8,124 @@ description: |-
 
 # azurermagw_binding_service (Resource)
 
+Manages binding service resource.
 
+## Example Usage
+```hcl
+locals {
+  probe_name                  = "probe-example"
+  ssl_certificate_name        = "ssl-certificate-example"
+  secret_id                   = "https://keyvault-name.vault.azure.net/secrets/kv-ssl-certificate-name"
+  frontend_ip_configuration   = "app-gateway-fe-ip-config"
+  frontend_port_http          = "app-gateway-fe-port"
+  frontend_port_https         = "app-gateway-fe-port-443"
+  backend_address_pool_name   = "backendAddressPool-example"
+  backend_http_settings_name  = "backendHttpSettings-example"
+  redirect_configuration_name = "redirectconfiguration-example"
+  https_listener1_name        = "http-listener-example-https1"
+  https_listener2_name        = "http-listener-example-https2"
+  http_listener_name          = "http-listener-example-http"
+}
+resource "azurermagw_binding_service" "binding-service-resource" {
+  name                                    = "binding-service-example"
+  application_gateway_name                = "application-gateway-name"
+  application_gateway_resource_group_name = "resource-group-name"
 
+backend_address_pool = {
+    name         = local.backend_address_pool_name
+    fqdns        = ["www.my-app-backend.com"]
+    ip_addresses = ["10.2.3.3"]
+  }
 
+  backend_http_settings = {
+    name                                = local.backend_http_settings_name
+    cookie_based_affinity               = "Disabled"
+    pick_host_name_from_backend_address = true
+    port                                = 443
+    probe_name                          = local.probe_name 
+    protocol                            = "Https"
+    request_timeout                     = 667
+  }
+
+  probe = {
+    name                                      = local.probe_name 
+    interval                                  = 30
+    protocol                                  = "Https"
+    path                                      = "/"
+    timeout                                   = 30
+    unhealthy_threshold                       = 3
+    pick_host_name_from_backend_http_settings = true
+    minimum_servers                           = 1
+    match = {
+      body        = ""
+      status_code = ["200-399"]
+    }
+  }
+
+  redirect_configuration = {
+    name                 = local.redirect_configuration_name
+    redirect_type        = "Permanent"
+    target_listener_name = local.https_listener1_name
+  }
+
+  ssl_certificate = {
+    name                = local.ssl_certificate_name
+    key_vault_secret_id = local.secret_id
+  }
+
+  http_listeners = {
+    "http_0" = {
+        frontend_ip_configuration_name = local.frontend_ip_configuration
+        frontend_port_name             = local.frontend_port_http
+        host_name                      = "www.my-app.com"
+        name                           = local.http_listener_name
+        protocol                       = "Http"
+        require_sni                    = false
+    },
+    "my-https-listener-key" = {
+        frontend_ip_configuration_name =local.frontend_ip_configuration
+        frontend_port_name             = local.frontend_port_https
+        host_name                      = "www.my-app.com"
+        name                           = local.https_listener1_name
+        protocol                       = "Https"
+        require_sni                    = true
+        ssl_certificate_name           = local.ssl_certificate_name
+    },
+    "https-listener-2" = {
+        frontend_ip_configuration_name =local.frontend_ip_configuration
+        frontend_port_name             = local.frontend_port_https
+        host_name                      = "www.my-app-2.com"
+        name                           = local.https_listener2_name
+        protocol                       = "Https"
+        require_sni                    = true
+        ssl_certificate_name           = local.ssl_certificate_name
+    }
+  }
+
+  request_routing_rules = {
+    "request_routing_rule_https1" = {
+        backend_address_pool_name  = local.backend_address_pool_name
+        backend_http_settings_name = local.backend_http_settings_name
+        http_listener_name         = local.https_listener1_name
+        name                       = "requestroutingrule-example1"
+        rule_type                  = "Basic"
+    },
+    "request_routing_rule_http" = {
+        http_listener_name          = local.http_listener_name
+        name                        = "requestroutingrule-example2"
+        rule_type                   = "Basic"
+        redirect_configuration_name = local.redirect_configuration_name
+    },
+    "request_routing_rule_https2" = {
+        http_listener_name          = local.https_listener2_name
+        name                        = "requestroutingrule-example3"
+        rule_type                   = "Basic"
+        redirect_configuration_name = local.redirect_configuration_name
+    }
+  }
+}
+
+```
 
 <!-- schema generated by tfplugindocs -->
 ## Schema
