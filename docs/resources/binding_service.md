@@ -17,32 +17,32 @@ description: |-
 
 ### Required
 
-- `application_gateway_name` (String)
-- `application_gateway_resource_group_name` (String)
-- `backend_address_pool` (Attributes) (see [below for nested schema](#nestedatt--backend_address_pool))
-- `backend_http_settings` (Attributes) (see [below for nested schema](#nestedatt--backend_http_settings))
-- `http_listeners` (Attributes Map) (see [below for nested schema](#nestedatt--http_listeners))
-- `name` (String) This is a MarkdownDescription message
-- `probe` (Attributes) (see [below for nested schema](#nestedatt--probe))
-- `redirect_configuration` (Attributes) (see [below for nested schema](#nestedatt--redirect_configuration))
-- `request_routing_rules` (Attributes Map) (see [below for nested schema](#nestedatt--request_routing_rules))
-- `ssl_certificate` (Attributes) (see [below for nested schema](#nestedatt--ssl_certificate))
+- `application_gateway_name` (String) The name of the application gateway to which the backend application will be binded.
+- `application_gateway_resource_group_name` (String) The name of the resource group where the application gateway is deployed.
+- `backend_address_pool` (Attributes) For this provider version, only one `backend_address_pool` block can be set as defined below. (see [below for nested schema](#nestedatt--backend_address_pool))
+- `backend_http_settings` (Attributes) For this provider version, only one `backend_http_settings` block can be set as defined below. (see [below for nested schema](#nestedatt--backend_http_settings))
+- `http_listeners` (Attributes Map) At least one block has to be defined. The http_listeners block has to be defiend as a mapwith a key name for each `http_listener`. See Example usage for details. (see [below for nested schema](#nestedatt--http_listeners))
+- `name` (String) The name of the binding service that bind an backend application (VM, web app, container web app, etc.) to the azure application gateway.
+- `probe` (Attributes) For this provider version, only one `probe` block can be set as defined below (see [below for nested schema](#nestedatt--probe))
+- `redirect_configuration` (Attributes) For this provider version, only one `redirect_configuration` block can be set as defined below (see [below for nested schema](#nestedatt--redirect_configuration))
+- `request_routing_rules` (Attributes Map) At least one block has to be defined. The request routing rules block has to be defiend as a map with a key name for each `request_routing_rule`. See Example usage for details. (see [below for nested schema](#nestedatt--request_routing_rules))
+- `ssl_certificate` (Attributes) For this provider version, only one `ssl_certificate` block can be set as defined below (see [below for nested schema](#nestedatt--ssl_certificate))
 
 <a id="nestedatt--backend_address_pool"></a>
 ### Nested Schema for `backend_address_pool`
 
 Required:
 
-- `name` (String)
+- `name` (String) The name of the Backend Address Pool.
 
 Optional:
 
-- `fqdns` (List of String)
-- `ip_addresses` (List of String)
+- `fqdns` (List of String) A list of FQDN's which should be part of the Backend Address Pool.
+- `ip_addresses` (List of String) A list of IP Addresses which should be part of the Backend Address Pool.
 
 Read-Only:
 
-- `id` (String)
+- `id` (String) The ID of the `backend_address_pool`.
 
 
 <a id="nestedatt--backend_http_settings"></a>
@@ -50,21 +50,21 @@ Read-Only:
 
 Required:
 
-- `cookie_based_affinity` (String)
-- `name` (String)
-- `port` (Number)
-- `protocol` (String)
-- `request_timeout` (Number)
+- `cookie_based_affinity` (String) Is Cookie-Based Affinity enabled? Possible values are `Enabled` and `Disabled`.
+- `name` (String) The name of the Backend HTTP Settings Collection.
+- `port` (Number) The port which should be used for this Backend HTTP Settings Collection.
+- `protocol` (String) The Protocol which should be used. Possible values are `Http` and `Https`.
+- `request_timeout` (Number) The request timeout in seconds, which must be between 1 and 86400 seconds.
 
 Optional:
 
-- `affinity_cookie_name` (String)
-- `pick_host_name_from_backend_address` (Boolean)
-- `probe_name` (String)
+- `affinity_cookie_name` (String) The name of the affinity cookie. Required if `cookie_based_affinity` is `Enabled`
+- `pick_host_name_from_backend_address` (Boolean) Whether host header should be picked from the host name of the backend server. Defaults to `false`.
+- `probe_name` (String) The name of an associated HTTP Probe.
 
 Read-Only:
 
-- `id` (String)
+- `id` (String) The ID of the `backend_http_settings`.
 
 
 <a id="nestedatt--http_listeners"></a>
@@ -72,21 +72,21 @@ Read-Only:
 
 Required:
 
-- `frontend_ip_configuration_name` (String)
-- `frontend_port_name` (String)
-- `name` (String)
-- `protocol` (String)
+- `frontend_ip_configuration_name` (String) The Name of the Frontend IP Configuration used for this HTTP Listener.
+- `frontend_port_name` (String) The Name of the Frontend Port use for this HTTP Listener.
+- `name` (String) The Name of the HTTP Listener.
+- `protocol` (String) The Protocol to use for this HTTP Listener. Possible values are `Http` and `Https`.
 
 Optional:
 
-- `host_name` (String)
-- `host_names` (List of String)
-- `require_sni` (Boolean)
-- `ssl_certificate_name` (String)
+- `host_name` (String) The Hostname which should be used for this HTTP Listener. Setting this value changes Listener Type to 'Multi site', however, this option is not supported by the provider version.
+- `host_names` (List of String) A list of Hostname(s) should be used for this HTTP Listener. It allows special wildcard characters.The `host_names` and `host_name` are mutually exclusive and cannot both be set.
+- `require_sni` (Boolean) Should Server Name Indication be Required? Defaults to `false`.
+- `ssl_certificate_name` (String) The name of the associated SSL Certificate which should be used for this HTTP Listener.It has to match a Ssl certificate name declared in the binding service resource.
 
 Read-Only:
 
-- `id` (String)
+- `id` (String) The ID of the `http_listener`.
 
 
 <a id="nestedatt--probe"></a>
@@ -94,30 +94,30 @@ Read-Only:
 
 Required:
 
-- `interval` (Number)
-- `match` (Attributes) (see [below for nested schema](#nestedatt--probe--match))
-- `name` (String)
-- `path` (String)
-- `protocol` (String)
-- `timeout` (Number)
-- `unhealthy_threshold` (Number)
+- `interval` (Number) The Interval between two consecutive probes in seconds. Possible values range from 1 second to a maximum of 86,400 seconds.
+- `match` (Attributes) A `match` block as defined above. (see [below for nested schema](#nestedatt--probe--match))
+- `name` (String) The Name of the Probe.
+- `path` (String) The Path used for this Probe.
+- `protocol` (String) The Protocol used for this Probe. Possible values are `Http` and `Https`.
+- `timeout` (Number) The Timeout used for this Probe, which indicates when a probe becomes unhealthy. Possible values range from 1 second to a maximum of 86,400 seconds.
+- `unhealthy_threshold` (Number) The Unhealthy Threshold for this Probe, which indicates the amount of retries which should be attempted before a node is deemed unhealthy. Possible values are from 1 to 20.
 
 Optional:
 
-- `minimum_servers` (Number)
-- `pick_host_name_from_backend_http_settings` (Boolean)
+- `minimum_servers` (Number) The minimum number of servers that are always marked as healthy. Defaults to `0`.
+- `pick_host_name_from_backend_http_settings` (Boolean) Whether the host header should be picked from the backend HTTP settings. Defaults to `false`.
 
 Read-Only:
 
-- `id` (String)
+- `id` (String) The ID of the `probe`.
 
 <a id="nestedatt--probe--match"></a>
 ### Nested Schema for `probe.match`
 
 Required:
 
-- `body` (String)
-- `status_code` (List of String)
+- `body` (String) A snippet from the Response Body which must be present in the Response.
+- `status_code` (List of String) A list of allowed status codes for this Health Probe.
 
 
 
@@ -126,19 +126,19 @@ Required:
 
 Required:
 
-- `name` (String)
-- `redirect_type` (String)
+- `name` (String) Unique name of the redirect configuration block.
+- `redirect_type` (String) The type of redirect. Possible values are `Permanent`, `Temporary`, `Found` and `SeeOther`.
 
 Optional:
 
-- `include_path` (Boolean)
-- `include_query_string` (Boolean)
-- `target_listener_name` (String)
-- `target_url` (String)
+- `include_path` (Boolean) Whether or not to include the path in the redirected Url. Defaults to `false`.
+- `include_query_string` (Boolean) Whether or not to include the query string in the redirected Url. Default to `false`.
+- `target_listener_name` (String) The name of the listener to redirect to. Cannot be set if `target_url` is set.
+- `target_url` (String) The Url to redirect the request to. Cannot be set if `target_listener_name` is set.
 
 Read-Only:
 
-- `id` (String)
+- `id` (String) The ID of the `redirect_configuration`.
 
 
 <a id="nestedatt--request_routing_rules"></a>
@@ -146,22 +146,22 @@ Read-Only:
 
 Required:
 
-- `http_listener_name` (String)
-- `name` (String)
-- `rule_type` (String)
+- `http_listener_name` (String) The Name of the HTTP Listener which should be used for this Routing Rule. It has to match a Http Listener name declared in the binding service resource.
+- `name` (String) The Name of this Request Routing Rule.
+- `rule_type` (String) The Type of Routing that should be used for this Rule. Possible values are `Basic` and `PathBasedRouting`.
 
 Optional:
 
-- `backend_address_pool_name` (String)
-- `backend_http_settings_name` (String)
-- `redirect_configuration_name` (String)
-- `rewrite_rule_set_name` (String)
-- `url_path_map_name` (String)
+- `backend_address_pool_name` (String) The Name of the Backend Address Pool which should be used for this Routing Rule. Cannot be set if `redirect_configuration_name` is set.It has to match a Backend Address Pool name declared in the binding service resource.
+- `backend_http_settings_name` (String) The Name of the Backend HTTP Settings Collection which should be used for this Routing Rule. Cannot be set if `redirect_configuration_name` is set.It has to match a Backend HTTP Settings name declared in the binding service resource.
+- `redirect_configuration_name` (String) The Name of the Redirect Configuration which should be used for this Routing Rule. Cannot be set if either `backend_address_pool_name` or `backend_http_settings_name` is set.It has to match a Redirect Configuration name declared in the binding service resource.
+- `rewrite_rule_set_name` (String) The Name of the Rewrite Rule Set which should be used for this Routing Rule. Only valid for v2 SKUs. Not supported in this version
+- `url_path_map_name` (String) The Name of the URL Path Map which should be associated with this Routing Rule. Not supported in this version
 
 Read-Only:
 
-- `id` (String)
-- `priority` (String)
+- `id` (String) The ID of the `request_routing_rule`.
+- `priority` (String) Rule evaluation order can be dictated by specifying an integer value from `1` to `20000` with `1` being the highest priority and `20000` being the lowest priority.For this version, the priority is computed by the provider (between 1 and 300) after getting the list of used values from the gateway.
 
 
 <a id="nestedatt--ssl_certificate"></a>
@@ -169,16 +169,16 @@ Read-Only:
 
 Required:
 
-- `name` (String)
+- `name` (String) The Name of the SSL certificate that is unique within this Application Gateway
 
 Optional:
 
-- `data` (String, Sensitive)
-- `key_vault_secret_id` (String)
-- `password` (String, Sensitive)
+- `data` (String, Sensitive) PFX certificate. Required if `key_vault_secret_id` is not set. Important: PFX certificate is not supported in the current provider version.
+- `key_vault_secret_id` (String) Secret Id of (base-64 encoded unencrypted pfx) `Secret` or `Certificate` object stored in Azure KeyVault. You need to enable soft delete for keyvault to use this feature. Required if `data` is not set. TLS termination with Key Vault certificates is limited to the v2 SKUs.
+- `password` (String, Sensitive) Password for the pfx file specified in data. Required if `data` is set.
 
 Read-Only:
 
-- `id` (String)
+- `id` (String) The ID of the `ssl_certificate`.
 
 

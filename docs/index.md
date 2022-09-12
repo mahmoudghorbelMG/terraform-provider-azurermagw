@@ -17,7 +17,7 @@ description: |-
 
 ### Optional
 
-- `azure_client_id` (String)
-- `azure_client_secret` (String, Sensitive)
-- `azure_subscription_id` (String)
-- `azure_tenant_id` (String)
+- `azure_client_id` (String) The Client ID which should be used (only Service principal is supported actually).
+- `azure_client_secret` (String, Sensitive) The Client Secret which should be used.
+- `azure_subscription_id` (String) The Subscription ID which should be used.
+- `azure_tenant_id` (String) The Tenant ID which should be used.
