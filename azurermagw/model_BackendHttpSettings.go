@@ -140,6 +140,8 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 	}	
 	if backend_json.Properties.CookieBasedAffinity == "Enabled" {
 		backend_state.Affinity_cookie_name = types.String{Value: backend_json.Properties.AffinityCookieName}
+	}else{
+		backend_state.Affinity_cookie_name.Null = true
 	}
 	return backend_state
 }
