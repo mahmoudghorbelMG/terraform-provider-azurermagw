@@ -35,11 +35,11 @@ func (r resourceBindingServiceType) GetSchema(_ context.Context) (tfsdk.Schema, 
 				Type:     types.StringType,
 				Required: true,
 			},
-			"agw_name": {
+			"application_gateway_name": {
 				Type:     types.StringType,
 				Required: true,
 			},
-			"agw_rg": {
+			"application_gateway_resource_group_name": {
 				Type:     types.StringType,
 				Required: true,
 			},
