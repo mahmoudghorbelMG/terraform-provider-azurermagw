@@ -34,141 +34,173 @@ func (r resourceBindingServiceType) GetSchema(_ context.Context) (tfsdk.Schema, 
 			"name": { // Containe the name of the Binding resource
 				Type:     types.StringType,
 				Required: true,
+				//Description: "This is a description message",
+				MarkdownDescription: "The name of the binding service that bind an backend application (VM, web app, container web app, etc.) to the azure application gateway.",
 			},
 			"application_gateway_name": {
 				Type:     types.StringType,
 				Required: true,
+				MarkdownDescription: "The name of the application gateway to which the backend application will be binded.",
 			},
 			"application_gateway_resource_group_name": {
 				Type:     types.StringType,
 				Required: true,
+				MarkdownDescription: "The name of the resource group where the application gateway is deployed.",
 			},
 			"backend_address_pool": {
 				Required: true,
+				MarkdownDescription: "For this provider version, only one `backend_address_pool` block can be set as defined below.",
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "The name of the Backend Address Pool.",
 					},
 					"id": {
 						Type:     types.StringType,
 						Computed: true,
+						MarkdownDescription: "The ID of the `backend_address_pool`.",
 					},
 					"fqdns": {
 						Type: types.ListType{
 							ElemType: types.StringType,
 						},
 						Optional: true,
+						MarkdownDescription: "A list of FQDN's which should be part of the Backend Address Pool.",
 					},
 					"ip_addresses": {
 						Type: types.ListType{
 							ElemType: types.StringType,
 						},
 						Optional: true,
+						MarkdownDescription: "A list of IP Addresses which should be part of the Backend Address Pool.",
 					},
 				}),
 			},
 			"backend_http_settings": {
 				Required: true,
+				MarkdownDescription: "For this provider version, only one `backend_http_settings` block can be set as defined below.",
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "The name of the Backend HTTP Settings Collection.",
 					},
 					"id": {
 						Type:     types.StringType,
 						Computed: true,
+						MarkdownDescription: "The ID of the `backend_http_settings`.",
 					},
 					//the affinity has a default value if it's not provided: "ApplicationGatewayAffinity"
 					"affinity_cookie_name": {
 						Type:     types.StringType,
 						Optional: true,
+						MarkdownDescription: "The name of the affinity cookie. Required if `cookie_based_affinity` is `Enabled`",
 						/*Computed: true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{stringDefault("ApplicationGatewayAffinity")},*/
 					},
 					"cookie_based_affinity": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "Is Cookie-Based Affinity enabled? Possible values are `Enabled` and `Disabled`.",
 					},
 					"pick_host_name_from_backend_address": {
 						Type:     types.BoolType,
 						Optional: true,
 						Computed: true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{boolDefault(false)},
+						MarkdownDescription: "Whether host header should be picked from the host name of the backend server. Defaults to `false`.",
 					},
 					"port": {
 						Type:     types.Int64Type,
 						Required: true,
+						MarkdownDescription: "The port which should be used for this Backend HTTP Settings Collection.",
 					},
 					"protocol": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "The Protocol which should be used. Possible values are `Http` and `Https`.",
 					},
 					"request_timeout": {
 						Type:     types.Int64Type,
 						Required: true,
+						MarkdownDescription: "The request timeout in seconds, which must be between 1 and 86400 seconds.",
 					},
 					"probe_name": {
 						Type:     types.StringType,
 						Optional: true,
+						MarkdownDescription: "The name of an associated HTTP Probe.",
 					},
 				}),
 			},
 			"probe": {
 				Required: true,
+				MarkdownDescription: "For this provider version, only one `probe` block can be set as defined below",
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: " The Name of the Probe.",
 					},
 					"id": {
 						Type:     types.StringType,
 						Computed: true,
+						MarkdownDescription: "The ID of the `probe`.",
 					},
 					"interval": {
 						Type:     types.Int64Type,
 						Required: true,
+						MarkdownDescription: "The Interval between two consecutive probes in seconds. Possible values range from 1 second to a maximum of 86,400 seconds.",
 					},
 					"protocol": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "The Protocol used for this Probe. Possible values are `Http` and `Https`.",
 					},
 					"path": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: " The Path used for this Probe.",
 					},
 					"pick_host_name_from_backend_http_settings": {
 						Type:     types.BoolType,
 						Optional: true,
 						Computed: true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{boolDefault(false)},
+						MarkdownDescription: "Whether the host header should be picked from the backend HTTP settings. Defaults to `false`.",
 					},
 					"timeout": {
 						Type:     types.Int64Type,
 						Required: true,
+						MarkdownDescription: "The Timeout used for this Probe, which indicates when a probe becomes unhealthy. Possible values range from 1 second to a maximum of 86,400 seconds.",
 					},
 					"unhealthy_threshold": {
 						Type:     types.Int64Type,
 						Required: true,
+						MarkdownDescription: "The Unhealthy Threshold for this Probe, which indicates the amount of retries which should be attempted before a node is deemed unhealthy. Possible values are from 1 to 20.",
 					},	
 					"minimum_servers": {
 						Type:     types.Int64Type,
 						Optional: true,
 						Computed: true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{intDefault(0)},
+						MarkdownDescription: "The minimum number of servers that are always marked as healthy. Defaults to `0`.",
 					},
 					"match": {
 						Required: true,
+						MarkdownDescription: "A `match` block as defined above.",
 						Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 							"body": {
 								Type:     types.StringType,
 								Required: true,
+								MarkdownDescription: "A snippet from the Response Body which must be present in the Response.",
 							},
 							"status_code": {
 								Type: types.ListType{
 									ElemType: types.StringType,
 								},
 								Required: true,
+								MarkdownDescription: "A list of allowed status codes for this Health Probe.",
 							},
 						}),
 					},
@@ -176,159 +208,204 @@ func (r resourceBindingServiceType) GetSchema(_ context.Context) (tfsdk.Schema, 
 			},			
 			"ssl_certificate": {
 				Required: true,
+				MarkdownDescription: "For this provider version, only one `ssl_certificate` block can be set as defined below",
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "The Name of the SSL certificate that is unique within this Application Gateway",
 					},
 					"id": {
 						Type:     types.StringType,
 						Computed: true,
+						MarkdownDescription: "The ID of the `ssl_certificate`.",
 					},
 					"key_vault_secret_id": {
 						Type:     types.StringType,
 						Optional: true,
+						MarkdownDescription: "Secret Id of (base-64 encoded unencrypted pfx) `Secret` or `Certificate` object stored in Azure KeyVault. "+
+						"You need to enable soft delete for keyvault to use this feature. Required if `data` is not set. "+
+						"TLS termination with Key Vault certificates is limited to the v2 SKUs.",
 					},
 					"data": {
 						Type:     types.StringType,
 						Optional: true,
 						Sensitive: true,
+						MarkdownDescription: "PFX certificate. Required if `key_vault_secret_id` is not set. Important: PFX certificate is not supported in the current provider version.",
 					},
 					"password": {
 						Type:     types.StringType,
 						Optional: true,
 						Sensitive: true,
+						MarkdownDescription: "Password for the pfx file specified in data. Required if `data` is set.",
 					},/*
 					"public_cert_data": {
 						Type:     types.StringType,
 						Computed: true,
+						MarkdownDescription: "",
 					},*/
 				}),
 			},
 			"redirect_configuration": {
 				Required: true,
+				MarkdownDescription: "For this provider version, only one `redirect_configuration` block can be set as defined below",
 				Attributes: tfsdk.SingleNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "Unique name of the redirect configuration block.",
 					},
 					"id": {
 						Type:     types.StringType,
 						Computed: true,
+						MarkdownDescription: "The ID of the `redirect_configuration`.",
 					},
 					"redirect_type": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "The type of redirect. Possible values are `Permanent`, `Temporary`, `Found` and `SeeOther`.",
 					},
 					"target_listener_name": {
 						Type:     types.StringType,
 						Optional: true,
+						MarkdownDescription: "The name of the listener to redirect to. Cannot be set if `target_url` is set.",
 					},
 					"target_url": {
 						Type:     types.StringType,
 						Optional: true,
+						MarkdownDescription: "The Url to redirect the request to. Cannot be set if `target_listener_name` is set.",
 					},
 					"include_path": {
 						Type:     types.BoolType,
 						Optional: true,
 						Computed: true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{boolDefault(false)},
+						MarkdownDescription: "Whether or not to include the path in the redirected Url. Defaults to `false`.",
 					},
 					"include_query_string": {
 						Type:     types.BoolType,
 						Optional: true,
 						Computed: true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{boolDefault(false)},
+						MarkdownDescription: "Whether or not to include the query string in the redirected Url. Default to `false`.",
 					},
 				}),
 			},
 			"request_routing_rules": {
 				Required: true,
+				MarkdownDescription: "At least one block has to be defined. The request routing rules block has to be defiend as a map with a key name for each `request_routing_rule`. See Example usage for details.",
 				Attributes: tfsdk.MapNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "The Name of this Request Routing Rule.",
 					},
 					"id": {
 						Type:     types.StringType,
 						Computed: true,
+						MarkdownDescription: "The ID of the `request_routing_rule`.",
 					},
 					"rule_type": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "The Type of Routing that should be used for this Rule. Possible values are `Basic` and `PathBasedRouting`.",
 					},
 					"priority": {
 						Type:     types.StringType,
 						Computed: true,
+						MarkdownDescription: "Rule evaluation order can be dictated by specifying an integer value from `1` to `20000` with `1` being the highest priority and `20000` being the lowest priority."+
+						"For this version, the priority is computed by the provider (between 1 and 300) after getting the list of used values from the gateway.",
 					},
 					"http_listener_name": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "The Name of the HTTP Listener which should be used for this Routing Rule. It has to match a Http Listener name declared in the binding service resource.",
 					},
 					"backend_address_pool_name": {
 						Type:     types.StringType,
 						Optional: true,
+						MarkdownDescription: "The Name of the Backend Address Pool which should be used for this Routing Rule. Cannot be set if `redirect_configuration_name` is set."+
+						"It has to match a Backend Address Pool name declared in the binding service resource.",
 					},
 					"backend_http_settings_name": {
 						Type:     types.StringType,
 						Optional: true,
+						MarkdownDescription: "The Name of the Backend HTTP Settings Collection which should be used for this Routing Rule. Cannot be set if `redirect_configuration_name` is set."+
+						"It has to match a Backend HTTP Settings name declared in the binding service resource.",
 					},
 					"redirect_configuration_name": {
 						Type:     types.StringType,
 						Optional: true,
+						MarkdownDescription: "The Name of the Redirect Configuration which should be used for this Routing Rule. "+
+						"Cannot be set if either `backend_address_pool_name` or `backend_http_settings_name` is set."+
+						"It has to match a Redirect Configuration name declared in the binding service resource.",
 					},
 					"rewrite_rule_set_name": {
 						Type:     types.StringType,
 						Optional: true,
+						MarkdownDescription: "The Name of the Rewrite Rule Set which should be used for this Routing Rule. Only valid for v2 SKUs. Not supported in this version",
 					},
 					"url_path_map_name": {
 						Type:     types.StringType,
 						Optional: true,
+						MarkdownDescription: "The Name of the URL Path Map which should be associated with this Routing Rule. Not supported in this version",
 					},
 				},tfsdk.MapNestedAttributesOptions{}),
 			},
 			"http_listeners": {
 				Required: true,
+				MarkdownDescription: "At least one block has to be defined. The http_listeners block has to be defiend as a mapwith a key name for each `http_listener`. See Example usage for details.",
 				Attributes: tfsdk.MapNestedAttributes(map[string]tfsdk.Attribute{
 					"name": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "The Name of the HTTP Listener.",
 					},
 					"id": {
 						Type:     types.StringType,
 						Computed: true,
+						MarkdownDescription: "The ID of the `http_listener`.",
 					},
 					"frontend_ip_configuration_name": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "The Name of the Frontend IP Configuration used for this HTTP Listener.",
 					},
 					"frontend_port_name": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "The Name of the Frontend Port use for this HTTP Listener.",
 					},
 					"require_sni": {
 						Type:     types.BoolType,
 						Optional: true,
 						Computed: true,
 						PlanModifiers: tfsdk.AttributePlanModifiers{boolDefault(false)},
+						MarkdownDescription: "Should Server Name Indication be Required? Defaults to `false`.",
 					},
 					"protocol": {
 						Type:     types.StringType,
 						Required: true,
+						MarkdownDescription: "The Protocol to use for this HTTP Listener. Possible values are `Http` and `Https`.",
 					},
 					"host_name": {
 						Type:     types.StringType,
 						Optional: true,
+						MarkdownDescription: "The Hostname which should be used for this HTTP Listener. Setting this value changes Listener Type to 'Multi site', however, this option is not supported by the provider version.",
 					},
 					"host_names": {
 						Type: types.ListType{
 							ElemType: types.StringType,
 						},
 						Optional: true,
+						MarkdownDescription: "A list of Hostname(s) should be used for this HTTP Listener. It allows special wildcard characters."+
+						"The `host_names` and `host_name` are mutually exclusive and cannot both be set.",
 					},
 					"ssl_certificate_name": {
 						Type:     types.StringType,
 						Optional: true,
+						MarkdownDescription: "The name of the associated SSL Certificate which should be used for this HTTP Listener."+
+						"It has to match a Ssl certificate name declared in the binding service resource.",
 					},
 				},tfsdk.MapNestedAttributesOptions{}),
 			},

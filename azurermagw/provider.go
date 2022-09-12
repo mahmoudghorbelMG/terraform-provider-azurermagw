@@ -35,22 +35,26 @@ func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics)
 				Type:     types.StringType,
 				Optional: true,
 				Computed: true,
+				MarkdownDescription: "The Client ID which should be used (only Service principal is supported actually).",
 			},
 			"azure_client_secret": {
 				Type:      types.StringType,
 				Optional:  true,
 				Computed:  true,
 				Sensitive: true,
+				MarkdownDescription: "The Client Secret which should be used.",
 			},
 			"azure_tenant_id": {
 				Type:     types.StringType,
 				Optional: true,
 				Computed: true,
+				MarkdownDescription: "The Tenant ID which should be used.",
 			},
 			"azure_subscription_id": {
 				Type:     types.StringType,
 				Optional: true,
 				Computed: true,
+				MarkdownDescription: "The Subscription ID which should be used.",
 			},
 		},
 	}, nil
