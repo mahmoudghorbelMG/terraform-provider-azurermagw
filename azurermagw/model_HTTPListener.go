@@ -111,41 +111,26 @@ func createHTTPListener(httpListener_plan *Http_listener, AZURE_SUBSCRIPTION_ID 
 	//var error_SslCertificateName string
 	if httpListener_plan.Ssl_certificate_name.Value != "" {
 		//we have to check here if the probe name matches probe name in terraform conf in plan.
-	//	if httpListener_plan.Ssl_certificate_name.Value == SslCertificateName {
-			httpListener_json.Properties.SslCertificate = &struct{
-				ID string "json:\"id,omitempty\""
-			}{
-				ID: sslCertificateID + httpListener_plan.Ssl_certificate_name.Value,
-			}
-		/*}else{
-			//Error exit
-			error_SslCertificateName = "fatal"
-		}*/
+		httpListener_json.Properties.SslCertificate = &struct{
+			ID string "json:\"id,omitempty\""
+		}{
+			ID: sslCertificateID + httpListener_plan.Ssl_certificate_name.Value,
+		}		
 	}
 	
 	//verify the mutual exclusivity of the optional attributes hostname and hostnames
 	//var error_Hostname string
-	if httpListener_plan.Host_name.Value != "" {/*
-		if len(httpListener_plan.Host_names)==0 {*/
+	if httpListener_plan.Host_name.Value != "" {
 			//hostname is provided but not hostnames
-			httpListener_json.Properties.HostName = httpListener_plan.Host_name.Value
-	/*	}else{
-			//both hostname and hostnames are provided
-			//the hostname is provided but not the hostnames
-			error_Hostname = "fatal-exclusivity"
-		}*/
-	}//else{
-		if len(httpListener_plan.Host_names)!=0 {
-			//hostnames is provided but not hostname
-			httpListener_json.Properties.HostNames = make([]string,len(httpListener_plan.Host_names))
-			for i := 0; i < len(httpListener_plan.Host_names); i++ {
-				httpListener_json.Properties.HostNames[i] = httpListener_plan.Host_names[i].Value
-			}
-		}/*else{
-			//both hostname and hostnames aren't provided
-			error_Hostname = "fatal-missing"
+			httpListener_json.Properties.HostName = httpListener_plan.Host_name.Value	
+	}
+	if len(httpListener_plan.Host_names)!=0 {
+		//hostnames is provided but not hostname
+		httpListener_json.Properties.HostNames = make([]string,len(httpListener_plan.Host_names))
+		for i := 0; i < len(httpListener_plan.Host_names); i++ {
+			httpListener_json.Properties.HostNames[i] = httpListener_plan.Host_names[i].Value
 		}
-	}*/
+	}
 	return httpListener_json
 }
 func generateHTTPListenerState(gw ApplicationGateway, HTTPListenerName string) Http_listener {
@@ -284,113 +269,101 @@ func removeHTTPListenerElement(gw *ApplicationGateway, HTTPListenerName string) 
 		}
 	}
 }
-func checkHTTPListenerCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
-	if plan.Http_listener.Ssl_certificate_name.Value != "" {
+func checkHTTPListenerCreate(http_listener Http_listener, plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+	if http_listener.Ssl_certificate_name.Value != "" && strings.EqualFold(http_listener.Protocol.Value,"http") {
 		//no need for SslCertificate
 		resp.Diagnostics.AddError(
-		"Unable to create binding. A SslCertificate name ("+plan.Http_listener.Ssl_certificate_name.Value+") is declared in Http_listener: "+ 
-		plan.Http_listener.Name.Value+". There is no need for SslCertificate name in this case. ",
+		"Unable to create binding. A SslCertificate name ("+http_listener.Ssl_certificate_name.Value+") is declared in Http_listener: "+ 
+		http_listener.Name.Value+". There is no need for SslCertificate name in this case. ",
 		"Please, change Http listener configuration then retry.",)
 		return true
 	}
-	if plan.Http_listener.Host_name.Value != "" && len(plan.Http_listener.Host_names) != 0 {
-		//hostname and hostnames are mutually exclusive. only one should be set
-		resp.Diagnostics.AddError(
-			"Unable to create binding. In HTTPS Listener "+ plan.Http_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
-			"Only one should be set",
-			"Please, change HTTP Listener configuration then retry.",)
-		return true
-	}
-	if plan.Http_listener.Host_name.Value == "" && len(plan.Http_listener.Host_names) == 0 {
-		//hostname and hostnames are mutually exclusive. at least and only one should be set
-		resp.Diagnostics.AddError(
-			"Unable to create binding. In HTTP Listener "+ plan.Http_listener.Name.Value+", both Hostname and Hostnames are missing. "+
-			"At least and only one should be set",
-			"Please, change HTTP Listener configuration then retry.",)
-		return true
-	}
-	return false
-}
-func checkHTTPListenerUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
-	if plan.Http_listener.Ssl_certificate_name.Value != "" {
+	if http_listener.Ssl_certificate_name.Value == "" && strings.EqualFold(http_listener.Protocol.Value,"https") {
 		//no need for SslCertificate
 		resp.Diagnostics.AddError(
-		"Unable to update binding. A SslCertificate name ("+plan.Http_listener.Ssl_certificate_name.Value+") is declared in Http_listener: "+ 
-		plan.Http_listener.Name.Value+". There is no need for SslCertificate name in this case. ",
+		"Unable to create binding. A SslCertificate name is missing for the Http_listener: "+ 
+		http_listener.Name.Value+".",
 		"Please, change Http listener configuration then retry.",)
 		return true
 	}
-	if plan.Http_listener.Host_name.Value != "" && len(plan.Http_listener.Host_names) != 0 {
+	//if it's about https, check if the certificate name match the one declared un the binding service, or (coming soon) in the gw
+	if http_listener.Ssl_certificate_name.Value != "" &&
+		http_listener.Ssl_certificate_name.Value != plan.Ssl_certificate.Name.Value{
+		//wrong SslCertificate Name
+		resp.Diagnostics.AddError(
+		"Unable to create binding. The SslCertificate name ("+http_listener.Ssl_certificate_name.Value+") declared in Http_listener: "+ 
+		http_listener.Name.Value+" doesn't match the SslCertificate name conf : "+plan.Ssl_certificate.Name.Value,
+		"Please, change Ssl Certificate name then retry.",)
+		return true
+	}
+	if http_listener.Host_name.Value != "" && len(http_listener.Host_names) != 0 {
 		//hostname and hostnames are mutually exclusive. only one should be set
 		resp.Diagnostics.AddError(
-			"Unable to update binding. In HTTPS Listener "+ plan.Http_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
+			"Unable to create binding. In HTTPS Listener "+ http_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
 			"Only one should be set",
 			"Please, change HTTP Listener configuration then retry.",)
 		return true
 	}
-	if plan.Http_listener.Host_name.Value == "" && len(plan.Http_listener.Host_names) == 0 {
+	if http_listener.Host_name.Value == "" && len(http_listener.Host_names) == 0 {
 		//hostname and hostnames are mutually exclusive. at least and only one should be set
 		resp.Diagnostics.AddError(
-			"Unable to update binding. In HTTP Listener "+ plan.Http_listener.Name.Value+", both Hostname and Hostnames are missing. "+
+			"Unable to create binding. In HTTP Listener "+ http_listener.Name.Value+", both Hostname and Hostnames are missing. "+
 			"At least and only one should be set",
 			"Please, change HTTP Listener configuration then retry.",)
 		return true
 	}
 	return false
 }
-func checkHTTPSListenerCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
-	if plan.Https_listener.Ssl_certificate_name.Value != "" &&
-		plan.Https_listener.Ssl_certificate_name.Value != plan.Ssl_certificate.Name.Value{
+func checkHTTPListenerUpdate(http_listener Http_listener, plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+	if http_listener.Ssl_certificate_name.Value != "" && strings.EqualFold(http_listener.Protocol.Value,"http") {
+		//no need for SslCertificate
+		resp.Diagnostics.AddError(
+		"Unable to update binding. A SslCertificate name ("+http_listener.Ssl_certificate_name.Value+") is declared in Http_listener: "+ 
+		http_listener.Name.Value+". There is no need for SslCertificate name in this case. ",
+		"Please, change Http listener configuration then retry.",)
+		return true
+	}
+	if http_listener.Ssl_certificate_name.Value == "" && strings.EqualFold(http_listener.Protocol.Value,"https") {
+		//no need for SslCertificate
+		resp.Diagnostics.AddError(
+		"Unable to update binding. A SslCertificate name is missing for the Http_listener: "+ 
+		http_listener.Name.Value+".",
+		"Please, change Http listener configuration then retry.",)
+		return true
+	}
+	//if it's about https, check if the certificate name match the one declared un the binding service, or in the gw
+	if http_listener.Ssl_certificate_name.Value != "" &&
+		http_listener.Ssl_certificate_name.Value != plan.Ssl_certificate.Name.Value{
 		//wrong SslCertificate Name
 		resp.Diagnostics.AddError(
-		"Unable to create binding. The SslCertificate name ("+plan.Https_listener.Ssl_certificate_name.Value+") declared in Https_listener: "+ 
-		plan.Https_listener.Name.Value+" doesn't match the SslCertificate name conf : "+plan.Ssl_certificate.Name.Value,
+		"Unable to update binding. The SslCertificate name ("+http_listener.Ssl_certificate_name.Value+") declared in Http_listener: "+ 
+		http_listener.Name.Value+" doesn't match the SslCertificate name conf : "+plan.Ssl_certificate.Name.Value,
 		"Please, change Ssl Certificate name then retry.",)
 		return true
 	}
-	if plan.Https_listener.Host_name.Value != "" && len(plan.Https_listener.Host_names) != 0 {
+	if http_listener.Host_name.Value != "" && len(http_listener.Host_names) != 0 {
 		//hostname and hostnames are mutually exclusive. only one should be set
 		resp.Diagnostics.AddError(
-			"Unable to create binding. In HTTPS Listener "+ plan.Https_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
+			"Unable to update binding. In HTTPS Listener "+ http_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
 			"Only one should be set",
-			"Please, change HTTPS Listener configuration then retry.",)
+			"Please, change HTTP Listener configuration then retry.",)
 		return true
 	}
-	if plan.Https_listener.Host_name.Value == "" && len(plan.Https_listener.Host_names) == 0 {
+	if http_listener.Host_name.Value == "" && len(http_listener.Host_names) == 0 {
 		//hostname and hostnames are mutually exclusive. at least and only one should be set
 		resp.Diagnostics.AddError(
-			"Unable to create binding. In HTTP Listener "+ plan.Https_listener.Name.Value+", both Hostname and Hostnames are missing. "+
+			"Unable to update binding. In HTTP Listener "+ http_listener.Name.Value+", both Hostname and Hostnames are missing. "+
 			"At least and only one should be set",
-			"Please, change HTTPS Listener configuration then retry.",)
+			"Please, change HTTP Listener configuration then retry.",)
 		return true
 	}
 	return false
 }
-func checkHTTPSListenerUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
-	if plan.Https_listener.Ssl_certificate_name.Value != "" &&
-		plan.Https_listener.Ssl_certificate_name.Value != plan.Ssl_certificate.Name.Value{
-		//wrong SslCertificate Name
-		resp.Diagnostics.AddError(
-		"Unable to update binding. The SslCertificate name ("+plan.Https_listener.Ssl_certificate_name.Value+") declared in Https_listener: "+ 
-		plan.Https_listener.Name.Value+" doesn't match the SslCertificate name conf : "+plan.Ssl_certificate.Name.Value,
-		"Please, change Ssl Certificate name then retry.",)
-		return true
-	}
-	if plan.Https_listener.Host_name.Value != "" && len(plan.Https_listener.Host_names) != 0 {
-		//hostname and hostnames are mutually exclusive. only one should be set
-		resp.Diagnostics.AddError(
-			"Unable to update binding. In HTTPS Listener "+ plan.Https_listener.Name.Value+", Hostname and Hostnames are mutually exclusive. "+
-			"Only one should be set",
-			"Please, change HTTPS Listener configuration then retry.",)
-		return true
-	}
-	if plan.Https_listener.Host_name.Value == "" && len(plan.Https_listener.Host_names) == 0 {
-		//hostname and hostnames are mutually exclusive. at least and only one should be set
-		resp.Diagnostics.AddError(
-			"Unable to update binding. In HTTP Listener "+ plan.Https_listener.Name.Value+", both Hostname and Hostnames are missing. "+
-			"At least and only one should be set",
-			"Please, change HTTPS Listener configuration then retry.",)
-		return true
+func checkHTTPListenerNameInMap(HTTPListenerName string, http_listeners map[string]Http_listener) bool{
+	for _, value := range http_listeners {
+		if HTTPListenerName == value.Name.Value {
+			return true
+		}
 	}
 	return false
 }

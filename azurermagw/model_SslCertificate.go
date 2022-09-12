@@ -5,6 +5,8 @@ import (
 	//"fmt"
 	//"strings"
 
+	"encoding/base64"
+
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -15,6 +17,7 @@ type SslCertificate struct {
 	Etag       string `json:"etag,omitempty"`
 	Properties struct {
 		ProvisioningState string `json:"provisioningState,omitempty"`
+		Data 			  string `json:"data,omitempty"`
 		PublicCertData    string `json:"publicCertData,omitempty"`
 		KeyVaultSecretID  string `json:"keyVaultSecretId,omitempty"`
 		Password          string `json:"password,omitempty"`
@@ -31,6 +34,7 @@ type Ssl_certificate struct {
 	Key_vault_secret_id							types.String	`tfsdk:"key_vault_secret_id"`
 	Data	                       				types.String	`tfsdk:"data"`								
 	Password									types.String	`tfsdk:"password"`
+	//Public_cert_data							types.String	`tfsdk:"public_cert_data"`
 }
 
 func createSslCertificate(sslCertificate_plan Ssl_certificate,AZURE_SUBSCRIPTION_ID string, rg_name string, agw_name string) (SslCertificate){	
@@ -40,6 +44,7 @@ func createSslCertificate(sslCertificate_plan Ssl_certificate,AZURE_SUBSCRIPTION
 		//Etag:       "",
 		Properties: struct{
 			ProvisioningState string "json:\"provisioningState,omitempty\""; 
+			Data string "json:\"data,omitempty\"";
 			PublicCertData string "json:\"publicCertData,omitempty\""; 
 			KeyVaultSecretID string "json:\"keyVaultSecretId,omitempty\""; 
 			Password string "json:\"password,omitempty\""; 
@@ -51,32 +56,18 @@ func createSslCertificate(sslCertificate_plan Ssl_certificate,AZURE_SUBSCRIPTION
 		},
 		Type: "Microsoft.Network/applicationGateways/sslCertificates",
 	}
-	//var error_exclusivity string
-	//var error_password string
-	//there is 2 constraints for SSLCertificate we have to check
-	//   1) Data and Key_vault_secret_id are optional but one of them has to be provided
-	//   2) If Data is provided, Password is required
-	if sslCertificate_plan.Key_vault_secret_id.Value != "" {
-		/*if sslCertificate_plan.Data.Value != "" {
-			//both are provided
-			error_exclusivity = "fatal-both-exist"
-		}else{*/
-			//only Key_vault_secret_id is provided
-			sslCertificate_json.Properties.KeyVaultSecretID = sslCertificate_plan.Key_vault_secret_id.Value
+	if sslCertificate_plan.Key_vault_secret_id.Value != "" {		
+		//only Key_vault_secret_id is provided
+		sslCertificate_json.Properties.KeyVaultSecretID = sslCertificate_plan.Key_vault_secret_id.Value
 		//}
-	}/*else{*/
-		if sslCertificate_plan.Data.Value != "" {
-			//only data is provided. check the password
-			//if sslCertificate_plan.Password.Value != "" {
-				sslCertificate_json.Properties.PublicCertData = sslCertificate_plan.Data.Value
-				sslCertificate_json.Properties.Password = sslCertificate_plan.Password.Value 
-			/*}else{
-				error_password = "fatal"
-			}
-		}else{
-			//both are empty
-			error_exclusivity = "fatal-both-miss"
-		}*/
+	}
+	if sslCertificate_plan.Data.Value != "" {
+		//only data is provided. check the password	
+		// data must be base64 encoded (from azurerm provider)
+		// output.ApplicationGatewaySslCertificatePropertiesFormat.Data = utils.String(utils.Base64EncodeIfNot(data))
+		//sslCertificate_json.Properties.PublicCertData = base64EncodeIfNot(sslCertificate_plan.Data.Value) only for GET
+		sslCertificate_json.Properties.Data = base64EncodeIfNot(sslCertificate_plan.Data.Value) //only for PUT
+		sslCertificate_json.Properties.Password = sslCertificate_plan.Password.Value 
 	}
 	return sslCertificate_json
 }
@@ -100,8 +91,11 @@ func generateSslCertificateState(gw ApplicationGateway, SslCertificateName strin
 		sslCertificate_state.Password.Null = true
 	}else{
 		sslCertificate_state.Key_vault_secret_id.Null = true
-		sslCertificate_state.Data = types.String{Value: sslCertificate_json.Properties.PublicCertData}
-		sslCertificate_state.Password = types.String{Value: sslCertificate_json.Properties.Password}
+		//sslCertificate_state.Data = types.String{Value: sslCertificate_json.Properties.PublicCertData}
+		sslCertificate_state.Password = types.String{Value: ""} //sslCertificate_json.Properties.Password
+		//sslCertificate_state.Public_cert_data = types.String{Value: sslCertificate_json.Properties.PublicCertData}
+		//the problem here is that the value of PublicCertData extracted from the gw_response resulted after calling updateGw() 
+		// is null because the API is under executing the request (which take some seconds)
 	}
 	
 	return sslCertificate_state
@@ -131,7 +125,7 @@ func removeSslCertificateElement(gw *ApplicationGateway, SslCertificateName stri
 		}
 	}
 }
-func checkSslCertificateCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+func checkSslCertificateCreate(plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
 	//there is 2 constraints we have to check for SSLCertificate 
 	//   1) Data and Key_vault_secret_id are optional but one of them has to be provided
 	//   2) If Data is provided, Password is required
@@ -139,7 +133,7 @@ func checkSslCertificateCreate(plan WebappBinding, gw ApplicationGateway, resp *
 	//fatal-both-exist
 	if plan.Ssl_certificate.Key_vault_secret_id.Value != "" && plan.Ssl_certificate.Data.Value != "" {
 		resp.Diagnostics.AddError(
-			"Unable to create binding. In the SSL Certificate  ("+plan.Ssl_certificate.Name.Value+") configuration, 2 optional parameters mutually exclusive "+ 
+			"Unable to create binding. In the SSL Certificate ("+plan.Ssl_certificate.Name.Value+") configuration, 2 optional parameters mutually exclusive "+ 
 			"are declared: Data and Key_vault_secret_id. Only one has to be set. ",
 			"Please, change configuration then retry.",				)
 		return true
@@ -164,7 +158,7 @@ func checkSslCertificateCreate(plan WebappBinding, gw ApplicationGateway, resp *
 	}
 	return false
 }
-func checkSslCertificateUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+func checkSslCertificateUpdate(plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
 	//there is 2 constraints we have to check for SSLCertificate 
 	//   1) Data and Key_vault_secret_id are optional but one of them has to be provided
 	//   2) If Data is provided, Password is required
@@ -172,7 +166,7 @@ func checkSslCertificateUpdate(plan WebappBinding, gw ApplicationGateway, resp *
 	//fatal-both-exist
 	if plan.Ssl_certificate.Key_vault_secret_id.Value != "" && plan.Ssl_certificate.Data.Value != "" {
 		resp.Diagnostics.AddError(
-			"Unable to update binding. In the SSL Certificate  ("+plan.Ssl_certificate.Name.Value+") configuration, 2 optional parameters mutually exclusive "+ 
+			"Unable to update binding. In the SSL Certificate ("+plan.Ssl_certificate.Name.Value+") configuration, 2 optional parameters mutually exclusive "+ 
 			"are declared: Data and Key_vault_secret_id. Only one has to be set. ",
 			"Please, change configuration then retry.",				)
 		return true
@@ -196,4 +190,16 @@ func checkSslCertificateUpdate(plan WebappBinding, gw ApplicationGateway, resp *
 		return true
 	}
 	return false
+}
+func base64EncodeIfNot(data string) string {
+	// Check whether the data is already Base64 encoded; don't double-encode
+	if base64IsEncoded(data) {
+		return data
+	}
+	// data has not been encoded encode and return
+	return base64.StdEncoding.EncodeToString([]byte(data))
+}
+func base64IsEncoded(data string) bool {
+	_, err := base64.StdEncoding.DecodeString(data)
+	return err == nil
 }

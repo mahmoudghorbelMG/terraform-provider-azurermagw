@@ -76,32 +76,16 @@ func createRedirectConfiguration(redirectConfiguration_plan Redirect_configurati
 	//there is a constraint for we have to check: Target_listener_name and target_url are mutually exclusive. 
 	//only one of has to be set
 	if redirectConfiguration_plan.Target_listener_name.Value != "" {
-		/*if redirectConfiguration_plan.Target_url.Value != "" {
-			//both are set
-			error_exclusivity = "fatal-both-exist"
-		}else{
-			//only Key_vault_secret_id is set
-			//check if its name match the HTTPS listener of the current config, else issue a warning
-			if redirectConfiguration_plan.Target_listener_name.Value == HTTPSListenerName {
-			*/	redirectConfiguration_json.Properties.TargetListener = &struct{
-					ID string "json:\"id,omitempty\""
-				}{
-					ID: target_listener_string + redirectConfiguration_plan.Target_listener_name.Value,
-				}
-			/*}else{
-				//Error exit
-				error_target = "fatal"
-			}	*/		
-		}
-	/*}else{*/
-		if redirectConfiguration_plan.Target_url.Value != "" {
-			//only Target_url is set.
-			redirectConfiguration_json.Properties.TargetURL = redirectConfiguration_plan.Target_url.Value
-		}/*else{
-			//both are empty
-			error_exclusivity = "fatal-both-miss"
-		}
-	}*/
+		redirectConfiguration_json.Properties.TargetListener = &struct{
+				ID string "json:\"id,omitempty\""
+			}{
+				ID: target_listener_string + redirectConfiguration_plan.Target_listener_name.Value,
+			}		
+	}	
+	if redirectConfiguration_plan.Target_url.Value != "" {
+		//only Target_url is set.
+		redirectConfiguration_json.Properties.TargetURL = redirectConfiguration_plan.Target_url.Value
+	}
 	return redirectConfiguration_json
 }
 func generateRedirectConfigurationState(gw ApplicationGateway, RedirectConfigurationName string) Redirect_configuration {
@@ -161,7 +145,7 @@ func removeRedirectConfigurationElement(gw *ApplicationGateway, RedirectConfigur
 		}
 	}
 }
-func checkRedirectConfigurationCreate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
+func checkRedirectConfigurationCreate(plan BindingService, gw ApplicationGateway, resp *tfsdk.CreateResourceResponse) bool {
 	//fatal-both-exist
 	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
 		plan.Redirect_configuration.Target_url.Value != "" {
@@ -171,6 +155,7 @@ func checkRedirectConfigurationCreate(plan WebappBinding, gw ApplicationGateway,
 		"Please, change configuration then retry.",)
 		return true
 	}
+	//fatal both don't exist
 	if plan.Redirect_configuration.Target_listener_name.Value == "" &&
 	plan.Redirect_configuration.Target_url.Value == "" {
 		resp.Diagnostics.AddError(
@@ -179,18 +164,20 @@ func checkRedirectConfigurationCreate(plan WebappBinding, gw ApplicationGateway,
 		"Please, change configuration then retry.",)
 		return true
 	}	
+	// check if the given Target_listener_name exist in http_listeners map or in the gw
 	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
-		plan.Redirect_configuration.Target_listener_name.Value != plan.Https_listener.Name.Value{
+		!checkHTTPListenerNameInMap(plan.Redirect_configuration.Target_listener_name.Value, plan.Http_listeners) &&
+		!checkHTTPListenerElement(gw, plan.Redirect_configuration.Target_listener_name.Value){
 		resp.Diagnostics.AddError(
 		"Unable to create binding. In the target HTTPS Listener ("+plan.Redirect_configuration.Target_listener_name.Value+") declared in Redirect Configuration : "+ 
-		plan.Redirect_configuration.Name.Value+" doesn't match the HTTPS Listener conf : "+plan.Https_listener.Name.Value,
-		"Please, change HTTPS Listener name then retry.",
+		plan.Redirect_configuration.Name.Value+" doesn't match any existing (in the gw) nor declared (in the tf) HTTP Listener. ",
+		"Please, change HTTP Listener name then retry.",
 		)
 		return true
-	}
+	} 
 	return false
 }
-func checkRedirectConfigurationUpdate(plan WebappBinding, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
+func checkRedirectConfigurationUpdate(plan BindingService, gw ApplicationGateway, resp *tfsdk.UpdateResourceResponse) bool {
 	//fatal-both-exist
 	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
 		plan.Redirect_configuration.Target_url.Value != "" {
@@ -200,6 +187,7 @@ func checkRedirectConfigurationUpdate(plan WebappBinding, gw ApplicationGateway,
 		"Please, change configuration then retry.",)
 		return true
 	}
+	//fatal both don't exist
 	if plan.Redirect_configuration.Target_listener_name.Value == "" &&
 	plan.Redirect_configuration.Target_url.Value == "" {
 		resp.Diagnostics.AddError(
@@ -207,15 +195,17 @@ func checkRedirectConfigurationUpdate(plan WebappBinding, gw ApplicationGateway,
 		"are missing: Target_listener_name and Target_url. At least and only one has to be set. ",
 		"Please, change configuration then retry.",)
 		return true
-	}	
+	}
+	// check if the given Target_listener_name exist in http_listeners map or in the gw
 	if plan.Redirect_configuration.Target_listener_name.Value != "" &&
-		plan.Redirect_configuration.Target_listener_name.Value != plan.Https_listener.Name.Value{
+		!checkHTTPListenerNameInMap(plan.Redirect_configuration.Target_listener_name.Value, plan.Http_listeners) &&
+		!checkHTTPListenerElement(gw, plan.Redirect_configuration.Target_listener_name.Value){
 		resp.Diagnostics.AddError(
-		"Unable to update binding. In the target HTTPS Listener ("+plan.Redirect_configuration.Target_listener_name.Value+") declared in Redirect Configuration : "+ 
-		plan.Redirect_configuration.Name.Value+" doesn't match the HTTPS Listener conf : "+plan.Https_listener.Name.Value,
-		"Please, change HTTPS Listener name then retry.",
+		"Unable to create binding. In the target HTTPS Listener ("+plan.Redirect_configuration.Target_listener_name.Value+") declared in Redirect Configuration : "+ 
+		plan.Redirect_configuration.Name.Value+" doesn't match any existing (in the gw) nor declared (in the tf) HTTP Listener. ",
+		"Please, change HTTP Listener name then retry.",
 		)
 		return true
-	}
+	} 
 	return false
 }
