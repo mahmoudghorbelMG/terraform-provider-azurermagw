@@ -7,7 +7,7 @@ import (
 // BindingService
 type BindingService struct {
 	Name                 		types.String         			`tfsdk:"name"`
-	Agw_name             		types.String         			`tfsdk:"agw_name"`
+	Agw_name             		types.String         			`tfsdk:"application_gateway_name"`
 	Agw_rg               		types.String         			`tfsdk:"agw_rg"`
 	Backend_address_pool		Backend_address_pool 			`tfsdk:"backend_address_pool"`
 	Backend_http_settings   	Backend_http_settings			`tfsdk:"backend_http_settings"`
