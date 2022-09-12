@@ -14,20 +14,21 @@ Only authentication to Azure using service principal is supported till now.
 You can configure the credentials for your Service Principal different ways:
 
 ### Environment Variables
-
+```shell
 $ export AZURE_CLIENT_ID="00000000-0000-0000-0000-000000000000"
 $ export AZURE_CLIENT_SECRET="00000000-0000-0000-0000-000000000000"
 $ export AZURE_SUBSCRIPTION_ID="00000000-0000-0000-0000-000000000000"
 $ export AZURE_TENANT_ID="00000000-0000-0000-0000-000000000000"
- 
-Then put 
+```
+
+Then put the following in the terraform file:
 
 ```hcl
 terraform {
   required_providers {
     azurermagw = {
       source = "mahmoudghorbelMG/azurermagw"
-      version = "0.2.0"
+      version = "0.2.1"
     }
   }
 }
@@ -36,7 +37,8 @@ provider "azurermagw" {
 ```
 
 ### Provider attributes
-Put 
+Or put the following in the terraform file:
+
 ```hcl
 provider "azurerm" {
   subscription_id = "00000000-0000-0000-0000-000000000000"
