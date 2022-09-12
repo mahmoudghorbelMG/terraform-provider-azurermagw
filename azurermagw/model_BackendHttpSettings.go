@@ -86,7 +86,7 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings, AZURE_SUBSCRI
 			TrustedRootCertificates *[]struct{ID string "json:\"id,omitempty\""} "json:\"trustedRootCertificates\""
 		}{	//initialisation of the Properties Struct
 			CookieBasedAffinity:			backend_plan.Cookie_based_affinity.Value,
-			AffinityCookieName:				backend_plan.Affinity_cookie_name.Value,
+			//AffinityCookieName:				backend_plan.Affinity_cookie_name.Value,
 			PickHostNameFromBackendAddress: bool(backend_plan.Pick_host_name_from_backend_address.Value),
 			Port: 							int(backend_plan.Port.Value),
 			Protocol: 						backend_plan.Protocol.Value,
@@ -94,7 +94,9 @@ func createBackendHTTPSettings(backend_plan Backend_http_settings, AZURE_SUBSCRI
 		},
 		Type: "Microsoft.Network/applicationGateways/backendHttpSettingsCollection",
 	}
-	
+	if backend_plan.Cookie_based_affinity.Value == "Enabled" {
+		backend_json.Properties.AffinityCookieName = backend_plan.Affinity_cookie_name.Value
+	}
 	//the probe name should treated specifically to construct the ID
 	probe_string := "/subscriptions/"+AZURE_SUBSCRIPTION_ID+"/resourceGroups/"+rg_name+"/providers/Microsoft.Network/applicationGateways/"+agw_name+"/probes/"
 	// if there is à probe, then copy it, else, nil
@@ -120,7 +122,7 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 	backend_state = Backend_http_settings{
 		Name:                                types.String	{Value: backend_json.Name},
 		Id:                                  types.String	{Value: backend_json.ID},
-		Affinity_cookie_name:                types.String	{Value: backend_json.Properties.AffinityCookieName},
+		//Affinity_cookie_name:                types.String	{Value: backend_json.Properties.AffinityCookieName},
 		Cookie_based_affinity:               types.String	{Value: backend_json.Properties.CookieBasedAffinity},
 		Pick_host_name_from_backend_address: types.Bool		{Value: backend_json.Properties.PickHostNameFromBackendAddress},
 		Port:                                types.Int64	{Value: int64(backend_json.Properties.Port)},
@@ -136,6 +138,9 @@ func generateBackendHTTPSettingsState(gw ApplicationGateway, BackendHTTPSettings
 	}else{
 		backend_state.Probe_name = types.String{Null: true}
 	}	
+	if backend_json.Properties.CookieBasedAffinity == "Enabled" {
+		backend_state.Affinity_cookie_name = types.String{Value: backend_json.Properties.AffinityCookieName}
+	}
 	return backend_state
 }
 func getBackendHTTPSettingsElementKey(gw ApplicationGateway, BackendHTTPSettingsName string) int {

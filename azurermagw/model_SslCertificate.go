@@ -34,7 +34,7 @@ type Ssl_certificate struct {
 	Key_vault_secret_id							types.String	`tfsdk:"key_vault_secret_id"`
 	Data	                       				types.String	`tfsdk:"data"`								
 	Password									types.String	`tfsdk:"password"`
-	Public_cert_data							types.String	`tfsdk:"public_cert_data"`
+	//Public_cert_data							types.String	`tfsdk:"public_cert_data"`
 }
 
 func createSslCertificate(sslCertificate_plan Ssl_certificate,AZURE_SUBSCRIPTION_ID string, rg_name string, agw_name string) (SslCertificate){	
@@ -93,7 +93,7 @@ func generateSslCertificateState(gw ApplicationGateway, SslCertificateName strin
 		sslCertificate_state.Key_vault_secret_id.Null = true
 		//sslCertificate_state.Data = types.String{Value: sslCertificate_json.Properties.PublicCertData}
 		sslCertificate_state.Password = types.String{Value: ""} //sslCertificate_json.Properties.Password
-		sslCertificate_state.Public_cert_data = types.String{Value: sslCertificate_json.Properties.PublicCertData}
+		//sslCertificate_state.Public_cert_data = types.String{Value: sslCertificate_json.Properties.PublicCertData}
 		//the problem here is that the value of PublicCertData extracted from the gw_response resulted after calling updateGw() 
 		// is null because the API is under executing the request (which take some seconds)
 	}
