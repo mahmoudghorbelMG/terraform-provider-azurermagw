@@ -40,7 +40,15 @@ provider "azurermagw" {
 Or put the following in the terraform file:
 
 ```hcl
-provider "azurerm" {
+terraform {
+  required_providers {
+    azurermagw = {
+      source = "Citeo/azurermagw"
+      version = "0.2.1"
+    }
+  }
+}
+provider "azurermagw" {
   subscription_id = "00000000-0000-0000-0000-000000000000"
   client_id       = "00000000-0000-0000-0000-000000000000"
   client_secret   = "00000000-0000-0000-0000-000000000000"
