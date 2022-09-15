@@ -3,11 +3,13 @@ package azurermagw
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -94,14 +96,6 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		AZURE_CLIENT_ID = config.AZURE_CLIENT_ID.Value
 	}
 
-	if AZURE_CLIENT_ID == "" {
-		// Error vs warning - empty value must stop execution
-		resp.Diagnostics.AddError(
-			"Unable to find AZURE_CLIENT_ID",
-			"AZURE_CLIENT_ID cannot be an empty string",
-		)
-		return
-	}
 
 	// User must provide a AZURE_CLIENT_SECRET to the provider
 	var AZURE_CLIENT_SECRET string
@@ -120,14 +114,6 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		AZURE_CLIENT_SECRET = config.AZURE_CLIENT_SECRET.Value
 	}
 
-	if AZURE_CLIENT_SECRET == "" {
-		// Error vs warning - empty value must stop execution
-		resp.Diagnostics.AddError(
-			"Unable to find AZURE_CLIENT_SECRET",
-			"AZURE_CLIENT_SECRET cannot be an empty string",
-		)
-		return
-	}
 
 	// User must provide a AZURE_TENANT_ID to the provider
 	var AZURE_TENANT_ID string
@@ -144,15 +130,6 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		AZURE_TENANT_ID = os.Getenv("AZURE_TENANT_ID")
 	} else {
 		AZURE_TENANT_ID = config.AZURE_TENANT_ID.Value
-	}
-
-	if AZURE_TENANT_ID == "" {
-		// Error vs warning - empty value must stop execution
-		resp.Diagnostics.AddError(
-			"Unable to find AZURE_TENANT_ID",
-			"AZURE_TENANT_ID cannot be an empty string",
-		)
-		return
 	}
 
 	// User must provide a AZURE_SUBSCRIPTION_ID to the provider
@@ -172,6 +149,30 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		AZURE_SUBSCRIPTION_ID = config.AZURE_SUBSCRIPTION_ID.Value
 	}
 
+	/*if AZURE_CLIENT_ID == "" {
+		// Error vs warning - empty value must stop execution
+		resp.Diagnostics.AddError(
+			"Unable to find AZURE_CLIENT_ID",
+			"AZURE_CLIENT_ID cannot be an empty string",
+		)
+		return
+	}	
+	if AZURE_CLIENT_SECRET == "" {
+		// Error vs warning - empty value must stop execution
+		resp.Diagnostics.AddError(
+			"Unable to find AZURE_CLIENT_SECRET",
+			"AZURE_CLIENT_SECRET cannot be an empty string",
+		)
+		return
+	}
+	if AZURE_TENANT_ID == "" {
+		// Error vs warning - empty value must stop execution
+		resp.Diagnostics.AddError(
+			"Unable to find AZURE_TENANT_ID",
+			"AZURE_TENANT_ID cannot be an empty string",
+		)
+		return
+	}
 	if AZURE_SUBSCRIPTION_ID == "" {
 		// Error vs warning - empty value must stop execution
 		resp.Diagnostics.AddError(
@@ -179,11 +180,42 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 			"AZURE_SUBSCRIPTION_ID cannot be an empty string",
 		)
 		return
+	}*/
+	
+	//check if we can get token after a successful login
+	cmd := exec.Command("az", "account", "get-access-token")
+	token_json, err := cmd.Output()
+	var login bool
+	if err!= nil {
+		fmt.Println("\n================== login = false =======================")
+		login = false
+	}else{
+		fmt.Println("\n================== login = true =======================\n",string(token_json))		
+		login = true 
 	}
 
+	var token Token		
+	if login {
+		err = json.Unmarshal(token_json, &token)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("\nuuuuuuuuuuuuuuuu token with login uuuuuuuuuuuuuuuu\n",token)
+	}else{
+		if AZURE_SUBSCRIPTION_ID == "" || AZURE_TENANT_ID == "" || AZURE_CLIENT_SECRET == "" || AZURE_CLIENT_ID == "" {
+			// Error vs warning - empty value must stop execution
+			resp.Diagnostics.AddError(
+			"Unable to find AZURE_SUBSCRIPTION_ID or AZURE_TENANT_ID or AZURE_CLIENT_SECRET or AZURE_CLIENT_ID",
+			"Please provide all these values (in tf file or via Environment variables) or connect to azure through az cli.",)
+			return
+		}else{
+			token = getToken(AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID)	
+			fmt.Println("\nuuuuuuuuuuuuuuuu token with ENV uuuuuuuuuuuuuuuu\n",token)
+		}
+		
+	}
 	// create Token
-	t := getToken(AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID)
-	p.token = &t
+	p.token = &token
 	p.AZURE_SUBSCRIPTION_ID = AZURE_SUBSCRIPTION_ID
 	//resp.Diagnostics.AddWarning("################TOKEN############### : ",p.token.Access_token)
 
