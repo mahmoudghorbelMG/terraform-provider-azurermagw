@@ -132,7 +132,7 @@ backend_address_pool = {
 
 ### Required
 
-- `application_gateway_name` (String) The name of the application gateway to which the backend application will be binded.
+- `application_gateway_name` (String) The name of the application gateway to which the backend application will be bound.
 - `application_gateway_resource_group_name` (String) The name of the resource group where the application gateway is deployed.
 - `backend_address_pool` (Attributes) For this provider version, only one `backend_address_pool` block can be set as defined below. (see [below for nested schema](#nestedatt--backend_address_pool))
 - `backend_http_settings` (Attributes) For this provider version, only one `backend_http_settings` block can be set as defined below. (see [below for nested schema](#nestedatt--backend_http_settings))
