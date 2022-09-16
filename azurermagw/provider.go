@@ -148,41 +148,7 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		AZURE_SUBSCRIPTION_ID = os.Getenv("AZURE_SUBSCRIPTION_ID")
 	} else {
 		AZURE_SUBSCRIPTION_ID = config.AZURE_SUBSCRIPTION_ID.Value
-	}
-
-	/*if AZURE_CLIENT_ID == "" {
-		// Error vs warning - empty value must stop execution
-		resp.Diagnostics.AddError(
-			"Unable to find AZURE_CLIENT_ID",
-			"AZURE_CLIENT_ID cannot be an empty string",
-		)
-		return
 	}	
-	if AZURE_CLIENT_SECRET == "" {
-		// Error vs warning - empty value must stop execution
-		resp.Diagnostics.AddError(
-			"Unable to find AZURE_CLIENT_SECRET",
-			"AZURE_CLIENT_SECRET cannot be an empty string",
-		)
-		return
-	}
-	if AZURE_TENANT_ID == "" {
-		// Error vs warning - empty value must stop execution
-		resp.Diagnostics.AddError(
-			"Unable to find AZURE_TENANT_ID",
-			"AZURE_TENANT_ID cannot be an empty string",
-		)
-		return
-	}
-	if AZURE_SUBSCRIPTION_ID == "" {
-		// Error vs warning - empty value must stop execution
-		resp.Diagnostics.AddError(
-			"Unable to find AZURE_SUBSCRIPTION_ID",
-			"AZURE_SUBSCRIPTION_ID cannot be an empty string",
-		)
-		return
-	}*/
-	
 	//check if we can get token after a successful login
 	cmd := exec.Command("az", "account", "get-access-token")
 	token_json, err := cmd.Output()
@@ -191,7 +157,7 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		fmt.Println("\n================== login = false =======================")
 		login = false
 	}else{
-		fmt.Println("\n================== login = true =======================\n",string(token_json))		
+		fmt.Println("\n================== login = true =======================")		
 		login = true 
 	}
 
@@ -202,10 +168,7 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println("\nuuuuuuuuuuuuuuuu token with login uuuuuuuuuuuuuuuu\n",tokenLogin)
-		//token.Access_token 	= tokenLogin.Access_token
-		//token.Token_type	= tokenLogin.Token_type
-		//token.Expires_on	= tokenLogin.Expires_on
+		fmt.Println("\nuuuuuuuuuuuuuuuu token with login uuuuuuuuuuuuuuuu")
 		p.Access_token			= tokenLogin.Access_token
 		p.AZURE_SUBSCRIPTION_ID = tokenLogin.Subscription_id
 	}else{
@@ -218,17 +181,14 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		}else{
 			token = getToken(AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID)	
 			p.AZURE_SUBSCRIPTION_ID = AZURE_SUBSCRIPTION_ID
-			fmt.Println("\nuuuuuuuuuuuuuuuu token with ENV uuuuuuuuuuuuuuuu\n",token)
+			fmt.Println("\nuuuuuuuuuuuuuuuu token with ENV uuuuuuuuuuuuuuuu")
 			p.Access_token = token.Access_token
 			p.AZURE_SUBSCRIPTION_ID = AZURE_SUBSCRIPTION_ID
 		}
 		
 	}
-	// create Token
-	//p.token = &token
-	
-	
-	resp.Diagnostics.AddWarning(p.AZURE_SUBSCRIPTION_ID+"################ TOKEN ############### : ",p.Access_token)
+		
+	//resp.Diagnostics.AddWarning(p.AZURE_SUBSCRIPTION_ID+"################ TOKEN ############### : ",p.Access_token)
 
 	p.configured = true
 }
