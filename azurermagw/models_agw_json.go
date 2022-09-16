@@ -10,6 +10,14 @@ type Token struct {
 	Resource       string `json:"resource"`
 	Access_token   string `json:"access_token"`
 }
+type TokenLogin struct {
+	// defining struct variables
+	Access_token   	string `json:"accessToken"`
+	Expires_on     	string `json:"expiresOn"`
+	Subscription_id	string `json:"subscription"`
+	Token_type     	string `json:"tokenType"`
+	Tenant			string `json:"tenant"`
+}
 
 type ApplicationGateway struct {
 	Name     string `json:"name"`

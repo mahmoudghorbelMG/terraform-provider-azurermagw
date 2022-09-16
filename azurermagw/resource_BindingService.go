@@ -443,7 +443,7 @@ func (r resourceBindingService) Create(ctx context.Context, req tfsdk.CreateReso
 	//Get the agw (app gateway) from Azure with its Rest API
 	resourceGroupName := plan.Agw_rg.Value
 	applicationGatewayName := plan.Agw_name.Value
-	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
+	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.Access_token)
 	
 	//Check if the agw already contains an existing element that has the same name of a new element to add
 	exist_element, exist := checkElementName(gw, plan)
@@ -520,7 +520,7 @@ func (r resourceBindingService) Create(ctx context.Context, req tfsdk.CreateReso
 
 
 	//call the API to update the gw
-	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
+	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.Access_token)
 	
 	//printToFile(error_json,"updateGW_create.json")
 	//verify if the API response is 200 (that means, normaly, elements were added to the gateway), otherwise exit error
@@ -595,7 +595,7 @@ func (r resourceBindingService) Read(ctx context.Context, req tfsdk.ReadResource
 		"redirectConfigurationName"		: state.Redirect_configuration.Name.Value,		
 	}
 	
-	state = getBindingServiceState(r.p.AZURE_SUBSCRIPTION_ID, names_map, state.Http_listeners, state.Request_routing_rules, r.p.token.Access_token)
+	state = getBindingServiceState(r.p.AZURE_SUBSCRIPTION_ID, names_map, state.Http_listeners, state.Request_routing_rules, r.p.Access_token)
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -638,7 +638,7 @@ func (r resourceBindingService) Update(ctx context.Context, req tfsdk.UpdateReso
 	//Get the agw in order to update it with new values from plan
 	resourceGroupName := plan.Agw_rg.Value
 	applicationGatewayName := plan.Agw_name.Value
-	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
+	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.Access_token)
 
 	//for all elements (attributes), prepare the new elements (json) from the plan
 	//Verify if the agw already contains the elements to be updated beacause:
@@ -907,7 +907,7 @@ func (r resourceBindingService) Update(ctx context.Context, req tfsdk.UpdateReso
 	gw.Properties.RedirectConfigurations = append(gw.Properties.RedirectConfigurations, redirectConfiguration_json)
 	
 	//and update the gateway
-	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
+	gw_response, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.Access_token)
 	
 	//verify if the API response is 200 (that means, normaly, elements were added to the gateway), otherwise exit error
 	if code != 200 {
@@ -996,7 +996,7 @@ func (r resourceBindingService) Delete(ctx context.Context, req tfsdk.DeleteReso
 	//Get the agw
 	resourceGroupName := state.Agw_rg.Value
 	applicationGatewayName := state.Agw_name.Value
-	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.token.Access_token)
+	gw := getGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, r.p.Access_token)
 	
 	//remove the elements from the gw
 	removeBackendAddressPoolElement(&gw, backendAddressPoolName)
@@ -1013,7 +1013,7 @@ func (r resourceBindingService) Delete(ctx context.Context, req tfsdk.DeleteReso
 	}
 	
 	//and update the gateway
-	_, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.token.Access_token)
+	_, error_json, code := updateGW(r.p.AZURE_SUBSCRIPTION_ID, resourceGroupName, applicationGatewayName, gw, r.p.Access_token)
 	//verify if the API response is 200 (that means, normaly, elements were deleted to the gateway), otherwise exit error
 	if code != 200 {
 		// Error  - when deleting new elements to the app gateway
@@ -1077,7 +1077,7 @@ func (r resourceBindingService) ImportState(ctx context.Context, req tfsdk.Impor
 		names_map["requestRoutingRuleHttpName"] = idParts[10]
 	}
 
-	state := getBindingServiceState(r.p.AZURE_SUBSCRIPTION_ID,names_map,r.p.token.Access_token)
+	state := getBindingServiceState(r.p.AZURE_SUBSCRIPTION_ID,names_map,r.p.Access_token)
 	diags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

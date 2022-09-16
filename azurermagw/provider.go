@@ -24,9 +24,10 @@ func New() tfsdk.Provider {
 }
 
 type provider struct {
-	configured bool
-	token                 *Token
-	AZURE_SUBSCRIPTION_ID string
+	configured 				bool
+	//token                 	*Token
+	Access_token			string
+	AZURE_SUBSCRIPTION_ID 	string
 }
 
 // GetSchema
@@ -194,13 +195,19 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		login = true 
 	}
 
+	var tokenLogin TokenLogin
 	var token Token		
 	if login {
-		err = json.Unmarshal(token_json, &token)
+		err = json.Unmarshal(token_json, &tokenLogin)
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println("\nuuuuuuuuuuuuuuuu token with login uuuuuuuuuuuuuuuu\n",token)
+		fmt.Println("\nuuuuuuuuuuuuuuuu token with login uuuuuuuuuuuuuuuu\n",tokenLogin)
+		//token.Access_token 	= tokenLogin.Access_token
+		//token.Token_type	= tokenLogin.Token_type
+		//token.Expires_on	= tokenLogin.Expires_on
+		p.Access_token			= tokenLogin.Access_token
+		p.AZURE_SUBSCRIPTION_ID = tokenLogin.Subscription_id
 	}else{
 		if AZURE_SUBSCRIPTION_ID == "" || AZURE_TENANT_ID == "" || AZURE_CLIENT_SECRET == "" || AZURE_CLIENT_ID == "" {
 			// Error vs warning - empty value must stop execution
@@ -210,14 +217,18 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 			return
 		}else{
 			token = getToken(AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID)	
+			p.AZURE_SUBSCRIPTION_ID = AZURE_SUBSCRIPTION_ID
 			fmt.Println("\nuuuuuuuuuuuuuuuu token with ENV uuuuuuuuuuuuuuuu\n",token)
+			p.Access_token = token.Access_token
+			p.AZURE_SUBSCRIPTION_ID = AZURE_SUBSCRIPTION_ID
 		}
 		
 	}
 	// create Token
-	p.token = &token
-	p.AZURE_SUBSCRIPTION_ID = AZURE_SUBSCRIPTION_ID
-	//resp.Diagnostics.AddWarning("################TOKEN############### : ",p.token.Access_token)
+	//p.token = &token
+	
+	
+	resp.Diagnostics.AddWarning(p.AZURE_SUBSCRIPTION_ID+"################ TOKEN ############### : ",p.Access_token)
 
 	p.configured = true
 }
