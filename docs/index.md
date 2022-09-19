@@ -13,7 +13,7 @@ The followings are the main 2 advantages of our azurermagw provider compared to 
 * Currently, the azurerm provider offer this service but for all backend applications at the same time and through the same resource (`azurerm_application_gateway`), so the same terraform project. We believe that managing such service separately for each standalone application project is a better way. So the binding service could be seen as a separate resource that can created, updated and removed from an existing application gateway without manipulating such huge resource. It’s the same idea as the azurerm resources `azurerm_key_vault_secret`, `azurerm_key_vault_certificate`, `azurerm_key_vault_key` or even `azurerm_key_vault_access_policy` that could be considered as key vault sub-resources that can be handled separately.
 * From another side, when using the current azurerm provider (version 3.x) for an application gateway resource, a very simple change in the terraform configuration of the app gateway project (or in the portal) makes the terraform plan or apply very hard to read. Several persons observed the same experience and waited for a coming soon azurerm provider that never come. 
 
-To overcome the readability problem of modified terraform configurations, the go terraform framework type MapNestedAttributes was used to declare several http listeners and request routing rules instead of ListNestedAttributes or SetNestedAttributes. These last types, after experiencing them, were responsible of the readability problem. That’s why we use a map with keys to declare listeners and rules. See the binding service example usage for more details
+To overcome the readability problem of modified terraform configurations, the go terraform framework type MapNestedAttributes was used to declare several http listeners and request routing rules instead of ListNestedAttributes or SetNestedAttributes. These last types, after experiencing them, were responsible of the readability problem. That’s why we use a map with keys to declare listeners and rules. See the binding service example usage for more details.
 
 ~> **NOTE:** A different key name has to be set for each listener or rule. It’s of your responsibility the check that the listener or rule keys are all different. 
 
@@ -22,6 +22,8 @@ To overcome the readability problem of modified terraform configurations, the go
 -> **Note:** The current provider version support only one instance of the following attributes: backend pool, backend http settings, probe, redirect configuration and ssl certificate. This could be enhanced in future release if required.
 
 -> **Note:** The current provider version support the ssl certificate to be stored in a key vault. This could be enhanced in future release if required.
+
+~> **NOTE:** This provider is an ongoing work that is under experimentations. Till now, we recommand to use it in non production environments only. 
 
 
 # Authentication
