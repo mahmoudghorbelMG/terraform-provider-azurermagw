@@ -180,37 +180,37 @@ type ApplicationGateway struct {
 		RedirectConfigurations []RedirectConfiguration `json:"redirectConfigurations,omitempty"`
 		RequestRoutingRules []RequestRoutingRule `json:"requestRoutingRules,omitempty"`
 		RewriteRuleSets []struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
+			Name       string `json:"name,omitempty"`
+			ID         string `json:"id,omitempty"`
+			Etag       string `json:"etag,omitempty"`
 			Properties struct {
-				ProvisioningState string `json:"provisioningState"`
+				ProvisioningState string `json:"provisioningState,omitempty"`
 				RewriteRules      []struct {
-					RuleSequence int           `json:"ruleSequence"`
-					Conditions   []interface{} `json:"conditions"`
-					Name         string        `json:"name"`
+					RuleSequence int           `json:"ruleSequence,omitempty"`
+					Conditions   []interface{} `json:"conditions,omitempty"`
+					Name         string        `json:"name,omitempty"`
 					ActionSet    struct {
-						RequestHeaderConfigurations []struct {
-							HeaderName  string `json:"headerName"`
-							HeaderValue string `json:"headerValue"`
-						} `json:"requestHeaderConfigurations"`
-						ResponseHeaderConfigurations []struct {
-							HeaderName  string `json:"headerName"`
-							HeaderValue string `json:"headerValue"`
-						} `json:"responseHeaderConfigurations"`
-						URLConfiguration struct {
-							ModifiedPath        string `json:"modifiedPath"`
-							ModifiedQueryString string `json:"modifiedQueryString"`
-							Reroute             bool   `json:"reroute"`
-						} `json:"urlConfiguration"`
-					} `json:"actionSet"`
-				} `json:"rewriteRules"`
-				RequestRoutingRules []struct {
-					ID string `json:"id"`
-				} `json:"requestRoutingRules"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"rewriteRuleSets"`
+						RequestHeaderConfigurations *[]struct {
+							HeaderName  string `json:"headerName,omitempty"`
+							HeaderValue string `json:"headerValue,omitempty"`
+						} `json:"requestHeaderConfigurations,omitempty"`
+						ResponseHeaderConfigurations *[]struct {
+							HeaderName  string `json:"headerName,omitempty"`
+							HeaderValue string `json:"headerValue,omitempty"`
+						} `json:"responseHeaderConfigurations,omitempty"`
+						URLConfiguration *struct {
+							ModifiedPath        string `json:"modifiedPath,omitempty"`
+							ModifiedQueryString string `json:"modifiedQueryString,omitempty"`
+							Reroute             bool   `json:"reroute,omitempty"`
+						} `json:"urlConfiguration,omitempty"`
+					} `json:"actionSet,omitempty"`
+				} `json:"rewriteRules,omitempty"`
+				RequestRoutingRules *[]struct {
+					ID string `json:"id,omitempty"`
+				} `json:"requestRoutingRules,omitempty"`
+			} `json:"properties,omitempty"`
+			Type string `json:"type,omitempty"`
+		} `json:"rewriteRuleSets,omitempty"`
 		RoutingRules []struct {
 			ID         string `json:"id"`
 			Name       string `json:"name"`
