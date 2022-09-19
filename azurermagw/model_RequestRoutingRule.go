@@ -56,7 +56,7 @@ type Request_routing_rule struct {
 	//Only valid for v2 SKUs.
 	Rewrite_rule_set_name  				types.String	`tfsdk:"rewrite_rule_set_name"`	
 	//optional
-	Url_path_map_name					types.String		`tfsdk:"url_path_map_name"`
+	Url_path_map_name					types.String	`tfsdk:"url_path_map_name"`
 }
 
 func createRequestRoutingRule(requestRoutingRule_plan *Request_routing_rule, priority int, AZURE_SUBSCRIPTION_ID string, 

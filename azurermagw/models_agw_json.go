@@ -2,181 +2,181 @@ package azurermagw
 
 type Token struct {
 	// defining struct variables
-	Token_type     string `json:"token_type"`
-	Expires_in     string `json:"expires_in"`
-	Ext_expires_in string `json:"ext_expires_in"`
-	Expires_on     string `json:"expires_on"`
-	Not_before     string `json:"not_before"`
-	Resource       string `json:"resource"`
-	Access_token   string `json:"access_token"`
+	Token_type     string `json:"token_type,omitempty"`
+	Expires_in     string `json:"expires_in,omitempty"`
+	Ext_expires_in string `json:"ext_expires_in,omitempty"`
+	Expires_on     string `json:"expires_on,omitempty"`
+	Not_before     string `json:"not_before,omitempty"`
+	Resource       string `json:"resource,omitempty"`
+	Access_token   string `json:"access_token,omitempty"`
 }
 type TokenLogin struct {
 	// defining struct variables
-	Access_token   	string `json:"accessToken"`
-	Expires_on     	string `json:"expiresOn"`
-	Subscription_id	string `json:"subscription"`
-	Token_type     	string `json:"tokenType"`
-	Tenant			string `json:"tenant"`
+	Access_token   	string `json:"accessToken,omitempty"`
+	Expires_on     	string `json:"expiresOn,omitempty"`
+	Subscription_id	string `json:"subscription,omitempty"`
+	Token_type     	string `json:"tokenType,omitempty"`
+	Tenant			string `json:"tenant,omitempty"`
 }
 
 type ApplicationGateway struct {
-	Name     string `json:"name"`
-	ID       string `json:"id"`
-	Etag     string `json:"etag"`
-	Type     string `json:"type"`
-	Location string `json:"location"`
+	Name     string `json:"name,omitempty"`
+	ID       string `json:"id,omitempty"`
+	Etag     string `json:"etag,omitempty"`
+	Type     string `json:"type,omitempty"`
+	Location string `json:"location,omitempty"`
 	Tags     struct {
-	} `json:"tags"`
+	} `json:"tags,omitempty"`
 	Identity *struct { //Identity `json:"identity,omitempty"`
 		Type                   string      `json:"type,omitempty"`
 		UserAssignedIdentities interface{} `json:"userAssignedIdentities,omitempty"`
-	} `json:"identity"`
+	} `json:"identity,omitempty"`
 	Properties struct {
 		AuthenticationCertificates []struct {
-			Id         string `json:"id"`
-			Name       string `json:"name"`
+			Id         string `json:"id,omitempty"`
+			Name       string `json:"name,omitempty"`
 			Properties struct {
-				Data string `json:"data"`
-			} `json:"properties"`
-		} `json:"authenticationCertificates"`
+				Data string `json:"data,omitempty"`
+			} `json:"properties,omitempty"`
+		} `json:"authenticationCertificates,omitempty"`
 		AutoscaleConfiguration *struct {
-			MaxCapacity int `json:"maxCapacity"`
-			MinCapacity int `json:"minCapacity"`
-		} `json:"autoscaleConfiguration"`
+			MaxCapacity int `json:"maxCapacity,omitempty"`
+			MinCapacity int `json:"minCapacity,omitempty"`
+		} `json:"autoscaleConfiguration,omitempty"`
 		BackendAddressPools 			[]BackendAddressPool `json:"backendAddressPools,omitempty"` 
 		BackendHTTPSettingsCollection 	[]BackendHTTPSettings `json:"backendHttpSettingsCollection,omitempty"`
 		BackendSettingsCollection 		[]struct {
-			ID         string `json:"id"`
-			Name       string `json:"name"`
+			ID         string `json:"id,omitempty"`
+			Name       string `json:"name,omitempty"`
 			Properties struct {
-				HostName                       string `json:"hostName"`
-				PickHostNameFromBackendAddress string `json:"pickHostNameFromBackendAddress"`
-				Port                           string `json:"port"`
+				HostName                       string `json:"hostName,omitempty"`
+				PickHostNameFromBackendAddress string `json:"pickHostNameFromBackendAddress,omitempty"`
+				Port                           string `json:"port,omitempty"`
 				Probe                          struct {
-					ID string `json:"id"`
-				} `json:"probe"`
-				Protocol                string `json:"protocol"`
-				Timeout                 string `json:"timeout"`
+					ID string `json:"id,omitempty"`
+				} `json:"probe,omitempty"`
+				Protocol                string `json:"protocol,omitempty"`
+				Timeout                 string `json:"timeout,omitempty"`
 				TrustedRootCertificates []struct {
-					ID string `json:"id"`
-				} `json:"trustedRootCertificates"`
-			} `json:"properties"`
-		} `json:"backendSettingsCollection"`
+					ID string `json:"id,omitempty"`
+				} `json:"trustedRootCertificates,omitempty"`
+			} `json:"properties,omitempty"`
+		} `json:"backendSettingsCollection,omitempty"`
 		CustomErrorConfigurations []struct {
-			CustomErrorPageURL string `json:"customErrorPageUrl"`
-			StatusCode         string `json:"statusCode"`
-		} `json:"customErrorConfigurations"`
+			CustomErrorPageURL string `json:"customErrorPageUrl,omitempty"`
+			StatusCode         string `json:"statusCode,omitempty"`
+		} `json:"customErrorConfigurations,omitempty"`
 		EnableFips     bool `json:"enableFips,omitempty"`
 		EnableHTTP2    bool `json:"enableHttp2,omitempty"`
 		FirewallPolicy *struct {
-			ID string `json:"id"`
-		} `json:"firewallPolicy"`
+			ID string `json:"id,omitempty"`
+		} `json:"firewallPolicy,omitempty"`
 		ForceFirewallPolicyAssociation bool `json:"forceFirewallPolicyAssociation,omitempty"`
 		FrontendIPConfigurations       []struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
-			Type       string `json:"type"`
+			Name       string `json:"name,omitempty"`
+			ID         string `json:"id,omitempty"`
+			Etag       string `json:"etag,omitempty"`
+			Type       string `json:"type,omitempty"`
 			Properties struct {
 				PrivateIPAddress          string `json:"privateIPAddress,omitempty"`
-				ProvisioningState         string `json:"provisioningState"`
-				PrivateIPAllocationMethod string `json:"privateIPAllocationMethod"`
+				ProvisioningState         string `json:"provisioningState,omitempty"`
+				PrivateIPAllocationMethod string `json:"privateIPAllocationMethod,omitempty"`
 				PublicIPAddress           struct {
-					ID string `json:"id"`
-				} `json:"publicIPAddress"`
+					ID string `json:"id,omitempty"`
+				} `json:"publicIPAddress,omitempty"`
 				HTTPListeners []struct {
-					ID string `json:"id"`
-				} `json:"httpListeners"`
+					ID string `json:"id,omitempty"`
+				} `json:"httpListeners,omitempty"`
 				Subnet *struct {
-					ID string `json:"id"`
-				} `json:"subnet"`
-			} `json:"properties"`
-		} `json:"frontendIPConfigurations"`
+					ID string `json:"id,omitempty"`
+				} `json:"subnet,omitempty"`
+			} `json:"properties,omitempty"`
+		} `json:"frontendIPConfigurations,omitempty"`
 		FrontendPorts []struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
+			Name       string `json:"name,omitempty"`
+			ID         string `json:"id,omitempty"`
+			Etag       string `json:"etag,omitempty"`
 			Properties struct {
-				ProvisioningState string `json:"provisioningState"`
-				Port              int    `json:"port"`
+				ProvisioningState string `json:"provisioningState,omitempty"`
+				Port              int    `json:"port,omitempty"`
 				HTTPListeners     []struct {
-					ID string `json:"id"`
-				} `json:"httpListeners"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"frontendPorts"`
+					ID string `json:"id,omitempty"`
+				} `json:"httpListeners,omitempty"`
+			} `json:"properties,omitempty"`
+			Type string `json:"type,omitempty"`
+		} `json:"frontendPorts,omitempty"`
 		GatewayIPConfigurations []struct {
-			Name       string `json:"name"`
-			ID         string `json:"id"`
-			Etag       string `json:"etag"`
+			Name       string `json:"name,omitempty"`
+			ID         string `json:"id,omitempty"`
+			Etag       string `json:"etag,omitempty"`
 			Properties struct {
-				ProvisioningState string `json:"provisioningState"`
+				ProvisioningState string `json:"provisioningState,omitempty"`
 				Subnet            struct {
-					ID string `json:"id"`
-				} `json:"subnet"`
-			} `json:"properties"`
-			Type string `json:"type"`
-		} `json:"gatewayIPConfigurations"`
+					ID string `json:"id,omitempty"`
+				} `json:"subnet,omitempty"`
+			} `json:"properties,omitempty"`
+			Type string `json:"type,omitempty"`
+		} `json:"gatewayIPConfigurations,omitempty"`
 		GlobalConfiguration *struct {
-			EnableRequestBuffering  bool `json:"enableRequestBuffering"`
-			EnableResponseBuffering bool `json:"enableResponseBuffering"`
-		} `json:"globalConfiguration"`
+			EnableRequestBuffering  bool `json:"enableRequestBuffering,omitempty"`
+			EnableResponseBuffering bool `json:"enableResponseBuffering,omitempty"`
+		} `json:"globalConfiguration,omitempty"`
 		HTTPListeners [] HTTPListener `json:"httpListeners,omitempty"`
 		Listeners []struct {
-			ID         string `json:"id"`
-			Name       string `json:"name"`
+			ID         string `json:"id,omitempty"`
+			Name       string `json:"name,omitempty"`
 			Properties struct {
 				FrontendIPConfiguration struct {
-					ID string `json:"id"`
-				} `json:"frontendIPConfiguration"`
+					ID string `json:"id,omitempty"`
+				} `json:"frontendIPConfiguration,omitempty"`
 				FrontendPort struct {
-					ID string `json:"id"`
-				} `json:"frontendPort"`
-				Protocol       string `json:"protocol"`
+					ID string `json:"id,omitempty"`
+				} `json:"frontendPort,omitempty"`
+				Protocol       string `json:"protocol,omitempty"`
 				SslCertificate *struct {
-					ID string `json:"id"`
-				} `json:"sslCertificate"`
+					ID string `json:"id,omitempty"`
+				} `json:"sslCertificate,omitempty"`
 				SslProfile *struct {
-					ID string `json:"id"`
-				} `json:"sslProfile"`
-			} `json:"properties"`
-		} `json:"listeners"`
+					ID string `json:"id,omitempty"`
+				} `json:"sslProfile,omitempty"`
+			} `json:"properties,omitempty"`
+		} `json:"listeners,omitempty"`
 		LoadDistributionPolicies []struct {
-			ID         string `json:"id"`
-			Name       string `json:"name"`
+			ID         string `json:"id,omitempty"`
+			Name       string `json:"name,omitempty"`
 			Properties struct {
-				LoadDistributionAlgorithm string `json:"loadDistributionAlgorithm"`
+				LoadDistributionAlgorithm string `json:"loadDistributionAlgorithm,omitempty"`
 				LoadDistributionTargets   []struct {
-					ID         string `json:"id"`
-					Name       string `json:"name"`
+					ID         string `json:"id,omitempty"`
+					Name       string `json:"name,omitempty"`
 					Properties struct {
 						BackendAddressPool struct {
-							ID string `json:"id"`
-						} `json:"backendAddressPool"`
-						WeightPerServer string `json:"weightPerServer"`
-					} `json:"properties"`
-				} `json:"loadDistributionTargets"`
-			} `json:"properties"`
-		} `json:"loadDistributionPolicies"`
+							ID string `json:"id,omitempty"`
+						} `json:"backendAddressPool,omitempty"`
+						WeightPerServer string `json:"weightPerServer,omitempty"`
+					} `json:"properties,omitempty"`
+				} `json:"loadDistributionTargets,omitempty"`
+			} `json:"properties,omitempty"`
+		} `json:"loadDistributionPolicies,omitempty"`
 		PrivateLinkConfigurations []struct {
-			ID         string `json:"id"`
-			Name       string `json:"name"`
+			ID         string `json:"id,omitempty"`
+			Name       string `json:"name,omitempty"`
 			Properties struct {
 				IPConfigurations []struct {
-					ID         string `json:"id"`
-					Name       string `json:"name"`
+					ID         string `json:"id,omitempty"`
+					Name       string `json:"name,omitempty"`
 					Properties struct {
-						Primary                   bool   `json:"primary"`
+						Primary                   bool   `json:"primary,omitempty"`
 						PrivateIPAddress          string `json:"privateIPAddress,omitempty"`
-						PrivateIPAllocationMethod string `json:"privateIPAllocationMethod"`
+						PrivateIPAllocationMethod string `json:"privateIPAllocationMethod,omitempty"`
 						Subnet                    struct {
-							ID string `json:"id"`
-						} `json:"subnet"`
-					} `json:"properties"`
-				} `json:"ipConfigurations"`
-			} `json:"properties"`
-		} `json:"privateLinkConfigurations"`
-		Probes []Probe_json `json:"probes"`
+							ID string `json:"id,omitempty"`
+						} `json:"subnet,omitempty"`
+					} `json:"properties,omitempty"`
+				} `json:"ipConfigurations,omitempty"`
+			} `json:"properties,omitempty"`
+		} `json:"privateLinkConfigurations,omitempty"`
+		Probes []Probe_json `json:"probes,omitempty"`
 		RedirectConfigurations []RedirectConfiguration `json:"redirectConfigurations,omitempty"`
 		RequestRoutingRules []RequestRoutingRule `json:"requestRoutingRules,omitempty"`
 		RewriteRuleSets []struct {
@@ -212,137 +212,137 @@ type ApplicationGateway struct {
 			Type string `json:"type,omitempty"`
 		} `json:"rewriteRuleSets,omitempty"`
 		RoutingRules []struct {
-			ID         string `json:"id"`
-			Name       string `json:"name"`
+			ID         string `json:"id,omitempty"`
+			Name       string `json:"name,omitempty"`
 			Properties struct {
 				BackendAddressPool struct {
-					ID string `json:"id"`
-				} `json:"backendAddressPool"`
+					ID string `json:"id,omitempty"`
+				} `json:"backendAddressPool,omitempty"`
 				BackendSettings struct {
-					ID string `json:"id"`
-				} `json:"backendSettings"`
+					ID string `json:"id,omitempty"`
+				} `json:"backendSettings,omitempty"`
 				Listener struct {
-					ID string `json:"id"`
-				} `json:"listener"`
-				RuleType string `json:"ruleType"`
-			} `json:"properties"`
-		} `json:"routingRules"`
+					ID string `json:"id,omitempty"`
+				} `json:"listener,omitempty"`
+				RuleType string `json:"ruleType,omitempty"`
+			} `json:"properties,omitempty"`
+		} `json:"routingRules,omitempty"`
 		Sku struct {
-			Name     string `json:"name"`
-			Tier     string `json:"tier"`
-			Capacity int    `json:"capacity"`
-		} `json:"sku"`
-		SslCertificates []SslCertificate `json:"sslCertificates"`
+			Name     string `json:"name,omitempty"`
+			Tier     string `json:"tier,omitempty"`
+			Capacity int    `json:"capacity,omitempty"`
+		} `json:"sku,omitempty"`
+		SslCertificates []SslCertificate `json:"sslCertificates,omitempty"`
 		SslPolicy struct {
 			CipherSuites         []string `json:"cipherSuites,omitempty"`
 			DisabledSslProtocols []string `json:"disabledSslProtocols,omitempty"`
 			MinProtocolVersion   string   `json:"minProtocolVersion,omitempty"`
-			PolicyName           string   `json:"policyName"`
-			PolicyType           string   `json:"policyType"`
-		} `json:"sslPolicy"`
+			PolicyName           string   `json:"policyName,omitempty"`
+			PolicyType           string   `json:"policyType,omitempty"`
+		} `json:"sslPolicy,omitempty"`
 		SslProfiles []struct {
-			ID         string `json:"id"`
-			Name       string `json:"name"`
+			ID         string `json:"id,omitempty"`
+			Name       string `json:"name,omitempty"`
 			Properties struct {
 				ClientAuthConfiguration struct {
-					VerifyClientCertIssuerDN bool `json:"verifyClientCertIssuerDN"`
-				} `json:"clientAuthConfiguration"`
+					VerifyClientCertIssuerDN bool `json:"verifyClientCertIssuerDN,omitempty"`
+				} `json:"clientAuthConfiguration,omitempty"`
 				SslPolicy struct {
-					CipherSuites         []string `json:"cipherSuites"`
-					DisabledSslProtocols []string `json:"disabledSslProtocols"`
-					MinProtocolVersion   string   `json:"minProtocolVersion"`
-					PolicyName           string   `json:"policyName"`
-					PolicyType           string   `json:"policyType"`
-				} `json:"sslPolicy"`
+					CipherSuites         []string `json:"cipherSuites,omitempty"`
+					DisabledSslProtocols []string `json:"disabledSslProtocols,omitempty"`
+					MinProtocolVersion   string   `json:"minProtocolVersion,omitempty"`
+					PolicyName           string   `json:"policyName,omitempty"`
+					PolicyType           string   `json:"policyType,omitempty"`
+				} `json:"sslPolicy,omitempty"`
 				TrustedClientCertificates []struct {
-					ID string `json:"id"`
-				} `json:"trustedClientCertificates"`
-			} `json:"properties"`
-		} `json:"sslProfiles"`
+					ID string `json:"id,omitempty"`
+				} `json:"trustedClientCertificates,omitempty"`
+			} `json:"properties,omitempty"`
+		} `json:"sslProfiles,omitempty"`
 		TrustedClientCertificates []struct {
-			ID         string `json:"id"`
-			Name       string `json:"name"`
+			ID         string `json:"id,omitempty"`
+			Name       string `json:"name,omitempty"`
 			Properties struct {
-				Data string `json:"data"`
-			} `json:"properties"`
-		} `json:"trustedClientCertificates"`
+				Data string `json:"data,omitempty"`
+			} `json:"properties,omitempty"`
+		} `json:"trustedClientCertificates,omitempty"`
 		TrustedRootCertificates []struct {
-			ID         string `json:"id"`
-			Name       string `json:"name"`
+			ID         string `json:"id,omitempty"`
+			Name       string `json:"name,omitempty"`
 			Properties struct {
-				Data             string `json:"data"`
-				KeyVaultSecretID string `json:"keyVaultSecretId"`
-			} `json:"properties"`
-		} `json:"trustedRootCertificates"`
+				Data             string `json:"data,omitempty"`
+				KeyVaultSecretID string `json:"keyVaultSecretId,omitempty"`
+			} `json:"properties,omitempty"`
+		} `json:"trustedRootCertificates,omitempty"`
 		URLPathMaps []struct {
-			ID         string `json:"id"`
-			Name       string `json:"name"`
+			ID         string `json:"id,omitempty"`
+			Name       string `json:"name,omitempty"`
 			Properties struct {
 				DefaultBackendAddressPool struct {
-					ID string `json:"id"`
-				} `json:"defaultBackendAddressPool"`
+					ID string `json:"id,omitempty"`
+				} `json:"defaultBackendAddressPool,omitempty"`
 				DefaultBackendHTTPSettings struct {
-					ID string `json:"id"`
-				} `json:"defaultBackendHttpSettings"`
+					ID string `json:"id,omitempty"`
+				} `json:"defaultBackendHttpSettings,omitempty"`
 				DefaultLoadDistributionPolicy struct {
-					ID string `json:"id"`
-				} `json:"defaultLoadDistributionPolicy"`
+					ID string `json:"id,omitempty"`
+				} `json:"defaultLoadDistributionPolicy,omitempty"`
 				DefaultRedirectConfiguration struct {
-					ID string `json:"id"`
-				} `json:"defaultRedirectConfiguration"`
+					ID string `json:"id,omitempty"`
+				} `json:"defaultRedirectConfiguration,omitempty"`
 				DefaultRewriteRuleSet struct {
-					ID string `json:"id"`
-				} `json:"defaultRewriteRuleSet"`
+					ID string `json:"id,omitempty"`
+				} `json:"defaultRewriteRuleSet,omitempty"`
 				PathRules []struct {
-					ID         string `json:"id"`
-					Name       string `json:"name"`
+					ID         string `json:"id,omitempty"`
+					Name       string `json:"name,omitempty"`
 					Properties struct {
 						BackendAddressPool struct {
-							ID string `json:"id"`
-						} `json:"backendAddressPool"`
+							ID string `json:"id,omitempty"`
+						} `json:"backendAddressPool,omitempty"`
 						BackendHTTPSettings struct {
-							ID string `json:"id"`
-						} `json:"backendHttpSettings"`
+							ID string `json:"id,omitempty"`
+						} `json:"backendHttpSettings,omitempty"`
 						FirewallPolicy *struct {
-							ID string `json:"id"`
-						} `json:"firewallPolicy"`
+							ID string `json:"id,omitempty"`
+						} `json:"firewallPolicy,omitempty"`
 						LoadDistributionPolicy struct {
-							ID string `json:"id"`
-						} `json:"loadDistributionPolicy"`
-						Paths                 []string `json:"paths"`
+							ID string `json:"id,omitempty"`
+						} `json:"loadDistributionPolicy,omitempty"`
+						Paths                 []string `json:"paths,omitempty"`
 						RedirectConfiguration struct {
-							ID string `json:"id"`
-						} `json:"redirectConfiguration"`
+							ID string `json:"id,omitempty"`
+						} `json:"redirectConfiguration,omitempty"`
 						RewriteRuleSet struct {
-							ID string `json:"id"`
-						} `json:"rewriteRuleSet"`
-					} `json:"properties"`
-				} `json:"pathRules"`
-			} `json:"properties"`
-		} `json:"urlPathMaps"`
+							ID string `json:"id,omitempty"`
+						} `json:"rewriteRuleSet,omitempty"`
+					} `json:"properties,omitempty"`
+				} `json:"pathRules,omitempty"`
+			} `json:"properties,omitempty"`
+		} `json:"urlPathMaps,omitempty"`
 		WebApplicationFirewallConfiguration *struct {
-			Enabled            bool   `json:"enabled"`
+			Enabled            bool   `json:"enabled,omitempty"`
 			MaxRequestBodySize int    `json:"maxRequestBodySize,omitempty"`
 			FirewallMode       string `json:"firewallMode,omitempty"`
 			RuleSetType        string `json:"ruleSetType,omitempty"`
-			RuleSetVersion     string `json:"ruleSetVersion"`
+			RuleSetVersion     string `json:"ruleSetVersion,omitempty"`
 			DisabledRuleGroups []struct {
-				RuleGroupName string   `json:"ruleGroupName"`
-				Rules         []string `json:"rules"`
-			} `json:"disabledRuleGroups"`
+				RuleGroupName string   `json:"ruleGroupName,omitempty"`
+				Rules         []string `json:"rules,omitempty"`
+			} `json:"disabledRuleGroups,omitempty"`
 			Exclusions *[]struct {
-				MatchVariable         string `json:"matchVariable"`
-				Selector              string `json:"selector"`
-				SelectorMatchOperator string `json:"selectorMatchOperator"`
-			} `json:"exclusions"`
-			RequestBodyCheck       bool `json:"requestBodyCheck"`
-			MaxRequestBodySizeInKb int  `json:"maxRequestBodySizeInKb"`
-			FileUploadLimitInMb    int  `json:"fileUploadLimitInMb"`
-		} `json:"webApplicationFirewallConfiguration"`
+				MatchVariable         string `json:"matchVariable,omitempty"`
+				Selector              string `json:"selector,omitempty"`
+				SelectorMatchOperator string `json:"selectorMatchOperator,omitempty"`
+			} `json:"exclusions,omitempty"`
+			RequestBodyCheck       bool `json:"requestBodyCheck,omitempty"`
+			MaxRequestBodySizeInKb int  `json:"maxRequestBodySizeInKb,omitempty"`
+			FileUploadLimitInMb    int  `json:"fileUploadLimitInMb,omitempty"`
+		} `json:"webApplicationFirewallConfiguration,omitempty"`
 		Zones                      []string      `json:"zones,omitempty"`
-		ProvisioningState          string        `json:"provisioningState"`
-		ResourceGUID               string        `json:"resourceGuid"`
-		OperationalState           string        `json:"operationalState"`
-		PrivateEndpointConnections []interface{} `json:"privateEndpointConnections"`
-	} `json:"properties"`
+		ProvisioningState          string        `json:"provisioningState,omitempty"`
+		ResourceGUID               string        `json:"resourceGuid,omitempty"`
+		OperationalState           string        `json:"operationalState,omitempty"`
+		PrivateEndpointConnections []interface{} `json:"privateEndpointConnections,omitempty"`
+	} `json:"properties,omitempty"`
 }
